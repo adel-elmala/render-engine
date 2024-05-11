@@ -6,7 +6,7 @@ Design is still in progress.
 ![Graphics Pipeline](imgs/gppln.png "Graphics Pipeline")
 
 ## Application 
-`input` : scene description file [TODO](adel) : model path for now
+`input` : scene description file [TODO](adel) : model path for now <br>
 `output` : vertex attributes in model space
 - Reads the models 
 - User input handling (keyboard and mouse)
@@ -15,7 +15,7 @@ Design is still in progress.
 - sends the models vertex attributes to the `Geometry` stage
 
 ## Geometry
-`input` : Vertex attributes in model space
+`input` : Vertex attributes in model space <br>
 `output` : vertex attributes in NDC (Normalized device coordinates) space
 
 ![Geometry Stage](imgs/gmtr.png "Geometry Stage")
@@ -30,7 +30,7 @@ Design is still in progress.
 
 ## Rasterization
 
-`input` : vertex attributes in NDC (Normalized device coordinates) space
+`input` : vertex attributes in NDC (Normalized device coordinates) space <br>
 `output` : pixels in a framebuffer with width and height corresponding to the window dimentions
 
 - perform primitive assembly
