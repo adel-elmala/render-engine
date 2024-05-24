@@ -19,12 +19,42 @@ struct Model
 	std::vector<Face> faces;
 };
 
+struct Camera
+{
+	glm::vec3 position;
+	glm::vec3 lookat;
+	glm::vec3 up;
+};
+
+struct ViewVolume
+{
+	float near_plane;
+	float far_plane;
+	float left_plane;
+	float right_plane;
+	float top_plane;
+	float bottom_plane;
+};
+
+enum DRAWING_MODE
+{
+	POINTS,
+	LINES,
+	TRIANGLES
+};
+
 struct Engine_State
 {
-	// window state
+	// window manager state
 	unsigned int cursor_x;
 	unsigned int cursor_y;
+	unsigned int win_width;
+	unsigned int win_height;
 	bool running;
 
+	// internal state
 	Model m_model;
+	Camera m_camera;
+	ViewVolume m_view_volume;
+	DRAWING_MODE m_mode;
 };

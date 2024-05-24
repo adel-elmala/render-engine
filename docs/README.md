@@ -16,7 +16,7 @@ Design is still in progress.
 
 ## Geometry
 `input` : Vertex attributes in model space <br>
-`output` : vertex attributes in NDC (Normalized device coordinates) space
+`output` : vertex attributes in pixel space
 
 ![Geometry Stage](imgs/gmtr.png "Geometry Stage")
 
@@ -26,11 +26,11 @@ Design is still in progress.
 - clip verticies out of the clip space [TODO](adel) : support clip planes
 - [TODO](adel) face culling: discard outword facing triangles
 - window transformation
-- send the vertex attributes in NDC space to `Rastertization` stage
+- send the vertex attributes in pixel space to `Rastertization` stage
 
 ## Rasterization
 
-`input` : vertex attributes in NDC (Normalized device coordinates) space <br>
+`input` : vertex attributes in pixel space <br>
 `output` : pixels in a framebuffer with width and height corresponding to the window dimentions
 
 - perform primitive assembly

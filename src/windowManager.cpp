@@ -94,6 +94,9 @@ void WindowManager::start_event_loop()
 		if (resized) {
 
 			SDL_GetWindowSize(m_window_handle, (int*)&m_width, (int*)&m_height);
+			// update engine state
+			state->win_width = m_width;
+			state->win_height = m_height;
 			m_window_surface = SDL_GetWindowSurface(m_window_handle);
 		}
 		// call the renderer callback to fill the framebuffer with the new frame
