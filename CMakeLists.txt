@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 
 project(renderEngine)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Engine src
-set(SRC "src/main.cpp" "src/renderEngine.cpp" "src/windowManager.cpp" "src/Application.cpp" "src/geometry.cpp")
-set(HEADER "include/renderEngine.h" "include/windowManager.h" "include/geometry.h")
+set(SRC "src/main.cpp" "src/renderEngine.cpp" "src/windowManager.cpp" "src/Application.cpp" "src/geometry.cpp" "src/rasterizer.cpp")
+set(HEADER "include/renderEngine.h" "include/windowManager.h" "include/geometry.h" "include/rasterizer.h")
 
 # vulkan module src
 set(VULKAN_SRC "src/vulkanWrapper.cpp" "include/vulkanWrapper.h")

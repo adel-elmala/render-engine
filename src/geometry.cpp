@@ -9,19 +9,11 @@ Geometry::Geometry()
 Geometry::~Geometry()
 {
 }
-void Geometry::update_viewport_transform()
+
+void Geometry::update_world_transform()
 {
-	auto nx = state->win_width;
-	auto ny = state->win_height;
-	auto nx_div_2 = nx / 2.0;
-	auto ny_div_2 = ny / 2.0;
-
-	glm::vec4 r1{ nx_div_2,0.0,0.0,nx_div_2 - 0.5 };
-	glm::vec4 r2{ 0.0,ny_div_2,0.0,ny_div_2 - 0.5 };
-	glm::vec4 r3{ 0.0,0.0,1.0,0.0 };
-	glm::vec4 r4{ 0.0,0.0,0.0,1.0 };
-
-	ndc_window_transform = glm::transpose(glm::mat4{ r1,r2,r3,r4 });
+	model_world_transform = glm::identity<glm::mat4>();
+	model_world_transform[3] = glm::vec4{ 0.0f,0.0f ,-70.0f ,1.0f };
 }
 
 void Geometry::update_camera_transform()
@@ -78,10 +70,103 @@ void Geometry::update_perspective_transform()
 
 }
 
-void Geometry::update_world_transform()
+void Geometry::update_viewport_transform()
 {
-	model_world_transform = glm::identity<glm::mat4>();
+	auto nx = state->m_swapchain.frame_width;
+	auto ny = state->m_swapchain.frame_height;
+	auto nx_div_2 = nx / 2.0;
+	auto ny_div_2 = ny / 2.0;
+
+	glm::vec4 r1{ nx_div_2,0.0,0.0,nx_div_2 - 0.5 };
+	glm::vec4 r2{ 0.0,ny_div_2,0.0,ny_div_2 - 0.5 };
+	glm::vec4 r3{ 0.0,0.0,1.0,0.0 };
+	glm::vec4 r4{ 0.0,0.0,0.0,1.0 };
+
+	ndc_pixel_transform = glm::transpose(glm::mat4{ r1,r2,r3,r4 });
 }
+
+void Geometry::send_to_camera_space()
+{
+	update_world_transform();
+	update_camera_transform();
+	auto m = world_camera_transform * model_world_transform;
+
+	for (auto& vertex_pos : state->m_model.positions)
+	{
+		vertex_pos = m * vertex_pos;
+	}
+
+	auto mn = glm::transpose(glm::inverse(m));
+	for (auto& face_normal : state->m_model.face_normals)
+	{
+		face_normal = mn * face_normal;
+	}
+}
+
+void Geometry::send_to_ndc_space()
+{
+	update_perspective_transform();
+
+	auto m = camera_ndc_transform;
+
+	for (auto& vertex_pos : state->m_model.positions)
+	{
+		auto v = m * vertex_pos;
+		vertex_pos = v / v.w;
+	}
+
+	auto mn = glm::transpose(glm::inverse(m));
+	// NOTE(adel): do we need the normals ? 
+	for (auto& face_normal : state->m_model.face_normals)
+	{
+		auto r = mn * face_normal;
+		face_normal = r / r.w;
+	}
+}
+
+void Geometry::send_to_pixel_space()
+{
+	update_viewport_transform();
+
+	auto m = ndc_pixel_transform;
+
+	for (auto& vertex_pos : state->m_model.positions)
+	{
+		auto v = m * vertex_pos;
+		vertex_pos = v / v.w;
+	}
+
+	auto mn = glm::transpose(glm::inverse(m));
+	// NOTE(adel): do we need the normals ? 
+	for (auto& face_normal : state->m_model.face_normals)
+	{
+		auto r = mn * face_normal;
+		face_normal = r / r.w;
+	}
+}
+
+void Geometry::lighting_calc()
+{
+	send_to_camera_space();
+	// do lighting stuff here
+}
+
+void Geometry::clipping()
+{
+	send_to_ndc_space();
+	// do clipping stuff here
+}
+
+void Geometry::run()
+{
+	// run lighting stage
+	lighting_calc();
+	// run clipping stage
+	clipping();
+	// send the remaining vertecies to pixel space
+	send_to_pixel_space();
+}
+
 
 glm::vec4 Geometry::transform_model_to_window(glm::vec3 v_model_space)
 {
@@ -90,5 +175,5 @@ glm::vec4 Geometry::transform_model_to_window(glm::vec3 v_model_space)
 	update_perspective_transform();
 	update_viewport_transform();
 
-	return ndc_window_transform * camera_ndc_transform * world_camera_transform * model_world_transform * glm::vec4{ v_model_space,1.0 };;
+	return ndc_pixel_transform * camera_ndc_transform * world_camera_transform * model_world_transform * glm::vec4{ v_model_space,1.0 };;
 }

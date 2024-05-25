@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include <thread>
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -13,8 +14,11 @@ class WindowManager
 public:
 	WindowManager();
 	~WindowManager();
+
 	void set_draw_frame_callback(void (*callback)(int w, int h, int bytes_per_pixel, void* framebuffer));
 	void start_event_loop();
+	void update_surface();
+	void enable_window_resizing(bool enable);
 	void bind_state(Engine_State* engine_state) { if(engine_state) state = engine_state; }
 	void run();
 
@@ -23,6 +27,7 @@ private:
 	bool init();
 	bool resize(unsigned int width, unsigned int height);
 
+	std::jthread event_handler;
 	unsigned int m_width;
 	unsigned int m_height;
 	void (*draw_frame_callback)(int w, int h, int bytes_per_pixel, void* framebuffer);

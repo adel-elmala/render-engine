@@ -3,7 +3,7 @@
 #include <iostream>
 #include <SDL.h>
 
-WindowManager::WindowManager() :m_width{ 800 }, m_height{ 600 }, state{}, draw_frame_callback{nullptr}
+WindowManager::WindowManager() :m_width{ 800 }, m_height{ 600 }, state{}, draw_frame_callback{ nullptr }
 {
 }
 
@@ -17,6 +17,7 @@ void WindowManager::run()
 {
 	init();
 }
+
 bool WindowManager::init()
 {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -39,15 +40,27 @@ bool WindowManager::init()
 		}
 	}
 	m_window_surface = SDL_GetWindowSurface(m_window_handle);
-	state->running = true;
+
+	// update engine state
+	{
+		std::unique_lock lock(state->m_window.m);
+		state->running = true;
+		state->m_window.win_resized = false;
+		state->m_window.win_bytes_per_pixel = m_window_surface->format->BytesPerPixel;
+		state->m_window.win_surface = m_window_surface->pixels;
+		state->m_window.win_width = m_width;
+		state->m_window.win_height = m_height;
+	}
 
 	return true;
 }
+
 bool WindowManager::resize(unsigned int width, unsigned int height)
 {
 	return true;
 }
-// TODO[adel] : put this in a thread 
+
+
 void WindowManager::start_event_loop()
 {
 	SDL_Event event;
@@ -92,17 +105,19 @@ void WindowManager::start_event_loop()
 			}
 		}
 		if (resized) {
-
-			SDL_GetWindowSize(m_window_handle, (int*)&m_width, (int*)&m_height);
+			resized = false;
 			// update engine state
-			state->win_width = m_width;
-			state->win_height = m_height;
-			m_window_surface = SDL_GetWindowSurface(m_window_handle);
+			{
+				std::unique_lock lock(state->m_window.m);
+				SDL_GetWindowSize(m_window_handle, (int*)&m_width, (int*)&m_height);
+				m_window_surface = SDL_GetWindowSurface(m_window_handle);
+				state->m_window.win_width = m_width;
+				state->m_window.win_height = m_height;
+				state->m_window.win_bytes_per_pixel = m_window_surface->format->BytesPerPixel;
+				state->m_window.win_surface = m_window_surface->pixels;
+				state->m_window.win_resized = true;
+			}
 		}
-		// call the renderer callback to fill the framebuffer with the new frame
-		if (draw_frame_callback)
-			draw_frame_callback(m_width, m_height, m_window_surface->format->BytesPerPixel, m_window_surface->pixels);
-		SDL_UpdateWindowSurface(m_window_handle);
 	}
 }
 
@@ -110,4 +125,14 @@ void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int b
 {
 	if (callback)
 		draw_frame_callback = callback;
+}
+
+void WindowManager::update_surface()
+{
+	SDL_UpdateWindowSurface(m_window_handle);
+}
+
+void WindowManager::enable_window_resizing(bool enable)
+{
+	SDL_SetWindowResizable(m_window_handle, (SDL_bool)enable);
 }
