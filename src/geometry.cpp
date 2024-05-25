@@ -12,8 +12,11 @@ Geometry::~Geometry()
 
 void Geometry::update_world_transform()
 {
+	static float count = 0;
 	model_world_transform = glm::identity<glm::mat4>();
-	model_world_transform[3] = glm::vec4{ 0.0f,0.0f ,-70.0f ,1.0f };
+	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-90.0f });
+	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.25f,-0.25f ,0.25f });
+	model_world_transform = glm::rotate(model_world_transform,glm::radians(count++), glm::vec3{0.0f,1.0f ,0.0f});
 }
 
 void Geometry::update_camera_transform()

@@ -9,7 +9,6 @@
 #include <chrono>
 using namespace std::chrono_literals;
 
-void renderFrame(int width, int height, int bytes_per_pixel, void* framebuffer);
 
 RenderEngine::RenderEngine(const std::string& model_path)
 {
@@ -22,7 +21,6 @@ RenderEngine::RenderEngine(const std::string& model_path)
 
 	m_win_manager = std::make_unique<WindowManager>();
 	m_win_manager->bind_state(&state);
-	m_win_manager->set_draw_frame_callback(renderFrame);
 	m_win_manager->run();
 
 	init_swapchain();
@@ -130,32 +128,3 @@ void RenderEngine::present_swapchain()
 	
 	m_win_manager->update_surface();
 }
-
-
-
-void renderFrame(int width, int height, int bytes_per_pixel, void* framebuffer)
-{
-	//char* end = (char*)framebuffer + (width * height * bytes_per_pixel);
-
-	//for (char* start = (char*)framebuffer; start < end; start += bytes_per_pixel)
-	//{
-	//	switch (bytes_per_pixel)
-	//	{
-	//	case 1:
-	//		*start = 0x00;
-	//		break;
-	//	case 2:
-	//		*(uint16_t*)start = 0x00ff;
-	//		break;
-	//	case 3:
-	//		*(uint16_t*)start = 0x0000;
-	//		start += 2;
-	//		*start = 0xff;
-	//		break;
-	//	case 4:
-	//		*(uint32_t*)start = (uint32_t)start;//0xffaabbcc;
-	//		break;
-	//	}
-	//}
-}
-

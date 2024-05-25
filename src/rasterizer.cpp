@@ -60,7 +60,7 @@ void Rasterizer::draw_point(glm::ivec2 point, glm::vec4 color)
 		*start = 0xff;
 		break;
 	case 4:
-		*(uint32_t*)start = (uint32_t)start;//0xffffffff;
+		*(uint32_t*)start = 0xffffffff;
 		break;
 	}
 
