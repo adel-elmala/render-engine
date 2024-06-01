@@ -12,11 +12,13 @@ Geometry::~Geometry()
 
 void Geometry::update_world_transform()
 {
-	static float count = 0;
+	static char count = 0;
 	model_world_transform = glm::identity<glm::mat4>();
-	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-90.0f });
+	model_world_transform = glm::translate(model_world_transform, glm::vec3{ count,count ,-90.0f + count});
 	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.25f,-0.25f ,0.25f });
-	model_world_transform = glm::rotate(model_world_transform,glm::radians(count++), glm::vec3{0.0f,1.0f ,0.0f});
+	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-5.0f });
+	//model_world_transform = glm::scale(model_world_transform, glm::vec3{ 40.0f,-40.0f ,40.0f });
+	model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 1)), glm::vec3{ 0.0f,1.0f ,0.0f });
 }
 
 void Geometry::update_camera_transform()
@@ -135,16 +137,14 @@ void Geometry::send_to_pixel_space()
 
 	for (auto& vertex_pos : state->m_model.positions)
 	{
-		auto v = m * vertex_pos;
-		vertex_pos = v / v.w;
+		vertex_pos = m * vertex_pos;
 	}
 
 	auto mn = glm::transpose(glm::inverse(m));
 	// NOTE(adel): do we need the normals ? 
 	for (auto& face_normal : state->m_model.face_normals)
 	{
-		auto r = mn * face_normal;
-		face_normal = r / r.w;
+		face_normal = mn * face_normal;
 	}
 }
 
@@ -157,7 +157,21 @@ void Geometry::lighting_calc()
 void Geometry::clipping()
 {
 	send_to_ndc_space();
-	// do clipping stuff here
+	// clipping base on drawing mode (points / lines / triangles)
+	switch (state->m_mode)
+	{
+	case DRAWING_MODE::POINTS:
+		// TODO(adel)
+		break;
+	case DRAWING_MODE::LINES:
+		// TODO(adel)
+		break;
+	case DRAWING_MODE::TRIANGLES:
+		clip_triangles();
+		break;
+	default:
+		break;
+	}
 }
 
 void Geometry::run()
@@ -170,6 +184,53 @@ void Geometry::run()
 	send_to_pixel_space();
 }
 
+__forceinline bool Geometry::in_view_volume(glm::vec4 point)
+{
+	bool bx = (point.x <= 1.0f) && (point.x >= -1.0f);
+	bool by = (point.y <= 1.0f) && (point.y >= -1.0f);
+	bool bz = (point.z <= 1.0f) && (point.z >= -1.0f);
+	return bx && by && bz;
+}
+void Geometry::clip_triangles()
+{
+	auto& verticies = state->m_model.positions;
+
+	for (auto& triangle : state->m_model.faces)
+	{
+		// face verts indices
+		auto v0_index = triangle.p_indices[0];
+		auto v1_index = triangle.p_indices[1];
+		auto v2_index = triangle.p_indices[2];
+		// face verts
+		auto& v0 = verticies[v0_index];
+		auto& v1 = verticies[v1_index];
+		auto& v2 = verticies[v2_index];
+
+		auto v0_in = in_view_volume(v0);
+		auto v1_in = in_view_volume(v1);
+		auto v2_in = in_view_volume(v2);
+
+		auto n_vert_out = 3 - (v0_in + v1_in + v2_in);
+
+		switch (n_vert_out)
+		{
+			// TODO(adel): handle partially clipped triangles
+		case 3:
+		case 2:
+		case 1:
+			triangle.erase = true;
+			break;
+		case 0:
+			triangle.erase = false;
+			break;
+		default:
+			break;
+		}
+
+
+	}
+}
+
 
 glm::vec4 Geometry::transform_model_to_window(glm::vec3 v_model_space)
 {
@@ -180,3 +241,4 @@ glm::vec4 Geometry::transform_model_to_window(glm::vec3 v_model_space)
 
 	return ndc_pixel_transform * camera_ndc_transform * world_camera_transform * model_world_transform * glm::vec4{ v_model_space,1.0 };;
 }
+

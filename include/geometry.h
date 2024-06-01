@@ -1,6 +1,5 @@
 #pragma once 
 
-#include <glm/glm.hpp>
 #include "common.h"
 
 class Geometry
@@ -16,6 +15,8 @@ private:
 	
 	void lighting_calc();
 	void clipping();
+	void clip_triangles();
+	bool in_view_volume(glm::vec4 point);
 
 	void send_to_camera_space();
 	void send_to_ndc_space();

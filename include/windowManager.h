@@ -19,6 +19,7 @@ public:
 	void start_event_loop();
 	void update_surface();
 	void enable_window_resizing(bool enable);
+	void update_window_title(const char* str);
 	void bind_state(Engine_State* engine_state) { if(engine_state) state = engine_state; }
 	void run();
 
@@ -27,7 +28,8 @@ private:
 	bool init();
 	bool resize(unsigned int width, unsigned int height);
 
-	std::jthread event_handler;
+
+	//std::thread event_loop;
 	unsigned int m_width;
 	unsigned int m_height;
 	void (*draw_frame_callback)(int w, int h, int bytes_per_pixel, void* framebuffer);

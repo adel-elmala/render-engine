@@ -9,6 +9,7 @@ WindowManager::WindowManager() :m_width{ 800 }, m_height{ 600 }, state{}, draw_f
 
 WindowManager::~WindowManager()
 {
+	//event_loop.join();
 	SDL_DestroyWindow(m_window_handle);
 	SDL_Quit();
 }
@@ -16,6 +17,7 @@ WindowManager::~WindowManager()
 void WindowManager::run()
 {
 	init();
+	//event_loop = std::thread(&WindowManager::start_event_loop, this);
 }
 
 bool WindowManager::init()
@@ -129,10 +131,17 @@ void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int b
 
 void WindowManager::update_surface()
 {
-	SDL_UpdateWindowSurface(m_window_handle);
+	if (state->running)
+		SDL_UpdateWindowSurface(m_window_handle);
 }
 
 void WindowManager::enable_window_resizing(bool enable)
 {
 	SDL_SetWindowResizable(m_window_handle, (SDL_bool)enable);
+}
+
+void WindowManager::update_window_title(const char* str)
+{
+	if (state->running)
+		SDL_SetWindowTitle(m_window_handle, str);
 }

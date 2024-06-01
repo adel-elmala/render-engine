@@ -42,4 +42,3 @@ Design is still in progress.
 
 ### Note To myself
 try to use as most of cpu caps as possible , SIMD , multi-threading.
-
