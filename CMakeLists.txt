@@ -19,7 +19,7 @@ find_package(Vulkan REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
-
+find_package(Tracy CONFIG REQUIRED)
 # logger module library 
 add_library(logger_module STATIC ${LOGGER_SRC})
 target_link_libraries(logger_module PUBLIC)
@@ -37,4 +37,5 @@ $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> # SDL2
 $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
 Vulkan_module
 logger_module
+Tracy::TracyClient
 )
