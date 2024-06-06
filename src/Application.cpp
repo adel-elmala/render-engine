@@ -30,7 +30,6 @@ void Application::parse_model(const std::string& path)
 	uint32_t n_count = mesh->normal_count;
 	uint32_t f_count = mesh->face_count;
 
-
 	state->m_model.positions.resize(p_count);
 	state->m_model.colors.resize(c_count);
 	state->m_model.tex_coords.resize(t_count);
@@ -43,10 +42,27 @@ void Application::parse_model(const std::string& path)
 		state->m_model.positions[j] = glm::vec4{ mesh->positions[i],mesh->positions[i + 1],mesh->positions[i + 2] ,1.0f };
 	}
 
-	// copy colors
-	for (uint32_t i = 0, j = 0; j < c_count; i += 3, ++j)
+	if (c_count >= f_count)
 	{
-		state->m_model.colors[j] = glm::vec4{ mesh->colors[i],mesh->colors[i + 1],mesh->colors[i + 2] ,1.0f };
+		// copy colors
+		for (uint32_t i = 0, j = 0; j < c_count; i += 3, ++j)
+		{
+			state->m_model.colors[j] = glm::vec4{ mesh->colors[i],mesh->colors[i + 1],mesh->colors[i + 2] ,1.0f };
+		}
+	}
+	else
+	{
+		state->m_model.colors.resize(p_count);
+		uint32_t counter = 0;
+		// generate pseudo-colors
+		for (uint32_t i = 0, j = 0; j < p_count; i += 3, ++j)
+		{
+			counter = std::rand();
+			char red_channel = counter & 0x000000ff;
+			char green_channel = (counter & 0x0000ff00) >> 8;
+			char blue_channel = (counter & 0x00ff0000) >> 16;
+			state->m_model.colors[j] = glm::u8vec4{ red_channel,green_channel,blue_channel ,0xff };
+		}
 	}
 
 	// copy tex_coords	

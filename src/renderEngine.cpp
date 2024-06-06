@@ -78,7 +78,7 @@ void RenderEngine::init_camera()
 void RenderEngine::init_view_volume()
 {
 	state.m_view_volume.near_plane = -50.0f;
-	state.m_view_volume.far_plane = -250.0f;
+	state.m_view_volume.far_plane = -350.0f;
 	state.m_view_volume.left_plane = -100.0f;
 	state.m_view_volume.right_plane = 100.0f;
 	state.m_view_volume.top_plane = 100.0f;
@@ -95,10 +95,19 @@ void RenderEngine::init_swapchain()
 	std::unique_lock lock(state.m_swapchain.m);
 	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
 	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
+	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.win_height * state.m_window.win_width * sizeof(float));
 
 	state.m_swapchain.frame_height = state.m_window.win_height;
 	state.m_swapchain.frame_width = state.m_window.win_width;
 	state.m_swapchain.frame_bytes_per_pixel = state.m_window.win_bytes_per_pixel;
+
+	// reset z_buffer
+	auto z_buffer_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width;
+	float* z_buffer_end_p = state.m_swapchain.z_buffer + z_buffer_size;
+	for (float* start = state.m_swapchain.z_buffer; start < z_buffer_end_p; ++start)
+	{
+		*start = -1.0f;
+	}
 }
 
 void RenderEngine::resize_swapchain()
@@ -107,9 +116,11 @@ void RenderEngine::resize_swapchain()
 	// free old swap chain
 	free(state.m_swapchain.back_buffer);
 	free(state.m_swapchain.front_buffer);
+	free(state.m_swapchain.z_buffer);
 	// allocate new swap chain with new dimenstions
 	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
 	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
+	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.win_height * state.m_window.win_width * sizeof(float));
 
 	state.m_swapchain.frame_height = state.m_window.win_height;
 	state.m_swapchain.frame_width = state.m_window.win_width;
@@ -121,7 +132,6 @@ void RenderEngine::resize_swapchain()
 void RenderEngine::present_swapchain()
 {
 	std::scoped_lock lock(state.m_swapchain.m, state.m_window.m);
-	//std::unique_lock lock(state.m_swapchain.m);
 
 	// swap front and back buffers
 	std::swap(state.m_swapchain.front_buffer, state.m_swapchain.back_buffer);
@@ -129,6 +139,14 @@ void RenderEngine::present_swapchain()
 	// set back buffer with clear color
 	auto swapchain_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width * state.m_swapchain.frame_bytes_per_pixel;
 	memset(state.m_swapchain.back_buffer, 0x00, swapchain_size);
+
+	// reset z_buffer
+	auto z_buffer_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width;
+	float* z_buffer_end_p = state.m_swapchain.z_buffer + z_buffer_size;
+	for (float* start = state.m_swapchain.z_buffer; start < z_buffer_end_p; ++start)
+	{
+		*start = -1.0f;
+	}
 
 	auto win_surface_size = state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel;
 	// copy frontbuffer to window surface

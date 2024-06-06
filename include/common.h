@@ -18,7 +18,7 @@ struct Model
 {
 	std::vector<glm::vec4> positions;
 	std::vector<glm::vec4> face_normals;
-	std::vector<glm::vec4> colors;
+	std::vector<glm::u8vec4> colors;
 	std::vector<glm::vec2> tex_coords;
 	std::vector<Face> faces;
 };
@@ -35,6 +35,7 @@ struct SwapChain
 	std::mutex m;
 	char* back_buffer;
 	char* front_buffer;
+	float* z_buffer;
 	unsigned int frame_width;
 	unsigned int frame_height;
 	unsigned int frame_bytes_per_pixel;

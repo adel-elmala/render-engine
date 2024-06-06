@@ -12,13 +12,14 @@ Geometry::~Geometry()
 
 void Geometry::update_world_transform()
 {
-	static char count = 0;
+	static float count = 0;
 	model_world_transform = glm::identity<glm::mat4>();
-	model_world_transform = glm::translate(model_world_transform, glm::vec3{ count,count ,-90.0f + count});
+	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,-150.0f});
 	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.25f,-0.25f ,0.25f });
-	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-5.0f });
-	//model_world_transform = glm::scale(model_world_transform, glm::vec3{ 40.0f,-40.0f ,40.0f });
 	model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 1)), glm::vec3{ 0.0f,1.0f ,0.0f });
+	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-120.0f });
+	//model_world_transform = glm::scale(model_world_transform, glm::vec3{ 40.0f,-40.0f ,40.0f });
+	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
 }
 
 void Geometry::update_camera_transform()
@@ -165,6 +166,7 @@ void Geometry::clipping()
 		break;
 	case DRAWING_MODE::LINES:
 		// TODO(adel)
+		clip_triangles();
 		break;
 	case DRAWING_MODE::TRIANGLES:
 		clip_triangles();
