@@ -51,24 +51,26 @@ void Rasterizer::draw_points()
 	}
 }
 
-void Rasterizer::draw_point(glm::vec3 &point, glm::u8vec4& color)
+void Rasterizer::draw_point(glm::vec3& point, glm::u8vec4& color)
 {
 	//ZoneScoped;
-
-	std::scoped_lock lock(state->m_swapchain.m);
+	//std::scoped_lock lock(state->m_swapchain.m);
 
 	//// TODO[adel] remove this and add clipping
 	//if (point.x >= state->m_swapchain.frame_width || point.x < 0 || point.y >= state->m_swapchain.frame_height || point.y < 0)
 	//	return;
+
 	float* z_buffer_current_value = (state->m_swapchain.z_buffer + (unsigned int)(state->m_swapchain.frame_width * point.y) + (unsigned int)point.x);
 	if (point.z < *z_buffer_current_value)
 		return;
 	*z_buffer_current_value = point.z;
 
 	// pixel memory layout BB GG RR AA -- >> 0xAARRGGBB
-	char* start = (char*)state->m_swapchain.back_buffer +
+	char* start =
+		state->m_swapchain.back_buffer +
 		((int)point.x * state->m_swapchain.frame_bytes_per_pixel) +
 		((int)point.y * state->m_swapchain.frame_width * state->m_swapchain.frame_bytes_per_pixel);
+
 	switch (state->m_swapchain.frame_bytes_per_pixel)
 	{
 	case 1:
@@ -91,13 +93,12 @@ void Rasterizer::draw_point(glm::vec3 &point, glm::u8vec4& color)
 __forceinline float implicit_2d_line_eq(glm::vec2 line_left_p, glm::vec2 line_right_p, glm::vec2 p)
 {
 	//ZoneScoped;
-
+	// p0 left  --  p1 right
+	// f(x,y) = (y0 −y1)x +(x1 −x0)y +x0y1 −x1y0
 	if (line_left_p.x > line_right_p.x)
 	{
 		std::swap(line_left_p, line_right_p);
 	}
-	// p0 left  --  p1 right
-	// f(x,y) = (y0 −y1)x +(x1 −x0)y +x0y1 −x1y0
 	auto c0 = line_left_p.y - line_right_p.y;
 	auto c1 = line_right_p.x - line_left_p.x;
 	auto c2 = (line_left_p.x * line_right_p.y) - (line_right_p.x * line_left_p.y);
@@ -192,7 +193,6 @@ void Rasterizer::draw_line(glm::vec3& p1, glm::vec3& p2, glm::u8vec4& color)
 void Rasterizer::draw_lines()
 {
 	//ZoneScoped;
-
 	auto& verticies = state->m_model.positions;
 	auto& colors = state->m_model.colors;
 
@@ -220,7 +220,6 @@ void Rasterizer::draw_lines()
 void Rasterizer::draw_triangles()
 {
 	//ZoneScoped;
-
 	for (auto& triangle : state->m_model.faces)
 	{
 		if (triangle.erase)
@@ -232,7 +231,6 @@ void Rasterizer::draw_triangles()
 void Rasterizer::draw_triangle(Face& triangle)
 {
 	//ZoneScoped;
-
 	auto& verticies = state->m_model.positions;
 	auto& colors = state->m_model.colors;
 
@@ -240,6 +238,7 @@ void Rasterizer::draw_triangle(Face& triangle)
 	auto v0_index = triangle.p_indices.x;
 	auto v1_index = triangle.p_indices.y;
 	auto v2_index = triangle.p_indices.z;
+
 	// face verts
 	auto& v0 = verticies[v0_index];
 	auto& v1 = verticies[v1_index];
@@ -261,7 +260,6 @@ void Rasterizer::draw_triangle(Face& triangle)
 		{
 			// test if (row,col) is in the triangle
 			auto candidate_pixel = glm::vec3{ col,row,0.0 };
-
 			auto alpha = implicit_2d_line_eq(v1, v2, candidate_pixel) / alpha_1;
 			auto beta = implicit_2d_line_eq(v0, v2, candidate_pixel) / beta_1;
 			auto gamma = 1 - alpha - beta;
@@ -283,7 +281,6 @@ void Rasterizer::draw_triangle(Face& triangle)
 std::pair<glm::ivec2, glm::ivec2> Rasterizer::triangle_bounding_box(const glm::ivec2& p0, const  glm::ivec2& p1, const  glm::ivec2& p2)
 {
 	//ZoneScoped;
-
 	auto most_left = std::min(std::min(p0.x, p1.x), p2.x);
 	auto most_right = std::max(std::max(p0.x, p1.x), p2.x);
 	auto most_top = std::max(std::max(p0.y, p1.y), p2.y);
