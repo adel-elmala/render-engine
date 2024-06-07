@@ -97,5 +97,14 @@ void Application::parse_model(const std::string& path)
 
 		state->m_model.faces[j] = tmp;
 	}
+
+	if (f_count < 200)
+		state->n_threads = 2;
+	else if (f_count < 2000)
+		state->n_threads = 4;
+	else if (f_count < 8000)
+		state->n_threads = 16;
+	else
+		state->n_threads = std::thread::hardware_concurrency();
 }
 

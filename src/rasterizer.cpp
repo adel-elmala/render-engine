@@ -34,8 +34,7 @@ void Rasterizer::draw_points()
 	//ZoneScoped;
 	auto& faces = state->m_model.faces;
 	size_t n_faces = faces.size();
-	size_t n_threads = std::thread::hardware_concurrency();
-	size_t thread_share = n_faces / n_threads;
+	size_t thread_share = n_faces / state->n_threads;
 
 	std::vector<std::thread> threads;
 	auto thunk = [this, thread_share, &faces](size_t id)
@@ -57,11 +56,11 @@ void Rasterizer::draw_points()
 			}
 		};
 	// launch threads
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
 	// main thread handle the remaingings left
-	for (size_t start = n_threads * thread_share; start < n_faces; ++start)
+	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
 	{
 		auto& face = faces[start];
 		if (face.erase)
@@ -77,7 +76,7 @@ void Rasterizer::draw_points()
 	}
 
 	// wait for the threads to finish
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 }
 
@@ -226,8 +225,7 @@ void Rasterizer::draw_lines()
 
 	auto& faces = state->m_model.faces;
 	size_t n_faces = faces.size();
-	size_t n_threads = std::thread::hardware_concurrency();
-	size_t thread_share = n_faces / n_threads;
+	size_t thread_share = n_faces / state->n_threads;
 
 	std::vector<std::thread> threads;
 	auto thunk = [this, thread_share, &colors, &verticies, &faces](size_t id)
@@ -255,11 +253,11 @@ void Rasterizer::draw_lines()
 			}
 		};
 	// launch threads
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
 	// main thread handle the remaingings left
-	for (size_t start = n_threads * thread_share; start < n_faces; ++start)
+	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
 	{
 		auto& triangle = faces[start];
 		if (triangle.erase)
@@ -281,7 +279,7 @@ void Rasterizer::draw_lines()
 	}
 
 	// wait for the threads to finish
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 }
 
@@ -290,8 +288,7 @@ void Rasterizer::draw_triangles()
 	//ZoneScoped;
 	auto& faces = state->m_model.faces;
 	size_t n_faces = faces.size();
-	size_t n_threads = std::thread::hardware_concurrency();
-	size_t thread_share = n_faces / n_threads;
+	size_t thread_share = n_faces / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
@@ -307,17 +304,17 @@ void Rasterizer::draw_triangles()
 			}
 		};
 	// launch threads
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
 	// main thread handle the remaingings left
-	for (size_t start = n_threads * thread_share; start < n_faces; ++start)
+	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
 	{
 		draw_triangle(faces[start]);
 	}
 
 	// wait for the threads to finish
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
 }

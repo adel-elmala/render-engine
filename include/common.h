@@ -87,4 +87,5 @@ struct Engine_State
 	DRAWING_MODE m_mode;
 	ViewVolume m_view_volume;
 	std::atomic_bool running;
+	size_t n_threads;
 };

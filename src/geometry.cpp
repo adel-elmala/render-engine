@@ -19,7 +19,7 @@ void Geometry::update_world_transform()
 	model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 1)), glm::vec3{ 0.0f,1.0f ,0.0f });
 	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-120.0f });
 	//model_world_transform = glm::scale(model_world_transform, glm::vec3{ 40.0f,-40.0f ,40.0f });
-	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
+	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 1)), glm::vec3{ 0.0f,1.0f ,0.0f });
 }
 
 void Geometry::update_camera_transform()
@@ -107,8 +107,7 @@ void Geometry::send_to_camera_space()
 
 	auto& postions = state->m_model.positions;
 	size_t n_pos = postions.size();
-	size_t n_threads = std::thread::hardware_concurrency();
-	size_t thread_share = n_pos / n_threads;
+	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
@@ -124,17 +123,17 @@ void Geometry::send_to_camera_space()
 			}
 		};
 	// launch threads
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
 	// main thread handle the remaingings left
-	for (size_t start = n_threads * thread_share; start < n_pos; ++start)
+	for (size_t start = state->n_threads * thread_share; start < n_pos; ++start)
 	{
 		postions[start] = m * postions[start];
 	}
 
 	// wait for the threads to finish
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
 	//auto mn = glm::transpose(glm::inverse(m));
@@ -152,8 +151,7 @@ void Geometry::send_to_ndc_space()
 
 	auto& postions = state->m_model.positions;
 	size_t n_pos = postions.size();
-	size_t n_threads = std::thread::hardware_concurrency();
-	size_t thread_share = n_pos / n_threads;
+	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
@@ -177,18 +175,18 @@ void Geometry::send_to_ndc_space()
 			}
 		};
 	// launch threads
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
 	// main thread handle the remaingings left
-	for (size_t start = n_threads * thread_share; start < n_pos; ++start)
+	for (size_t start = state->n_threads * thread_share; start < n_pos; ++start)
 	{
 		postions[start] = m * postions[start];
 		postions[start] /= postions[start].w;
 	}
 
 	// wait for the threads to finish
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
 	//// NOTE(adel): do we need the normals ? 
@@ -208,8 +206,7 @@ void Geometry::send_to_pixel_space()
 
 	auto& postions = state->m_model.positions;
 	size_t n_pos = postions.size();
-	size_t n_threads = std::thread::hardware_concurrency();
-	size_t thread_share = n_pos / n_threads;
+	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
@@ -225,17 +222,17 @@ void Geometry::send_to_pixel_space()
 			}
 		};
 	// launch threads
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
 	// main thread handle the remaingings left
-	for (size_t start = n_threads * thread_share; start < n_pos; ++start)
+	for (size_t start = state->n_threads * thread_share; start < n_pos; ++start)
 	{
 		postions[start] = m * postions[start];
 	}
 
 	// wait for the threads to finish
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
 	//// NOTE(adel): do we need the normals ? 
@@ -300,8 +297,7 @@ void Geometry::clip_triangles()
 	auto& verticies = state->m_model.positions;
 	auto& faces = state->m_model.faces;
 	size_t n_faces = faces.size();
-	size_t n_threads = std::thread::hardware_concurrency();
-	size_t thread_share = n_faces / n_threads;
+	size_t thread_share = n_faces / state->n_threads;
 
 	std::vector<std::thread> threads;
 	auto thunk = [this, thread_share, &faces, &verticies](size_t id)
@@ -343,11 +339,11 @@ void Geometry::clip_triangles()
 		};
 
 	// launch threads
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
 	// main thread handle the remaingings left
-	for (size_t start = n_threads * thread_share; start < n_faces; ++start)
+	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
 	{
 		auto& triangle = faces[start];
 		// face verts indices
@@ -382,7 +378,7 @@ void Geometry::clip_triangles()
 	}
 
 	// wait for the threads to finish
-	for (size_t i = 0; i < n_threads; ++i)
+	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
 }
