@@ -4,9 +4,6 @@
 #include "../include/geometry.h"
 #include "../include/rasterizer.h"
 
-#include <tracy/Tracy.hpp>
-#define TRACY_ENABLE
-
 #include <iostream>
 #include <chrono>
 using namespace std::chrono_literals;
@@ -14,6 +11,7 @@ using namespace std::chrono_literals;
 
 RenderEngine::RenderEngine(const std::string& model_path)
 {
+	//ZoneScoped;
 	state.m_window.win_height = 600;
 	state.m_window.win_width = 800;
 	state.m_window.win_bytes_per_pixel = 4;
@@ -43,6 +41,7 @@ RenderEngine::RenderEngine(const std::string& model_path)
 
 void RenderEngine::start_engine()
 {
+	//ZoneScoped;
 	m_application->run();
 	
 	while (state.running)
@@ -61,12 +60,14 @@ void RenderEngine::start_engine()
 		auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 		//m_win_manager->update_window_title(std::to_string(1000000.0 / elapsed.count()).c_str());
 		std::cout << 1000000.0 / elapsed.count() << std::endl;
-		ZoneScoped;
+		//FrameMark;
 	}
 }
 
 RenderEngine::~RenderEngine()
 {
+	//ZoneScoped;
+
 	engine_loop.join();
 	free(state.m_swapchain.back_buffer);
 	free(state.m_swapchain.front_buffer);
@@ -74,6 +75,8 @@ RenderEngine::~RenderEngine()
 
 void RenderEngine::init_camera()
 {
+	//ZoneScoped;
+
 	state.m_camera.position = glm::vec3{ 0.0f,0.0f,0.0f };
 	state.m_camera.lookat = glm::vec3{ 0.0f,0.0f,-10.0f };
 	state.m_camera.up = glm::vec3{ 0.0f,1.0f,0.0f };
@@ -81,6 +84,8 @@ void RenderEngine::init_camera()
 
 void RenderEngine::init_view_volume()
 {
+	//ZoneScoped;
+
 	state.m_view_volume.near_plane = -50.0f;
 	state.m_view_volume.far_plane = -350.0f;
 	state.m_view_volume.left_plane = -100.0f;
@@ -91,11 +96,15 @@ void RenderEngine::init_view_volume()
 
 void RenderEngine::set_drawing_mode(DRAWING_MODE mode)
 {
+	//ZoneScoped;
+
 	state.m_mode = mode;
 }
 
 void RenderEngine::init_swapchain()
 {
+	//ZoneScoped;
+
 	std::unique_lock lock(state.m_swapchain.m);
 	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
 	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
@@ -116,6 +125,8 @@ void RenderEngine::init_swapchain()
 
 void RenderEngine::resize_swapchain()
 {
+	//ZoneScoped;
+
 	std::unique_lock lock(state.m_swapchain.m);
 	// free old swap chain
 	free(state.m_swapchain.back_buffer);
@@ -135,6 +146,8 @@ void RenderEngine::resize_swapchain()
 
 void RenderEngine::present_swapchain()
 {
+	//ZoneScoped;
+
 	std::scoped_lock lock(state.m_swapchain.m, state.m_window.m);
 
 	// swap front and back buffers

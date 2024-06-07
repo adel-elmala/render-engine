@@ -4,23 +4,33 @@
 #define FAST_OBJ_IMPLEMENTATION
 #include "../include/fast_obj.h"
 
+#include <tracy/Tracy.hpp>
+#define ENABLE_TRACY
+
 Application::Application(const std::string& model_path)
 {
+	//ZoneScoped;
+
 	m_model_path = model_path;
 }
 
 Application::~Application()
 {
+	//ZoneScoped;
+
 	fast_obj_destroy((fastObjMesh*)m_mesh);
 }
 void Application::run()
 {
+	//ZoneScoped;
 	parse_model(m_model_path);
 	state->m_model_original = state->m_model;
 }
 
 void Application::parse_model(const std::string& path)
 {
+	//ZoneScoped;
+
 	m_mesh = fast_obj_read(path.c_str());
 	fastObjMesh* mesh = (fastObjMesh*)m_mesh;
 

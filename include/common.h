@@ -6,6 +6,9 @@
 #include <mutex>
 #include <atomic>
 
+//#include <tracy/Tracy.hpp>
+//#define TRACY_ENABLE
+
 struct Face
 {
 	glm::vec3 p_indices;

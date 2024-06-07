@@ -5,10 +5,14 @@
 
 WindowManager::WindowManager() :m_width{ 800 }, m_height{ 600 }, state{}, draw_frame_callback{ nullptr }
 {
+	//ZoneScoped;
+
 }
 
 WindowManager::~WindowManager()
 {
+	//ZoneScoped;
+
 	//event_loop.join();
 	SDL_DestroyWindow(m_window_handle);
 	SDL_Quit();
@@ -16,12 +20,16 @@ WindowManager::~WindowManager()
 
 void WindowManager::run()
 {
+	//ZoneScoped;
+
 	init();
 	//event_loop = std::thread(&WindowManager::start_event_loop, this);
 }
 
 bool WindowManager::init()
 {
+	//ZoneScoped;
+
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
 		std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
@@ -59,12 +67,16 @@ bool WindowManager::init()
 
 bool WindowManager::resize(unsigned int width, unsigned int height)
 {
+	//ZoneScoped;
+
 	return true;
 }
 
 
 void WindowManager::start_event_loop()
 {
+	//ZoneScoped;
+
 	SDL_Event event;
 	bool resized = false;
 
@@ -125,23 +137,31 @@ void WindowManager::start_event_loop()
 
 void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int bytes_per_pixel, void* framebuffer))
 {
+	//ZoneScoped;
+
 	if (callback)
 		draw_frame_callback = callback;
 }
 
 void WindowManager::update_surface()
 {
+	//ZoneScoped;
+
 	if (state->running)
 		SDL_UpdateWindowSurface(m_window_handle);
 }
 
 void WindowManager::enable_window_resizing(bool enable)
 {
+	//ZoneScoped;
+
 	SDL_SetWindowResizable(m_window_handle, (SDL_bool)enable);
 }
 
 void WindowManager::update_window_title(const char* str)
 {
+	//ZoneScoped;
+
 	if (state->running)
 		SDL_SetWindowTitle(m_window_handle, str);
 }

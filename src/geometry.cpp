@@ -1,6 +1,7 @@
 #include "../include/geometry.h"
 
 #include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
+#include <omp.h>
 
 Geometry::Geometry()
 {
@@ -12,6 +13,8 @@ Geometry::~Geometry()
 
 void Geometry::update_world_transform()
 {
+	//ZoneScoped;
+
 	static float count = 0;
 	model_world_transform = glm::identity<glm::mat4>();
 	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,-150.0f});
@@ -24,6 +27,8 @@ void Geometry::update_world_transform()
 
 void Geometry::update_camera_transform()
 {
+	//ZoneScoped;
+
 	auto eye = state->m_camera.position;
 	auto gaze = state->m_camera.lookat - state->m_camera.position;
 	auto up = state->m_camera.up;
@@ -50,6 +55,8 @@ void Geometry::update_camera_transform()
 
 void Geometry::update_perspective_transform()
 {
+	//ZoneScoped;
+
 	auto n = state->m_view_volume.near_plane;
 	auto f = state->m_view_volume.far_plane;
 	auto t = state->m_view_volume.top_plane;
@@ -78,6 +85,8 @@ void Geometry::update_perspective_transform()
 
 void Geometry::update_viewport_transform()
 {
+	//ZoneScoped;
+
 	auto nx = state->m_swapchain.frame_width;
 	auto ny = state->m_swapchain.frame_height;
 	auto nx_div_2 = nx / 2.0;
@@ -93,6 +102,8 @@ void Geometry::update_viewport_transform()
 
 void Geometry::send_to_camera_space()
 {
+	//ZoneScoped;
+
 	update_world_transform();
 	update_camera_transform();
 	auto m = world_camera_transform * model_world_transform;
@@ -102,15 +113,17 @@ void Geometry::send_to_camera_space()
 		vertex_pos = m * vertex_pos;
 	}
 
-	auto mn = glm::transpose(glm::inverse(m));
-	for (auto& face_normal : state->m_model.face_normals)
-	{
-		face_normal = mn * face_normal;
-	}
+	//auto mn = glm::transpose(glm::inverse(m));
+	//for (auto& face_normal : state->m_model.face_normals)
+	//{
+	//	face_normal = mn * face_normal;
+	//}
 }
 
 void Geometry::send_to_ndc_space()
 {
+	//ZoneScoped;
+
 	update_perspective_transform();
 
 	auto m = camera_ndc_transform;
@@ -121,17 +134,19 @@ void Geometry::send_to_ndc_space()
 		vertex_pos = v / v.w;
 	}
 
-	auto mn = glm::transpose(glm::inverse(m));
-	// NOTE(adel): do we need the normals ? 
-	for (auto& face_normal : state->m_model.face_normals)
-	{
-		auto r = mn * face_normal;
-		face_normal = r / r.w;
-	}
+	//// NOTE(adel): do we need the normals ? 
+	//auto mn = glm::transpose(glm::inverse(m));
+	//for (auto& face_normal : state->m_model.face_normals)
+	//{
+	//	auto r = mn * face_normal;
+	//	face_normal = r / r.w;
+	//}
 }
 
 void Geometry::send_to_pixel_space()
 {
+	//ZoneScoped;
+
 	update_viewport_transform();
 
 	auto m = ndc_pixel_transform;
@@ -141,22 +156,26 @@ void Geometry::send_to_pixel_space()
 		vertex_pos = m * vertex_pos;
 	}
 
-	auto mn = glm::transpose(glm::inverse(m));
-	// NOTE(adel): do we need the normals ? 
-	for (auto& face_normal : state->m_model.face_normals)
-	{
-		face_normal = mn * face_normal;
-	}
+	//// NOTE(adel): do we need the normals ? 
+	//auto mn = glm::transpose(glm::inverse(m));
+	//for (auto& face_normal : state->m_model.face_normals)
+	//{
+	//	face_normal = mn * face_normal;
+	//}
 }
 
 void Geometry::lighting_calc()
 {
+	//ZoneScoped;
+
 	send_to_camera_space();
 	// do lighting stuff here
 }
 
 void Geometry::clipping()
 {
+	//ZoneScoped;
+
 	send_to_ndc_space();
 	// clipping base on drawing mode (points / lines / triangles)
 	switch (state->m_mode)
@@ -165,7 +184,6 @@ void Geometry::clipping()
 		// TODO(adel)
 		break;
 	case DRAWING_MODE::LINES:
-		// TODO(adel)
 		clip_triangles();
 		break;
 	case DRAWING_MODE::TRIANGLES:
@@ -178,6 +196,8 @@ void Geometry::clipping()
 
 void Geometry::run()
 {
+	//ZoneScoped;
+
 	// run lighting stage
 	lighting_calc();
 	// run clipping stage
@@ -186,8 +206,10 @@ void Geometry::run()
 	send_to_pixel_space();
 }
 
-__forceinline bool Geometry::in_view_volume(glm::vec4 point)
+__forceinline bool Geometry::in_view_volume(glm::vec4& point)
 {
+	//ZoneScoped;
+
 	bool bx = (point.x <= 1.0f) && (point.x >= -1.0f);
 	bool by = (point.y <= 1.0f) && (point.y >= -1.0f);
 	bool bz = (point.z <= 1.0f) && (point.z >= -1.0f);
@@ -195,6 +217,8 @@ __forceinline bool Geometry::in_view_volume(glm::vec4 point)
 }
 void Geometry::clip_triangles()
 {
+	//ZoneScoped;
+
 	auto& verticies = state->m_model.positions;
 
 	for (auto& triangle : state->m_model.faces)
@@ -232,15 +256,3 @@ void Geometry::clip_triangles()
 
 	}
 }
-
-
-glm::vec4 Geometry::transform_model_to_window(glm::vec3 v_model_space)
-{
-	update_world_transform();
-	update_camera_transform();
-	update_perspective_transform();
-	update_viewport_transform();
-
-	return ndc_pixel_transform * camera_ndc_transform * world_camera_transform * model_world_transform * glm::vec4{ v_model_space,1.0 };;
-}
-

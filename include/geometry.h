@@ -16,7 +16,7 @@ private:
 	void lighting_calc();
 	void clipping();
 	void clip_triangles();
-	bool in_view_volume(glm::vec4 point);
+	bool in_view_volume(glm::vec4& point);
 
 	void send_to_camera_space();
 	void send_to_ndc_space();
@@ -26,8 +26,6 @@ private:
 	void update_camera_transform();
 	void update_perspective_transform();
 	void update_world_transform();
-
-	glm::vec4 transform_model_to_window(glm::vec3 v_model_space); // for testing
 
 	glm::mat4 model_world_transform;
 	glm::mat4 world_camera_transform;
