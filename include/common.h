@@ -1,5 +1,9 @@
 #pragma once
 
+#define GLM_FORCE_INLINE
+#define GLM_FORCE_AVX2
+#define GLM_FORCE_ALIGNED
+
 #include <glm/glm.hpp>
 #include <vector>
 #include <memory>

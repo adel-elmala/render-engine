@@ -31,6 +31,7 @@ target_link_libraries(Vulkan_module PUBLIC glfw glm::glm Vulkan::Vulkan logger_m
 
 # render engine exe.
 add_executable(${PROJECT_NAME} ${SRC})
+add_definitions(/arch:AVX2)
 
 target_link_libraries(${PROJECT_NAME}
 $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> # SDL2
