@@ -109,14 +109,18 @@ void Geometry::send_to_camera_space()
 	size_t n_pos = postions.size();
 	size_t n_threads = std::thread::hardware_concurrency();
 	size_t thread_share = n_pos / n_threads;
+	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
 	auto thunk = [thread_share, &m, &postions](size_t id)
 		{
 			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; ++start)
+			for (size_t start = thread_share * id; start < end; start += 4)
 			{
 				postions[start] = m * postions[start];
+				postions[start + 1] = m * postions[start + 1];
+				postions[start + 2] = m * postions[start + 2];
+				postions[start + 3] = m * postions[start + 3];
 			}
 		};
 	// launch threads
@@ -150,15 +154,26 @@ void Geometry::send_to_ndc_space()
 	size_t n_pos = postions.size();
 	size_t n_threads = std::thread::hardware_concurrency();
 	size_t thread_share = n_pos / n_threads;
+	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
 	auto thunk = [thread_share, &m, &postions](size_t id)
 		{
 			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; ++start)
+			for (size_t start = thread_share * id; start < end; start += 4)
 			{
 				postions[start] = m * postions[start];
 				postions[start] /= postions[start].w;
+
+				postions[start + 1] = m * postions[start + 1];
+				postions[start + 1] /= postions[start + 1].w;
+
+				postions[start + 2] = m * postions[start + 2];
+				postions[start + 2] /= postions[start + 2].w;
+
+				postions[start + 3] = m * postions[start + 3];
+				postions[start + 3] /= postions[start + 3].w;
+
 			}
 		};
 	// launch threads
@@ -195,14 +210,18 @@ void Geometry::send_to_pixel_space()
 	size_t n_pos = postions.size();
 	size_t n_threads = std::thread::hardware_concurrency();
 	size_t thread_share = n_pos / n_threads;
+	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
 	auto thunk = [thread_share, &m, &postions](size_t id)
 		{
 			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; ++start)
+			for (size_t start = thread_share * id; start < end; start += 4)
 			{
 				postions[start] = m * postions[start];
+				postions[start + 1] = m * postions[start + 1];
+				postions[start + 2] = m * postions[start + 2];
+				postions[start + 3] = m * postions[start + 3];
 			}
 		};
 	// launch threads
@@ -242,7 +261,7 @@ void Geometry::clipping()
 	switch (state->m_mode)
 	{
 	case DRAWING_MODE::POINTS:
-		// TODO(adel)
+		clip_triangles();
 		break;
 	case DRAWING_MODE::LINES:
 		clip_triangles();

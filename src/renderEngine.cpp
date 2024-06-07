@@ -59,7 +59,7 @@ void RenderEngine::start_engine()
 		auto end = std::chrono::system_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 		//m_win_manager->update_window_title(std::to_string(1000000.0 / elapsed.count()).c_str());
-		std::cout << 1000000.0 / elapsed.count() << std::endl;
+		std::cout << 1000000 / elapsed.count() << std::endl;
 		//FrameMark;
 	}
 }
@@ -67,7 +67,6 @@ void RenderEngine::start_engine()
 RenderEngine::~RenderEngine()
 {
 	//ZoneScoped;
-
 	engine_loop.join();
 	free(state.m_swapchain.back_buffer);
 	free(state.m_swapchain.front_buffer);
@@ -76,7 +75,6 @@ RenderEngine::~RenderEngine()
 void RenderEngine::init_camera()
 {
 	//ZoneScoped;
-
 	state.m_camera.position = glm::vec3{ 0.0f,0.0f,0.0f };
 	state.m_camera.lookat = glm::vec3{ 0.0f,0.0f,-10.0f };
 	state.m_camera.up = glm::vec3{ 0.0f,1.0f,0.0f };
@@ -85,7 +83,6 @@ void RenderEngine::init_camera()
 void RenderEngine::init_view_volume()
 {
 	//ZoneScoped;
-
 	state.m_view_volume.near_plane = -50.0f;
 	state.m_view_volume.far_plane = -350.0f;
 	state.m_view_volume.left_plane = -100.0f;
@@ -97,14 +94,12 @@ void RenderEngine::init_view_volume()
 void RenderEngine::set_drawing_mode(DRAWING_MODE mode)
 {
 	//ZoneScoped;
-
 	state.m_mode = mode;
 }
 
 void RenderEngine::init_swapchain()
 {
 	//ZoneScoped;
-
 	std::unique_lock lock(state.m_swapchain.m);
 	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
 	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
@@ -126,7 +121,6 @@ void RenderEngine::init_swapchain()
 void RenderEngine::resize_swapchain()
 {
 	//ZoneScoped;
-
 	std::unique_lock lock(state.m_swapchain.m);
 	// free old swap chain
 	free(state.m_swapchain.back_buffer);
@@ -147,7 +141,6 @@ void RenderEngine::resize_swapchain()
 void RenderEngine::present_swapchain()
 {
 	//ZoneScoped;
-
 	std::scoped_lock lock(state.m_swapchain.m, state.m_window.m);
 
 	// swap front and back buffers
@@ -166,6 +159,7 @@ void RenderEngine::present_swapchain()
 	}
 
 	auto win_surface_size = state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel;
+
 	// copy frontbuffer to window surface
 	auto smaller_size = std::min(win_surface_size, swapchain_size);
 	memcpy(state.m_window.win_surface, state.m_swapchain.front_buffer, smaller_size);

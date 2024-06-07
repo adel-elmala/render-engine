@@ -32,13 +32,40 @@ void Rasterizer::run()
 void Rasterizer::draw_points()
 {
 	//ZoneScoped;
+	auto& faces = state->m_model.faces;
+	size_t n_faces = faces.size();
+	size_t n_threads = std::thread::hardware_concurrency();
+	size_t thread_share = n_faces / n_threads;
 
-	//std::unique_lock lock(state->m_swapchain.m);
+	std::vector<std::thread> threads;
+	auto thunk = [this, thread_share, &faces](size_t id)
+		{
+			size_t end = thread_share * (id + 1);
+			for (size_t start = thread_share * id; start < end; ++start)
+			{
+				auto& face = faces[start];
+				if (face.erase)
+					continue;
+				glm::vec3 p0 = state->m_model.positions[face.p_indices.x];
+				glm::vec3 p1 = state->m_model.positions[face.p_indices.y];
+				glm::vec3 p2 = state->m_model.positions[face.p_indices.z];
 
-	int count = 0;
-	// TODO(adel) : should i lock the swapchain here instead ?
-	for (auto& face : state->m_model.faces)
+				auto c0 = state->m_model.colors[face.p_indices.x];
+				draw_point(p0, c0);
+				draw_point(p1, c0);
+				draw_point(p2, c0);
+			}
+		};
+	// launch threads
+	for (size_t i = 0; i < n_threads; ++i)
+		threads.emplace_back(thunk, i);
+
+	// main thread handle the remaingings left
+	for (size_t start = n_threads * thread_share; start < n_faces; ++start)
 	{
+		auto& face = faces[start];
+		if (face.erase)
+			continue;
 		glm::vec3 p0 = state->m_model.positions[face.p_indices.x];
 		glm::vec3 p1 = state->m_model.positions[face.p_indices.y];
 		glm::vec3 p2 = state->m_model.positions[face.p_indices.z];
@@ -47,8 +74,11 @@ void Rasterizer::draw_points()
 		draw_point(p0, c0);
 		draw_point(p1, c0);
 		draw_point(p2, c0);
-		count++;
 	}
+
+	// wait for the threads to finish
+	for (size_t i = 0; i < n_threads; ++i)
+		threads[i].join();
 }
 
 void Rasterizer::draw_point(glm::vec3& point, glm::u8vec4& color)
@@ -56,16 +86,14 @@ void Rasterizer::draw_point(glm::vec3& point, glm::u8vec4& color)
 	//ZoneScoped;
 	//std::scoped_lock lock(state->m_swapchain.m);
 
-	//// TODO[adel] remove this and add clipping
-	//if (point.x >= state->m_swapchain.frame_width || point.x < 0 || point.y >= state->m_swapchain.frame_height || point.y < 0)
-	//	return;
-
 	float* z_buffer_current_value = (state->m_swapchain.z_buffer + (unsigned int)(state->m_swapchain.frame_width * point.y) + (unsigned int)point.x);
 	if (point.z < *z_buffer_current_value)
 		return;
+
+	// update the z-buffer value
 	*z_buffer_current_value = point.z;
 
-	// pixel memory layout BB GG RR AA -- >> 0xAARRGGBB
+	// pixel memory layout BB GG RR AA --- 0xAARRGGBB
 	char* start =
 		state->m_swapchain.back_buffer +
 		((int)point.x * state->m_swapchain.frame_bytes_per_pixel) +
@@ -196,8 +224,44 @@ void Rasterizer::draw_lines()
 	auto& verticies = state->m_model.positions;
 	auto& colors = state->m_model.colors;
 
-	for (auto& triangle : state->m_model.faces)
+	auto& faces = state->m_model.faces;
+	size_t n_faces = faces.size();
+	size_t n_threads = std::thread::hardware_concurrency();
+	size_t thread_share = n_faces / n_threads;
+
+	std::vector<std::thread> threads;
+	auto thunk = [this, thread_share, &colors, &verticies, &faces](size_t id)
+		{
+			size_t end = thread_share * (id + 1);
+			for (size_t start = thread_share * id; start < end; ++start)
+			{
+				auto& triangle = faces[start];
+				if (triangle.erase)
+					continue;
+				// face verts indices
+				auto v0_index = triangle.p_indices.x;
+				auto v1_index = triangle.p_indices.y;
+				auto v2_index = triangle.p_indices.z;
+				// face verts
+				glm::vec3 v0 = verticies[v0_index];
+				glm::vec3 v1 = verticies[v1_index];
+				glm::vec3 v2 = verticies[v2_index];
+
+				auto& c0 = colors[v0_index];
+
+				draw_line(v0, v1, c0);
+				draw_line(v0, v2, c0);
+				draw_line(v1, v2, c0);
+			}
+		};
+	// launch threads
+	for (size_t i = 0; i < n_threads; ++i)
+		threads.emplace_back(thunk, i);
+
+	// main thread handle the remaingings left
+	for (size_t start = n_threads * thread_share; start < n_faces; ++start)
 	{
+		auto& triangle = faces[start];
 		if (triangle.erase)
 			continue;
 		// face verts indices
@@ -215,22 +279,54 @@ void Rasterizer::draw_lines()
 		draw_line(v0, v2, c0);
 		draw_line(v1, v2, c0);
 	}
+
+	// wait for the threads to finish
+	for (size_t i = 0; i < n_threads; ++i)
+		threads[i].join();
 }
 
 void Rasterizer::draw_triangles()
 {
 	//ZoneScoped;
-	for (auto& triangle : state->m_model.faces)
+	auto& faces = state->m_model.faces;
+	size_t n_faces = faces.size();
+	size_t n_threads = std::thread::hardware_concurrency();
+	size_t thread_share = n_faces / n_threads;
+	thread_share = (thread_share / 4) * 4;
+
+	std::vector<std::thread> threads;
+	auto thunk = [this, thread_share, &faces](size_t id)
+		{
+			size_t end = thread_share * (id + 1);
+			for (size_t start = thread_share * id; start < end; start += 4)
+			{
+				draw_triangle(faces[start]);
+				draw_triangle(faces[start + 1]);
+				draw_triangle(faces[start + 2]);
+				draw_triangle(faces[start + 3]);
+			}
+		};
+	// launch threads
+	for (size_t i = 0; i < n_threads; ++i)
+		threads.emplace_back(thunk, i);
+
+	// main thread handle the remaingings left
+	for (size_t start = n_threads * thread_share; start < n_faces; ++start)
 	{
-		if (triangle.erase)
-			continue;
-		draw_triangle(triangle);
+		draw_triangle(faces[start]);
 	}
+
+	// wait for the threads to finish
+	for (size_t i = 0; i < n_threads; ++i)
+		threads[i].join();
+
 }
 
 void Rasterizer::draw_triangle(Face& triangle)
 {
 	//ZoneScoped;
+	if (triangle.erase)
+		return;
 	auto& verticies = state->m_model.positions;
 	auto& colors = state->m_model.colors;
 
@@ -271,7 +367,7 @@ void Rasterizer::draw_triangle(Face& triangle)
 			{
 				auto c = colors[v0_index]; // TODO(adel) lerp the triangle verts colors
 				candidate_pixel.z = v0.z * alpha + v1.z * beta + v2.z * gamma;
-				//auto c = glm::vec4{ colors[v0_index] } * alpha + glm::vec4{ colors[v1_index] } * beta + glm::vec4{ colors[v2_index] } * gamma;
+				//glm::u8vec4 c = glm::vec4{ colors[v0_index] } *alpha + glm::vec4{ colors[v1_index] } *beta + glm::vec4{ colors[v2_index] } *gamma;
 				draw_point(candidate_pixel, c);
 			}
 		}
