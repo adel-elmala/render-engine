@@ -20,10 +20,11 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
+find_package(Stb REQUIRED)
+
 # logger module library 
 add_library(logger_module STATIC ${LOGGER_SRC})
 target_link_libraries(logger_module PUBLIC)
-
 
 # vulkan module library 
 add_library(Vulkan_module STATIC ${VULKAN_SRC})
@@ -31,7 +32,6 @@ target_link_libraries(Vulkan_module PUBLIC glfw glm::glm Vulkan::Vulkan logger_m
 
 # render engine exe.
 add_executable(${PROJECT_NAME} ${SRC})
-add_definitions(/arch:AVX2)
 
 target_link_libraries(${PROJECT_NAME}
 $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> # SDL2
@@ -40,3 +40,7 @@ Vulkan_module
 logger_module
 Tracy::TracyClient
 )
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${Stb_INCLUDE_DIR})
+
+add_definitions(/arch:AVX2)

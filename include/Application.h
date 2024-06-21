@@ -19,6 +19,7 @@ public:
 private:
 
 	void parse_model(const std::string& path);
+	void load_texture(const std::string& path);
 	void* m_mesh; // single model mesh for now
 	std::string m_model_path;
 	Engine_State* state;

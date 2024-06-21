@@ -4,33 +4,35 @@
 #define FAST_OBJ_IMPLEMENTATION
 #include "../include/fast_obj.h"
 
-#include <tracy/Tracy.hpp>
-#define ENABLE_TRACY
+#define STBI_FAILURE_USERMSG
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 Application::Application(const std::string& model_path)
 {
 	//ZoneScoped;
-
 	m_model_path = model_path;
 }
 
 Application::~Application()
 {
 	//ZoneScoped;
-
 	fast_obj_destroy((fastObjMesh*)m_mesh);
+	for (auto& texture : state->m_model.textures)
+		stbi_image_free(texture.data);
+
 }
 void Application::run()
 {
 	//ZoneScoped;
 	parse_model(m_model_path);
+	load_texture("../../assets/bunny/bunny-atlas.jpg");
 	state->m_model_original = state->m_model;
 }
 
 void Application::parse_model(const std::string& path)
 {
 	//ZoneScoped;
-
 	m_mesh = fast_obj_read(path.c_str());
 	fastObjMesh* mesh = (fastObjMesh*)m_mesh;
 
@@ -41,6 +43,7 @@ void Application::parse_model(const std::string& path)
 	uint32_t f_count = mesh->face_count;
 
 	state->m_model.positions.resize(p_count);
+	state->m_model.verts_w_coords.resize(p_count);
 	state->m_model.colors.resize(c_count);
 	state->m_model.tex_coords.resize(t_count);
 	state->m_model.face_normals.resize(n_count);
@@ -108,3 +111,17 @@ void Application::parse_model(const std::string& path)
 		state->n_threads = std::thread::hardware_concurrency();
 }
 
+void Application::load_texture(const std::string& path)
+{
+	Texture t = {};
+	t.bytes_per_pixel = state->m_swapchain.frame_bytes_per_pixel;
+
+	stbi_set_flip_vertically_on_load(true);
+	int n;
+	t.data = (char*)stbi_load(path.c_str(), &(t.width), &(t.height), &n, t.bytes_per_pixel);
+
+	if (!t.data)
+		stbi_failure_reason();
+	else
+		state->m_model.textures.push_back(t);
+}

@@ -12,14 +12,14 @@ Geometry::~Geometry()
 void Geometry::update_world_transform()
 {
 	//ZoneScoped;
-	static char count = 0;
+	static float count = 0;
 	model_world_transform = glm::identity<glm::mat4>();
-	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,-100.0f + count });
+	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,-150.0f});
 	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.25f,-0.25f ,0.25f });
-	model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 1)), glm::vec3{ 0.0f,1.0f ,0.0f });
-	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-120.0f });
+	model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
+	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-90.0f });
 	//model_world_transform = glm::scale(model_world_transform, glm::vec3{ 40.0f,-40.0f ,40.0f });
-	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 1)), glm::vec3{ 0.0f,1.0f ,0.0f });
+	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
 }
 
 void Geometry::update_camera_transform()
@@ -150,26 +150,31 @@ void Geometry::send_to_ndc_space()
 	auto m = camera_ndc_transform;
 
 	auto& postions = state->m_model.positions;
+	auto& save_w_coords = state->m_model.verts_w_coords;
 	size_t n_pos = postions.size();
 	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
-	auto thunk = [thread_share, &m, &postions](size_t id)
+	auto thunk = [thread_share, &m, &save_w_coords, &postions](size_t id)
 		{
 			size_t end = thread_share * (id + 1);
 			for (size_t start = thread_share * id; start < end; start += 4)
 			{
 				postions[start] = m * postions[start];
+				save_w_coords[start] = postions[start].w;
 				postions[start] /= postions[start].w;
 
 				postions[start + 1] = m * postions[start + 1];
+				save_w_coords[start + 1] = postions[start + 1].w;
 				postions[start + 1] /= postions[start + 1].w;
 
 				postions[start + 2] = m * postions[start + 2];
+				save_w_coords[start + 2] = postions[start + 2].w;
 				postions[start + 2] /= postions[start + 2].w;
 
 				postions[start + 3] = m * postions[start + 3];
+				save_w_coords[start + 3] = postions[start + 3].w;
 				postions[start + 3] /= postions[start + 3].w;
 
 			}
@@ -182,6 +187,7 @@ void Geometry::send_to_ndc_space()
 	for (size_t start = state->n_threads * thread_share; start < n_pos; ++start)
 	{
 		postions[start] = m * postions[start];
+		save_w_coords[start] = postions[start].w;
 		postions[start] /= postions[start].w;
 	}
 

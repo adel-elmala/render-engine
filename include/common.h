@@ -21,13 +21,23 @@ struct Face
 	bool erase;
 };
 
+struct Texture
+{
+	int width;
+	int height;
+	int bytes_per_pixel;
+	char* data;
+};
+
 struct Model
 {
 	std::vector<glm::vec4> positions;
+	std::vector<float> verts_w_coords;
 	std::vector<glm::vec4> face_normals;
 	std::vector<glm::u8vec4> colors;
 	std::vector<glm::vec2> tex_coords;
 	std::vector<Face> faces;
+	std::vector<Texture> textures;
 };
 
 struct Camera

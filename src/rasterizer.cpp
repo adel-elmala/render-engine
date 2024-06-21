@@ -117,19 +117,70 @@ void Rasterizer::draw_point(glm::vec3& point, glm::u8vec4& color)
 	}
 }
 
-__forceinline float implicit_2d_line_eq(glm::vec2 line_left_p, glm::vec2 line_right_p, glm::vec2 p)
+void Rasterizer::draw_lines()
 {
 	//ZoneScoped;
-	// p0 left  --  p1 right
-	// f(x,y) = (y0 −y1)x +(x1 −x0)y +x0y1 −x1y0
-	if (line_left_p.x > line_right_p.x)
+	auto& verticies = state->m_model.positions;
+	auto& colors = state->m_model.colors;
+
+	auto& faces = state->m_model.faces;
+	size_t n_faces = faces.size();
+	size_t thread_share = n_faces / state->n_threads;
+
+	std::vector<std::thread> threads;
+	auto thunk = [this, thread_share, &colors, &verticies, &faces](size_t id)
+		{
+			size_t end = thread_share * (id + 1);
+			for (size_t start = thread_share * id; start < end; ++start)
+			{
+				auto& triangle = faces[start];
+				if (triangle.erase)
+					continue;
+				// face verts indices
+				auto v0_index = triangle.p_indices.x;
+				auto v1_index = triangle.p_indices.y;
+				auto v2_index = triangle.p_indices.z;
+				// face verts
+				glm::vec3 v0 = verticies[v0_index];
+				glm::vec3 v1 = verticies[v1_index];
+				glm::vec3 v2 = verticies[v2_index];
+
+				auto& c0 = colors[v0_index];
+
+				draw_line(v0, v1, c0);
+				draw_line(v0, v2, c0);
+				draw_line(v1, v2, c0);
+			}
+		};
+	// launch threads
+	for (size_t i = 0; i < state->n_threads; ++i)
+		threads.emplace_back(thunk, i);
+
+	// main thread handle the remaingings left
+	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
 	{
-		std::swap(line_left_p, line_right_p);
+		auto& triangle = faces[start];
+		if (triangle.erase)
+			continue;
+		// face verts indices
+		auto v0_index = triangle.p_indices.x;
+		auto v1_index = triangle.p_indices.y;
+		auto v2_index = triangle.p_indices.z;
+		// face verts
+		glm::vec3 v0 = verticies[v0_index];
+		glm::vec3 v1 = verticies[v1_index];
+		glm::vec3 v2 = verticies[v2_index];
+
+		auto& c0 = colors[v0_index];
+
+		draw_line(v0, v1, c0);
+		draw_line(v0, v2, c0);
+		draw_line(v1, v2, c0);
 	}
-	auto c0 = line_left_p.y - line_right_p.y;
-	auto c1 = line_right_p.x - line_left_p.x;
-	auto c2 = (line_left_p.x * line_right_p.y) - (line_right_p.x * line_left_p.y);
-	return c0 * p.x + c1 * p.y + c2;
+
+	// wait for the threads to finish
+	for (size_t i = 0; i < state->n_threads; ++i)
+		threads[i].join();
 }
 
 void Rasterizer::draw_line(glm::vec3& p1, glm::vec3& p2, glm::u8vec4& color)
@@ -217,72 +268,6 @@ void Rasterizer::draw_line(glm::vec3& p1, glm::vec3& p2, glm::u8vec4& color)
 
 }
 
-void Rasterizer::draw_lines()
-{
-	//ZoneScoped;
-	auto& verticies = state->m_model.positions;
-	auto& colors = state->m_model.colors;
-
-	auto& faces = state->m_model.faces;
-	size_t n_faces = faces.size();
-	size_t thread_share = n_faces / state->n_threads;
-
-	std::vector<std::thread> threads;
-	auto thunk = [this, thread_share, &colors, &verticies, &faces](size_t id)
-		{
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; ++start)
-			{
-				auto& triangle = faces[start];
-				if (triangle.erase)
-					continue;
-				// face verts indices
-				auto v0_index = triangle.p_indices.x;
-				auto v1_index = triangle.p_indices.y;
-				auto v2_index = triangle.p_indices.z;
-				// face verts
-				glm::vec3 v0 = verticies[v0_index];
-				glm::vec3 v1 = verticies[v1_index];
-				glm::vec3 v2 = verticies[v2_index];
-
-				auto& c0 = colors[v0_index];
-
-				draw_line(v0, v1, c0);
-				draw_line(v0, v2, c0);
-				draw_line(v1, v2, c0);
-			}
-		};
-	// launch threads
-	for (size_t i = 0; i < state->n_threads; ++i)
-		threads.emplace_back(thunk, i);
-
-	// main thread handle the remaingings left
-	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
-	{
-		auto& triangle = faces[start];
-		if (triangle.erase)
-			continue;
-		// face verts indices
-		auto v0_index = triangle.p_indices.x;
-		auto v1_index = triangle.p_indices.y;
-		auto v2_index = triangle.p_indices.z;
-		// face verts
-		glm::vec3 v0 = verticies[v0_index];
-		glm::vec3 v1 = verticies[v1_index];
-		glm::vec3 v2 = verticies[v2_index];
-
-		auto& c0 = colors[v0_index];
-
-		draw_line(v0, v1, c0);
-		draw_line(v0, v2, c0);
-		draw_line(v1, v2, c0);
-	}
-
-	// wait for the threads to finish
-	for (size_t i = 0; i < state->n_threads; ++i)
-		threads[i].join();
-}
-
 void Rasterizer::draw_triangles()
 {
 	//ZoneScoped;
@@ -362,9 +347,22 @@ void Rasterizer::draw_triangle(Face& triangle)
 				(beta > 0 or off_screen_and_v1_on_same_side) and
 				(gamma > 0 or off_screen_and_v2_on_same_side))
 			{
-				auto c = colors[v0_index]; // TODO(adel) lerp the triangle verts colors
 				candidate_pixel.z = v0.z * alpha + v1.z * beta + v2.z * gamma;
-				//glm::u8vec4 c = glm::vec4{ colors[v0_index] } *alpha + glm::vec4{ colors[v1_index] } *beta + glm::vec4{ colors[v2_index] } *gamma;
+				//glm::u8vec4 c = glm::vec4{ colors[v0_index] } *alpha + glm::vec4{ colors[v1_index] } *beta + glm::vec4{ colors[v2_index] } *gamma
+
+				// do a prespective-correct texture mapping
+				float w_recp =
+					(1 / state->m_model.verts_w_coords[v0_index]) * alpha +
+					(1 / state->m_model.verts_w_coords[v1_index]) * beta +
+					(1 / state->m_model.verts_w_coords[v2_index]) * gamma;
+
+				glm::vec2 t =
+					(state->m_model.tex_coords[triangle.t_indices.x] / state->m_model.verts_w_coords[v0_index]) * alpha +
+					(state->m_model.tex_coords[triangle.t_indices.y] / state->m_model.verts_w_coords[v1_index]) * beta +
+					(state->m_model.tex_coords[triangle.t_indices.z] / state->m_model.verts_w_coords[v2_index]) * gamma;
+				t /= w_recp;
+
+				auto c = sample_texture(state->m_model.textures[0], t);
 				draw_point(candidate_pixel, c);
 			}
 		}
@@ -381,3 +379,27 @@ std::pair<glm::ivec2, glm::ivec2> Rasterizer::triangle_bounding_box(const glm::i
 	return { {most_left,most_bottom},{most_right,most_top} };
 }
 
+__forceinline float implicit_2d_line_eq(glm::vec2 line_left_p, glm::vec2 line_right_p, glm::vec2 p)
+{
+	//ZoneScoped;
+	// p0 left  --  p1 right
+	// f(x,y) = (y0 −y1)x +(x1 −x0)y +x0y1 −x1y0
+	if (line_left_p.x > line_right_p.x)
+	{
+		std::swap(line_left_p, line_right_p);
+	}
+	auto c0 = line_left_p.y - line_right_p.y;
+	auto c1 = line_right_p.x - line_left_p.x;
+	auto c2 = (line_left_p.x * line_right_p.y) - (line_right_p.x * line_left_p.y);
+	return c0 * p.x + c1 * p.y + c2;
+}
+
+
+glm::u8vec4 Rasterizer::sample_texture(Texture& t, glm::vec2 uv)
+{
+	size_t row = (t.height - 1) * uv.y;
+	size_t col = (t.width - 1) * uv.x;
+
+	char* start = t.data + row * (t.width * t.bytes_per_pixel) + (col * t.bytes_per_pixel);
+	return glm::u8vec4{ *start , *(start + 1), *(start + 2) , 0xff };
+}
