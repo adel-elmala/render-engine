@@ -45,6 +45,7 @@ struct Camera
 	glm::vec3 position;
 	glm::vec3 lookat;
 	glm::vec3 up;
+	float sensitivity;
 };
 
 struct SwapChain
@@ -78,10 +79,17 @@ enum DRAWING_MODE
 struct Window
 {
 	std::mutex m;
-	int cursor_x;
-	int cursor_y;
-	unsigned  int win_width;
-	unsigned int win_height;
+	float cursor_dx;
+	float cursor_dy;
+	float mouse_yaw;
+	float mouse_pitch;
+	bool enable_mouse_movement;
+	bool move_cam_left;
+	bool move_cam_right;
+	bool move_cam_forward;
+	bool move_cam_back;
+	int win_width;
+	int win_height;
 	unsigned int win_bytes_per_pixel;
 	bool win_resized;
 	void* win_surface;

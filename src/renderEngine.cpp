@@ -19,7 +19,7 @@ RenderEngine::RenderEngine(const std::string& model_path)
 	init_camera();
 	init_view_volume();
 	init_swapchain();
-	set_drawing_mode(DRAWING_MODE::TRIANGLES);
+	set_drawing_mode(DRAWING_MODE::LINES);
 
 	m_win_manager = std::make_unique<WindowManager>();
 	m_win_manager->bind_state(&state);
@@ -43,7 +43,7 @@ void RenderEngine::start_engine()
 {
 	//ZoneScoped;
 	m_application->run();
-	
+
 	while (state.running)
 	{
 		auto start = std::chrono::system_clock::now();
@@ -59,7 +59,7 @@ void RenderEngine::start_engine()
 		auto end = std::chrono::system_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 		//m_win_manager->update_window_title(std::to_string(1000000.0 / elapsed.count()).c_str());
-		std::cout << 1000000 / elapsed.count() << std::endl;
+		//std::cout << 1000000 / elapsed.count() << std::endl;
 		//FrameMark;
 	}
 }
@@ -76,8 +76,9 @@ void RenderEngine::init_camera()
 {
 	//ZoneScoped;
 	state.m_camera.position = glm::vec3{ 0.0f,0.0f,0.0f };
-	state.m_camera.lookat = glm::vec3{ 0.0f,0.0f,-10.0f };
+	state.m_camera.lookat = glm::vec3{ 0.0f,0.0f,-1.0f };
 	state.m_camera.up = glm::vec3{ 0.0f,1.0f,0.0f };
+	state.m_camera.sensitivity = 0.6f;
 }
 
 void RenderEngine::init_view_volume()

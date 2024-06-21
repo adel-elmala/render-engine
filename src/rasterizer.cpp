@@ -85,7 +85,7 @@ void Rasterizer::draw_point(glm::vec3& point, glm::u8vec4& color)
 	//ZoneScoped;
 	//std::scoped_lock lock(state->m_swapchain.m);
 
-	float* z_buffer_current_value = (state->m_swapchain.z_buffer + (unsigned int)(state->m_swapchain.frame_width * point.y) + (unsigned int)point.x);
+	float* z_buffer_current_value = (state->m_swapchain.z_buffer + (state->m_swapchain.frame_width * (int)point.y) + (int)point.x);
 	if (point.z < *z_buffer_current_value)
 		return;
 

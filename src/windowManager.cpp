@@ -62,6 +62,17 @@ bool WindowManager::init()
 		state->m_window.win_height = m_height;
 	}
 
+	// init ui state
+	state->m_window.mouse_yaw = -90.0f;
+	state->m_window.mouse_pitch = 0.0f;
+	state->m_window.cursor_dx = 0.0f;
+	state->m_window.cursor_dy = 0.0f;
+	state->m_window.move_cam_back = false;
+	state->m_window.move_cam_forward = false;
+	state->m_window.move_cam_left = false;
+	state->m_window.move_cam_right = false;
+	state->m_window.enable_mouse_movement = false;
+
 	return true;
 }
 
@@ -79,11 +90,12 @@ void WindowManager::start_event_loop()
 
 	SDL_Event event;
 	bool resized = false;
-
 	while (state->running) {
 
 		while (SDL_PollEvent(&event) != 0)
 		{
+			state->m_window.cursor_dx = 0.0f;
+			state->m_window.cursor_dy = 0.0f;
 			switch (event.type)
 			{
 			case SDL_QUIT:
@@ -91,16 +103,60 @@ void WindowManager::start_event_loop()
 				state->running = false;
 				break;
 			case SDL_MOUSEMOTION:
+				state->m_window.cursor_dx = event.motion.xrel;
+				state->m_window.cursor_dy = event.motion.yrel;
+				//std::cout << "X: " << state->m_window.cursor_dx << " ,Y: " << state->m_window.cursor_dy << "\n";
 				break;
 			case SDL_MOUSEBUTTONDOWN:
+				if (event.button.button == 1)
+					state->m_window.enable_mouse_movement = true;
 				break;
 			case SDL_MOUSEBUTTONUP:
+				if (event.button.button == 1)
+					state->m_window.enable_mouse_movement = false;
 				break;
 			case SDL_KEYDOWN:
 				std::cout << "KEYDOWN event\tkey: " << SDL_GetKeyName(event.key.keysym.sym) << "\n";
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_w:
+					state->m_window.move_cam_forward = true;
+					break;
+				case SDLK_s:
+					state->m_window.move_cam_back = true;
+					break;
+				case SDLK_d:
+					state->m_window.move_cam_right = true;
+					break;
+				case SDLK_a:
+					state->m_window.move_cam_left = true;
+					break;
+				case SDLK_ESCAPE:
+					state->running = false;
+					break;
+				default:
+					break;
+				}
 				break;
 			case SDL_KEYUP:
 				std::cout << "KEYUP event\tkey: " << SDL_GetKeyName(event.key.keysym.sym) << "\n";
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_w:
+					state->m_window.move_cam_forward = false;
+					break;
+				case SDLK_s:
+					state->m_window.move_cam_back = false;
+					break;
+				case SDLK_d:
+					state->m_window.move_cam_right = false;
+					break;
+				case SDLK_a:
+					state->m_window.move_cam_left = false;
+					break;
+				default:
+					break;
+				}
 				break;
 			case SDL_WINDOWEVENT: // resize event
 				switch (event.window.event)
@@ -113,7 +169,7 @@ void WindowManager::start_event_loop()
 				default:
 					break;
 				}
-
+				break;
 			default:
 				break;
 			}

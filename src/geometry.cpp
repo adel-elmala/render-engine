@@ -12,11 +12,11 @@ Geometry::~Geometry()
 void Geometry::update_world_transform()
 {
 	//ZoneScoped;
-	static float count = 0;
+	static char count = 0;
 	model_world_transform = glm::identity<glm::mat4>();
-	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,-150.0f});
+	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,-150.0f });
 	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.25f,-0.25f ,0.25f });
-	model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
+	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
 	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-90.0f });
 	//model_world_transform = glm::scale(model_world_transform, glm::vec3{ 40.0f,-40.0f ,40.0f });
 	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
@@ -25,14 +25,35 @@ void Geometry::update_world_transform()
 void Geometry::update_camera_transform()
 {
 	//ZoneScoped;
+	// update the camera state according to Keyboard/Mouse input
+
+	if (state->m_window.enable_mouse_movement)
+	{
+		state->m_window.mouse_yaw += state->m_window.cursor_dx * state->m_camera.sensitivity;
+		state->m_window.mouse_pitch += state->m_window.cursor_dy * state->m_camera.sensitivity;
+
+		state->m_camera.lookat.x = cos(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
+		state->m_camera.lookat.y = sin(glm::radians(state->m_window.mouse_pitch));
+		state->m_camera.lookat.z = sin(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
+	}
 
 	auto eye = state->m_camera.position;
-	auto gaze = state->m_camera.lookat - state->m_camera.position;
+	auto gaze = state->m_camera.lookat;
 	auto up = state->m_camera.up;
 	// camera coords basis
 	auto w = -(glm::normalize(gaze));
 	auto u = glm::normalize(glm::cross(up, w));
 	auto v = glm::cross(w, u);
+
+
+	if (state->m_window.move_cam_right)
+		state->m_camera.position += u * state->m_camera.sensitivity;
+	if (state->m_window.move_cam_left)
+		state->m_camera.position -= u * state->m_camera.sensitivity;
+	if (state->m_window.move_cam_forward)
+		state->m_camera.position -= w * state->m_camera.sensitivity;
+	if (state->m_window.move_cam_back)
+		state->m_camera.position += w * state->m_camera.sensitivity;
 
 	glm::mat4 translate_eye_to_origin(
 		{ 1.0f, 0.0f, 0.0f, -eye.x },
