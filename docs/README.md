@@ -1,7 +1,10 @@
 # Render Engine Design
 CPU based render engine - No GPU API hassule is being used.
 
+> NOTE : This Readme might not be updated to include changes in the code base yet.
+ 
 Design is still in progress.
+
 # PipeLine
 ![Graphics Pipeline](imgs/gppln.png "Graphics Pipeline")
 
