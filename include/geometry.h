@@ -12,7 +12,7 @@ public:
 	void run();
 
 private:
-	
+
 	void lighting_calc();
 	void clipping();
 	void clip_triangles();

@@ -14,7 +14,6 @@ public:
 	~Application();
 
 	void run();
-
 	void bind_state(Engine_State* engine_state) { if (engine_state) state = engine_state; }
 private:
 

@@ -23,10 +23,10 @@ struct Face
 
 struct Texture
 {
+	char* data;
 	int width;
 	int height;
 	int bytes_per_pixel;
-	char* data;
 };
 
 struct Model
@@ -79,6 +79,10 @@ enum DRAWING_MODE
 struct Window
 {
 	std::mutex m;
+	void* win_surface;
+	int win_width;
+	int win_height;
+	unsigned int win_bytes_per_pixel;
 	float cursor_dx;
 	float cursor_dy;
 	float mouse_yaw;
@@ -88,11 +92,7 @@ struct Window
 	bool move_cam_right;
 	bool move_cam_forward;
 	bool move_cam_back;
-	int win_width;
-	int win_height;
-	unsigned int win_bytes_per_pixel;
 	bool win_resized;
-	void* win_surface;
 };
 
 struct Engine_State
@@ -102,8 +102,8 @@ struct Engine_State
 	Window m_window;
 	SwapChain m_swapchain;
 	Camera m_camera;
-	DRAWING_MODE m_mode;
 	ViewVolume m_view_volume;
-	std::atomic_bool running;
 	size_t n_threads;
+	DRAWING_MODE m_mode;
+	std::atomic_bool running;
 };

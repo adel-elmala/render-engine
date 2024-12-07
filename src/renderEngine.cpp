@@ -70,6 +70,7 @@ RenderEngine::~RenderEngine()
 	engine_loop.join();
 	free(state.m_swapchain.back_buffer);
 	free(state.m_swapchain.front_buffer);
+	free(state.m_swapchain.z_buffer);
 }
 
 void RenderEngine::init_camera()
@@ -85,7 +86,7 @@ void RenderEngine::init_view_volume()
 {
 	//ZoneScoped;
 	state.m_view_volume.near_plane = -50.0f;
-	state.m_view_volume.far_plane = -350.0f;
+	state.m_view_volume.far_plane = -150.0f;
 	state.m_view_volume.left_plane = -100.0f;
 	state.m_view_volume.right_plane = 100.0f;
 	state.m_view_volume.top_plane = 100.0f;
