@@ -49,7 +49,13 @@ bool WindowManager::init()
 			return false;
 		}
 	}
+
 	m_window_surface = SDL_GetWindowSurface(m_window_handle);
+	if (NULL == m_window_surface)
+	{
+		std::cerr << "SDL could not acquire window surface! SDL_Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
 
 	// update engine state
 	{
@@ -76,9 +82,17 @@ bool WindowManager::init()
 	return true;
 }
 
-bool WindowManager::resize(unsigned int width, unsigned int height)
+bool WindowManager::resize()
 {
 	//ZoneScoped;
+	std::unique_lock lock(state->m_window.m);
+	SDL_GetWindowSize(m_window_handle, (int*)&m_width, (int*)&m_height);
+	m_window_surface = SDL_GetWindowSurface(m_window_handle);
+	state->m_window.width = m_width;
+	state->m_window.height = m_height;
+	state->m_window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
+	state->m_window.surface = m_window_surface->pixels;
+	state->m_window.resized = true;
 
 	return true;
 }
@@ -89,7 +103,6 @@ void WindowManager::start_event_loop()
 	//ZoneScoped;
 
 	SDL_Event event;
-	bool resized = false;
 	while (state->running) {
 
 		while (SDL_PollEvent(&event) != 0)
@@ -158,8 +171,7 @@ void WindowManager::start_event_loop()
 				{
 				case SDL_WINDOWEVENT_RESIZED:
 				case SDL_WINDOWEVENT_SIZE_CHANGED:
-					std::cout << "resized\n";
-					resized = true;
+					resize();
 					break;
 				default:
 					break;
@@ -167,20 +179,6 @@ void WindowManager::start_event_loop()
 				break;
 			default:
 				break;
-			}
-		}
-		if (resized) {
-			resized = false;
-			// update engine state
-			{
-				std::unique_lock lock(state->m_window.m);
-				SDL_GetWindowSize(m_window_handle, (int*)&m_width, (int*)&m_height);
-				m_window_surface = SDL_GetWindowSurface(m_window_handle);
-				state->m_window.width = m_width;
-				state->m_window.height = m_height;
-				state->m_window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
-				state->m_window.surface = m_window_surface->pixels;
-				state->m_window.resized = true;
 			}
 		}
 	}

@@ -26,7 +26,7 @@ public:
 	SDL_Surface* m_window_surface;
 private:
 	bool init();
-	bool resize(unsigned int width, unsigned int height);
+	bool resize();
 
 
 	//std::thread event_loop;
