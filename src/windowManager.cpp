@@ -94,8 +94,6 @@ void WindowManager::start_event_loop()
 
 		while (SDL_PollEvent(&event) != 0)
 		{
-			state->m_window.cursor_dx = 0.0f;
-			state->m_window.cursor_dy = 0.0f;
 			switch (event.type)
 			{
 			case SDL_QUIT:
@@ -105,7 +103,6 @@ void WindowManager::start_event_loop()
 			case SDL_MOUSEMOTION:
 				state->m_window.cursor_dx = event.motion.xrel;
 				state->m_window.cursor_dy = event.motion.yrel;
-				//std::cout << "X: " << state->m_window.cursor_dx << " ,Y: " << state->m_window.cursor_dy << "\n";
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 				if (event.button.button == 1)
@@ -116,7 +113,6 @@ void WindowManager::start_event_loop()
 					state->m_window.enable_mouse_movement = false;
 				break;
 			case SDL_KEYDOWN:
-				std::cout << "KEYDOWN event\tkey: " << SDL_GetKeyName(event.key.keysym.sym) << "\n";
 				switch (event.key.keysym.sym)
 				{
 				case SDLK_w:
@@ -139,7 +135,6 @@ void WindowManager::start_event_loop()
 				}
 				break;
 			case SDL_KEYUP:
-				std::cout << "KEYUP event\tkey: " << SDL_GetKeyName(event.key.keysym.sym) << "\n";
 				switch (event.key.keysym.sym)
 				{
 				case SDLK_w:

@@ -79,7 +79,7 @@ void RenderEngine::init_camera()
 	state.m_camera.position = glm::vec3{ 0.0f,0.0f,0.0f };
 	state.m_camera.lookat = glm::vec3{ 0.0f,0.0f,-1.0f };
 	state.m_camera.up = glm::vec3{ 0.0f,1.0f,0.0f };
-	state.m_camera.sensitivity = 0.6f;
+	state.m_camera.sensitivity = 1.0f;
 }
 
 void RenderEngine::init_view_volume()

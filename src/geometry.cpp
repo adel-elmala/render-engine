@@ -27,20 +27,23 @@ void Geometry::update_camera_transform()
 	{
 		state->m_window.mouse_yaw += state->m_window.cursor_dx * state->m_camera.sensitivity;
 		state->m_window.mouse_pitch += state->m_window.cursor_dy * state->m_camera.sensitivity;
+		// reset cursor deltas, otherwise the camera will continue to drift in the last registered direction
+		state->m_window.cursor_dx = 0;
+		state->m_window.cursor_dy = 0;
 
 		state->m_camera.lookat.x = cos(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
 		state->m_camera.lookat.y = sin(glm::radians(state->m_window.mouse_pitch));
 		state->m_camera.lookat.z = sin(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
 	}
 
-	auto eye = state->m_camera.position;
+	auto& eye = state->m_camera.position;
 	auto gaze = state->m_camera.lookat;
 	auto up = state->m_camera.up;
+
 	// camera coords basis
 	auto w = -(glm::normalize(gaze));
 	auto u = glm::normalize(glm::cross(up, w));
 	auto v = glm::cross(w, u);
-
 
 	if (state->m_window.move_cam_right)
 		state->m_camera.position += u * state->m_camera.sensitivity;
@@ -64,7 +67,6 @@ void Geometry::update_camera_transform()
 		{ 0.0f, 0.0f, 0.0f, 1.0f });
 
 	world_camera_transform = glm::transpose(align_basis) * glm::transpose(translate_eye_to_origin);
-
 }
 
 void Geometry::update_perspective_transform()
