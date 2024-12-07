@@ -55,11 +55,11 @@ bool WindowManager::init()
 	{
 		std::unique_lock lock(state->m_window.m);
 		state->running = true;
-		state->m_window.win_resized = false;
-		state->m_window.win_bytes_per_pixel = m_window_surface->format->BytesPerPixel;
-		state->m_window.win_surface = m_window_surface->pixels;
-		state->m_window.win_width = m_width;
-		state->m_window.win_height = m_height;
+		state->m_window.resized = false;
+		state->m_window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
+		state->m_window.surface = m_window_surface->pixels;
+		state->m_window.width = m_width;
+		state->m_window.height = m_height;
 	}
 
 	// init ui state
@@ -176,11 +176,11 @@ void WindowManager::start_event_loop()
 				std::unique_lock lock(state->m_window.m);
 				SDL_GetWindowSize(m_window_handle, (int*)&m_width, (int*)&m_height);
 				m_window_surface = SDL_GetWindowSurface(m_window_handle);
-				state->m_window.win_width = m_width;
-				state->m_window.win_height = m_height;
-				state->m_window.win_bytes_per_pixel = m_window_surface->format->BytesPerPixel;
-				state->m_window.win_surface = m_window_surface->pixels;
-				state->m_window.win_resized = true;
+				state->m_window.width = m_width;
+				state->m_window.height = m_height;
+				state->m_window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
+				state->m_window.surface = m_window_surface->pixels;
+				state->m_window.resized = true;
 			}
 		}
 	}

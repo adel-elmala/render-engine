@@ -12,9 +12,9 @@ using namespace std::chrono_literals;
 RenderEngine::RenderEngine(const std::string& model_path)
 {
 	//ZoneScoped;
-	state.m_window.win_height = 600;
-	state.m_window.win_width = 800;
-	state.m_window.win_bytes_per_pixel = 4;
+	state.m_window.height = 600;
+	state.m_window.width = 800;
+	state.m_window.bytes_per_pixel = 4;
 	state.running = true;
 	init_camera();
 	init_view_volume();
@@ -50,7 +50,7 @@ void RenderEngine::start_engine()
 
 		// render frame
 		state.m_model = state.m_model_original;
-		if (state.m_window.win_resized)
+		if (state.m_window.resized)
 			resize_swapchain();
 		m_geometry->run();
 		m_rasterizer->run();
@@ -103,13 +103,13 @@ void RenderEngine::init_swapchain()
 {
 	//ZoneScoped;
 	std::unique_lock lock(state.m_swapchain.m);
-	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
-	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
-	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.win_height * state.m_window.win_width * sizeof(float));
+	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.height * state.m_window.width * sizeof(float));
 
-	state.m_swapchain.frame_height = state.m_window.win_height;
-	state.m_swapchain.frame_width = state.m_window.win_width;
-	state.m_swapchain.frame_bytes_per_pixel = state.m_window.win_bytes_per_pixel;
+	state.m_swapchain.frame_height = state.m_window.height;
+	state.m_swapchain.frame_width = state.m_window.width;
+	state.m_swapchain.frame_bytes_per_pixel = state.m_window.bytes_per_pixel;
 
 	// reset z_buffer
 	auto z_buffer_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width;
@@ -129,15 +129,15 @@ void RenderEngine::resize_swapchain()
 	free(state.m_swapchain.front_buffer);
 	free(state.m_swapchain.z_buffer);
 	// allocate new swap chain with new dimenstions
-	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
-	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel);
-	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.win_height * state.m_window.win_width * sizeof(float));
+	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.height * state.m_window.width * sizeof(float));
 
-	state.m_swapchain.frame_height = state.m_window.win_height;
-	state.m_swapchain.frame_width = state.m_window.win_width;
-	state.m_swapchain.frame_bytes_per_pixel = state.m_window.win_bytes_per_pixel;
+	state.m_swapchain.frame_height = state.m_window.height;
+	state.m_swapchain.frame_width = state.m_window.width;
+	state.m_swapchain.frame_bytes_per_pixel = state.m_window.bytes_per_pixel;
 
-	state.m_window.win_resized = false;
+	state.m_window.resized = false;
 }
 
 void RenderEngine::present_swapchain()
@@ -160,11 +160,11 @@ void RenderEngine::present_swapchain()
 		*start = -1.0f;
 	}
 
-	auto win_surface_size = state.m_window.win_height * state.m_window.win_width * state.m_window.win_bytes_per_pixel;
+	auto win_surface_size = state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel;
 
 	// copy frontbuffer to window surface
 	auto smaller_size = std::min(win_surface_size, swapchain_size);
-	memcpy(state.m_window.win_surface, state.m_swapchain.front_buffer, smaller_size);
+	memcpy(state.m_window.surface, state.m_swapchain.front_buffer, smaller_size);
 
 	m_win_manager->update_surface();
 }

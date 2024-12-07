@@ -13,6 +13,13 @@
 //#include <tracy/Tracy.hpp>
 //#define TRACY_ENABLE
 
+enum DRAWING_MODE
+{
+	POINTS,
+	LINES,
+	TRIANGLES
+};
+
 struct Face
 {
 	glm::vec3 p_indices;
@@ -69,20 +76,13 @@ struct ViewVolume
 	float bottom_plane;
 };
 
-enum DRAWING_MODE
-{
-	POINTS,
-	LINES,
-	TRIANGLES
-};
-
 struct Window
 {
 	std::mutex m;
-	void* win_surface;
-	int win_width;
-	int win_height;
-	unsigned int win_bytes_per_pixel;
+	void* surface;
+	int width;
+	int height;
+	unsigned int bytes_per_pixel;
 	float cursor_dx;
 	float cursor_dy;
 	float mouse_yaw;
@@ -92,7 +92,7 @@ struct Window
 	bool move_cam_right;
 	bool move_cam_forward;
 	bool move_cam_back;
-	bool win_resized;
+	bool resized;
 };
 
 struct Engine_State
