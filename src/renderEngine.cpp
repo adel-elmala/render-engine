@@ -87,10 +87,10 @@ void RenderEngine::init_view_volume()
 	//ZoneScoped;
 	state.m_view_volume.near_plane = -50.0f;
 	state.m_view_volume.far_plane = -150.0f;
-	state.m_view_volume.left_plane = -100.0f;
-	state.m_view_volume.right_plane = 100.0f;
-	state.m_view_volume.top_plane = 100.0f;
-	state.m_view_volume.bottom_plane = -100.0f;
+	state.m_view_volume.left_plane = -50.0f;
+	state.m_view_volume.right_plane = 50.0f;
+	state.m_view_volume.top_plane = 50.0f;
+	state.m_view_volume.bottom_plane = -50.0f;
 }
 
 void RenderEngine::set_drawing_mode(DRAWING_MODE mode)

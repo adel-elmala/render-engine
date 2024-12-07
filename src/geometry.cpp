@@ -15,11 +15,7 @@ void Geometry::update_world_transform()
 	static char count = 0;
 	model_world_transform = glm::identity<glm::mat4>();
 	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,state->m_view_volume.near_plane - (state->m_view_volume.near_plane - state->m_view_volume.far_plane) / 2 });
-	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.25f,-0.25f ,0.25f });
-	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
-	//model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0.0f,0.0f ,-90.0f });
-	//model_world_transform = glm::scale(model_world_transform, glm::vec3{ 40.0f,-40.0f ,40.0f });
-	//model_world_transform = glm::rotate(model_world_transform, glm::radians((float)(count += 0.25)), glm::vec3{ 0.0f,1.0f ,0.0f });
+	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.15f,-0.15f ,0.15f });
 }
 
 void Geometry::update_camera_transform()
