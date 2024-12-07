@@ -21,8 +21,8 @@ void Geometry::update_world_transform()
 void Geometry::update_camera_transform()
 {
 	//ZoneScoped;
-	// update the camera state according to Keyboard/Mouse input
 
+	// update the camera state according to Keyboard/Mouse input
 	if (state->m_window.enable_mouse_movement)
 	{
 		state->m_window.mouse_yaw += state->m_window.cursor_dx * state->m_camera.sensitivity;
@@ -145,7 +145,7 @@ void Geometry::send_to_camera_space()
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
 
-	// main thread handle the remaingings left
+	// main thread handle the remainings left
 	for (size_t start = state->n_threads * thread_share; start < n_pos; ++start)
 	{
 		postions[start] = m * postions[start];
@@ -155,6 +155,7 @@ void Geometry::send_to_camera_space()
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
+	// NOTE: no need to multiply by (M)^1T as the matrix is a combination of rigid-body-transforms + unifrom scale -- check later when needed
 	//auto mn = glm::transpose(glm::inverse(m));
 	//for (auto& face_normal : state->m_model.face_normals)
 	//{

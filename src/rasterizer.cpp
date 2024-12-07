@@ -195,7 +195,7 @@ void Rasterizer::draw_line(glm::vec3& p1, glm::vec3& p2, glm::u8vec4& color)
 		right = p1;
 	}
 
-	float slope = (right.y - left.y) / ((float)right.x - (float)left.x);
+	float slope = (right.y - left.y) / (right.x - left.x);
 
 	// vertical line
 	if (left.x == right.x)
@@ -393,7 +393,6 @@ __forceinline float implicit_2d_line_eq(glm::vec2 line_left_p, glm::vec2 line_ri
 	auto c2 = (line_left_p.x * line_right_p.y) - (line_right_p.x * line_left_p.y);
 	return c0 * p.x + c1 * p.y + c2;
 }
-
 
 glm::u8vec4 Rasterizer::sample_texture(Texture& t, glm::vec2 uv)
 {

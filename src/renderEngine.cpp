@@ -59,7 +59,7 @@ void RenderEngine::start_engine()
 		auto end = std::chrono::system_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 		//m_win_manager->update_window_title(std::to_string(1000000.0 / elapsed.count()).c_str());
-		std::cout << "\r" << 1000000 / elapsed.count();
+		std::cout << "\rFPS: " << 1000000 / elapsed.count();
 		//FrameMark;
 	}
 }

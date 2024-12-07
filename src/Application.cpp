@@ -20,8 +20,8 @@ Application::~Application()
 	fast_obj_destroy((fastObjMesh*)m_mesh);
 	for (auto& texture : state->m_model.textures)
 		stbi_image_free(texture.data);
-
 }
+
 void Application::run()
 {
 	//ZoneScoped;
