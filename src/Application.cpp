@@ -27,6 +27,7 @@ void Application::run()
 	//ZoneScoped;
 	parse_model(m_model_path);
 	load_texture("../../assets/bunny/bunny-atlas.jpg");
+	// load_texture("../../assets/cube3/cube.png");
 	state->m_model_original = state->m_model;
 }
 
@@ -36,11 +37,11 @@ void Application::parse_model(const std::string& path)
 	m_mesh = fast_obj_read(path.c_str());
 	fastObjMesh* mesh = (fastObjMesh*)m_mesh;
 
-	uint32_t p_count = mesh->position_count;
-	uint32_t c_count = mesh->color_count;
-	uint32_t t_count = mesh->texcoord_count;
-	uint32_t n_count = mesh->normal_count;
-	uint32_t f_count = mesh->face_count;
+	int32_t p_count = mesh->position_count - 1;
+	int32_t c_count = mesh->color_count;
+	int32_t t_count = mesh->texcoord_count - 1;
+	int32_t n_count = mesh->normal_count - 1;
+	int32_t f_count = mesh->face_count;
 
 	state->m_model.positions.resize(p_count);
 	state->m_model.verts_w_coords.resize(p_count);
@@ -50,7 +51,7 @@ void Application::parse_model(const std::string& path)
 	state->m_model.faces.resize(f_count);
 
 	// copy positions
-	for (uint32_t i = 0, j = 0; j < p_count; i += 3, ++j)
+	for (uint32_t i = 3, j = 0; j < p_count; i += 3, ++j)
 	{
 		state->m_model.positions[j] = glm::vec4{ mesh->positions[i],mesh->positions[i + 1],mesh->positions[i + 2] ,1.0f };
 	}
@@ -79,13 +80,13 @@ void Application::parse_model(const std::string& path)
 	}
 
 	// copy tex_coords	
-	for (uint32_t i = 0, j = 0; j < t_count; i += 2, ++j)
+	for (uint32_t i = 2, j = 0; j < t_count; i += 2, ++j)
 	{
 		state->m_model.tex_coords[j] = glm::vec2{ mesh->texcoords[i],mesh->texcoords[i + 1] };
 	}
 
 	// face normals
-	for (uint32_t i = 0, j = 0; j < n_count; i += 3, ++j)
+	for (uint32_t i = 3, j = 0; j < n_count; i += 3, ++j)
 	{
 		state->m_model.face_normals[j] = glm::vec4{ mesh->normals[i],mesh->normals[i + 1],mesh->normals[i + 2],0.0f };
 	}
@@ -94,9 +95,27 @@ void Application::parse_model(const std::string& path)
 	for (uint32_t i = 0, j = 0; j < f_count; i += 3, ++j)
 	{
 		Face tmp{};
-		tmp.p_indices = glm::vec3{ mesh->indices[i].p ,mesh->indices[i + 1].p ,mesh->indices[i + 2].p };
-		tmp.n_indices = glm::vec3{ mesh->indices[i].n ,mesh->indices[i + 1].n ,mesh->indices[i + 2].n };
-		tmp.t_indices = glm::vec3{ mesh->indices[i].t ,mesh->indices[i + 1].t ,mesh->indices[i + 2].t };
+		tmp.p_indices = glm::vec3{ mesh->indices[i].p - 1 ,mesh->indices[i + 1].p - 1,mesh->indices[i + 2].p - 1 };
+		tmp.n_indices = glm::vec3{ mesh->indices[i].n - 1,mesh->indices[i + 1].n - 1,mesh->indices[i + 2].n - 1 };
+		tmp.t_indices = glm::vec3{ mesh->indices[i].t - 1,mesh->indices[i + 1].t - 1 ,mesh->indices[i + 2].t - 1 };
+
+		// generate face normals if not found in the model
+		if (n_count < 1)
+		{
+			auto v0 = state->m_model.positions[tmp.p_indices[0]];
+			auto v1 = state->m_model.positions[tmp.p_indices[1]];
+			auto v2 = state->m_model.positions[tmp.p_indices[2]];
+
+			auto e0 = v0 - v1;
+			auto e1 = v2 - v1;
+			auto n = glm::normalize(
+				glm::cross(
+					glm::vec3(e0.x, e0.y, e0.z),
+					glm::vec3(e1.x, e1.y, e1.z))
+			);
+			state->m_model.face_normals.push_back(glm::vec4(n, 0.0f));
+			tmp.n_indices = glm::vec3{ j,j,j };
+		}
 
 		state->m_model.faces[j] = tmp;
 	}

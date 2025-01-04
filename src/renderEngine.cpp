@@ -20,7 +20,8 @@ RenderEngine::RenderEngine(const std::string& model_path)
 	init_view_volume();
 	init_swapchain();
 	set_drawing_mode(DRAWING_MODE::TRIANGLES);
-
+	
+	
 	m_win_manager = std::make_unique<WindowManager>();
 	m_win_manager->bind_state(&state);
 	m_win_manager->run();
@@ -79,7 +80,7 @@ void RenderEngine::init_camera()
 	state.m_camera.position = glm::vec3{ 0.0f,0.0f,0.0f };
 	state.m_camera.lookat = glm::vec3{ 0.0f,0.0f,-1.0f };
 	state.m_camera.up = glm::vec3{ 0.0f,1.0f,0.0f };
-	state.m_camera.sensitivity = 1.0f;
+	state.m_camera.sensitivity = .3f;
 }
 
 void RenderEngine::init_view_volume()
@@ -150,7 +151,7 @@ void RenderEngine::present_swapchain()
 
 	// set back buffer with clear color
 	auto swapchain_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width * state.m_swapchain.frame_bytes_per_pixel;
-	memset(state.m_swapchain.back_buffer, 0x00, swapchain_size);
+	memset(state.m_swapchain.back_buffer, 0x69, swapchain_size);
 
 	// reset z_buffer
 	auto z_buffer_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width;

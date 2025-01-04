@@ -150,6 +150,12 @@ void Rasterizer::draw_lines()
 				draw_line(v0, v1, c0);
 				draw_line(v0, v2, c0);
 				draw_line(v1, v2, c0);
+				// face normal
+				//auto center = (v0 + v1 + v2) / 3.0f;
+				//glm::vec3 n = glm::normalize(state->m_model.face_normals[triangle.n_indices[0]]);
+				//auto n_end = center + (n * 60.0f);
+				//auto c = glm::u8vec4(255, 0, 0, 1);
+				//draw_line(center, n_end, c);
 			}
 		};
 	// launch threads
@@ -318,9 +324,16 @@ void Rasterizer::draw_triangle(Face& triangle)
 	auto v2_index = triangle.p_indices.z;
 
 	// face verts
-	auto& v0 = verticies[v0_index];
-	auto& v1 = verticies[v1_index];
-	auto& v2 = verticies[v2_index];
+	glm::vec3 v0 = verticies[v0_index];
+	glm::vec3 v1 = verticies[v1_index];
+	glm::vec3 v2 = verticies[v2_index];
+
+	// // face normal
+	// auto center = (v0 + v1 + v2) / 3.0f;
+	// glm::vec3 n = glm::normalize(state->m_model.face_normals[triangle.n_indices[0]]);
+	// auto n_end = center + (n * 60.0f);
+	// auto c = glm::u8vec4(255, 0, 0, 1);
+	// draw_line(center, n_end, c);
 
 	auto alpha_1 = implicit_2d_line_eq(v1, v2, v0);
 	auto beta_1 = implicit_2d_line_eq(v0, v2, v1);

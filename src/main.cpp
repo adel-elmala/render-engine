@@ -7,11 +7,10 @@ int main(int argc, char** argv)
 {
 
 	RenderEngine engine("../../assets/bunny/bunny.obj");
-	//engine.start_engine();
-	//_sleep(10000);
-	//VulkanWrapper app;
+	//RenderEngine engine("../../assets/cube3/cube.obj");
 
-	//app.run();
+	// VulkanWrapper app;
+	// app.run();
 
 	return EXIT_SUCCESS;
 }

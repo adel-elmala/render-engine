@@ -15,6 +15,7 @@ private:
 
 	void lighting_calc();
 	void clipping();
+	void backface_cull();
 	void clip_triangles();
 	bool in_view_volume(glm::vec4& point);
 
