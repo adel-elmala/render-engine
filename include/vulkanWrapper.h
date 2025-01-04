@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO(adel) use window manager from the engine here (which uses SDL2)
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -8,8 +9,9 @@
 
 class VulkanWrapper {
 public:
+	VulkanWrapper();
+	~VulkanWrapper();
 	void run();
-
 private:
 	void initVulkan();
 	void mainLoop();
@@ -22,16 +24,27 @@ private:
 	bool selectPhysicalDevice();
 	bool isDeviceSuitable(VkPhysicalDevice device);
 	bool createLogicalDevice();
+	void createCommandPool();
+	void createSwapChain();
+	void createCommandBuffers();
+	void destroyCommandBuffers();
+	void createSyncPrimitives();
 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 	std::vector<const char*> getRequiredExtensions();
 
 	VkInstance instance;
-	VkDebugUtilsMessengerEXT debugMessenger;
+	VkDebugUtilsMessengerEXT debug_messenger;
 	VkSurfaceKHR surface;
 	VkPhysicalDevice physical_device;
-	VkQueue graphics_queue;
+	VkQueue graphics_queue ;
 	VkDevice device;
+	VkCommandPool command_pool;
+	VkSwapchainKHR swap_chain;
+	std::vector<VkImage> images;
+	std::vector<VkImageView> image_views;
+	std::vector<VkCommandBuffer> cmd_buffers;
+	std::vector<VkFence> wait_fences;
 	std::optional<uint32_t> graphics_family_queue_index;
 	GLFWwindow* window;
 	unsigned int win_width = 800;
