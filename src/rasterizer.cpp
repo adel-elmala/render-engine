@@ -15,13 +15,13 @@ void Rasterizer::run()
 
 	switch (state->m_mode)
 	{
-	case DRAWING_MODE::POINTS:
+	case DRAWING_MODE::DRAWING_MODE_POINTS:
 		draw_points();
 		break;
-	case DRAWING_MODE::LINES:
+	case DRAWING_MODE::DRAWING_MODE_LINES:
 		draw_lines();
 		break;
-	case DRAWING_MODE::TRIANGLES:
+	case DRAWING_MODE::DRAWING_MODE_TRIANGLES:
 		draw_triangles();
 		break;
 	default:

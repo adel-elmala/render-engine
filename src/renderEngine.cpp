@@ -19,7 +19,7 @@ RenderEngine::RenderEngine(const std::string& model_path)
 	init_camera();
 	init_view_volume();
 	init_swapchain();
-	set_drawing_mode(DRAWING_MODE::TRIANGLES);
+	set_drawing_mode(DRAWING_MODE::DRAWING_MODE_TRIANGLES);
 
 	m_win_manager = std::make_unique<WindowManager>();
 	m_win_manager->bind_state(&state);
