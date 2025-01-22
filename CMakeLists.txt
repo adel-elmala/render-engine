@@ -11,6 +11,9 @@ set(HEADER "include/renderEngine.h" "include/windowManager.h" "include/geometry.
 # vulkan module src
 set(VULKAN_SRC "src/vulkanWrapper.cpp" "include/vulkanWrapper.h")
 
+# d3d11 module src
+set(D3D11_SRC "src/d3d11Wrapper.cpp" "include/d3d11Wrapper.h")
+
 # logger module src
 set(LOGGER_SRC "src/logger.cpp" "include/logger.h")
 
@@ -30,6 +33,10 @@ target_link_libraries(logger_module PUBLIC)
 add_library(Vulkan_module STATIC ${VULKAN_SRC})
 target_link_libraries(Vulkan_module PUBLIC glfw glm::glm Vulkan::Vulkan logger_module)
 
+# d3d11 module library 
+add_library(D3D11_module STATIC ${D3D11_SRC})
+target_link_libraries(D3D11_module PUBLIC glfw d3d11.lib)
+
 # render engine exe.
 add_executable(${PROJECT_NAME} ${SRC})
 
@@ -37,6 +44,7 @@ target_link_libraries(${PROJECT_NAME}
 $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> # SDL2
 $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
 Vulkan_module
+D3D11_module
 logger_module
 Tracy::TracyClient
 )
