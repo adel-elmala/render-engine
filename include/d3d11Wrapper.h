@@ -4,6 +4,7 @@
 
 
 #include <vector>
+#include <string>
 
 class D3D11Wrapper
 {
@@ -20,6 +21,7 @@ private:
 	void _d3d11_set_debug_layer();
 	void _d3d11_create_swapchain();
 	void _d3d11_create_render_target();
+	void _d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path);
 
 	GLFWwindow *window;
 	unsigned int win_width = 800;
@@ -29,6 +31,11 @@ private:
 	ID3D11DeviceContext1 *d3d11DeviceContext;
 	IDXGISwapChain1 *d3d11SwapChain;
 	ID3D11RenderTargetView *d3d11FrameBufferView;
+	ID3D11VertexShader *vertexShader;
+	ID3D11PixelShader *pixelShader;
+	ID3D11InputLayout *inputLayout;
+	ID3D11Buffer *vertexBuffer;
+
 
 #ifdef NDEBUG
 	const bool enableDebugLayer = false;

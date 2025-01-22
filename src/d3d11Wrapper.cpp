@@ -3,6 +3,8 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
+#include <d3dcompiler.h>
+
 #include<assert.h>
 #include<iostream>
 
@@ -124,6 +126,93 @@ void D3D11Wrapper::_d3d11_create_render_target()
 	d3d11FrameBuffer->Release();
 }
 
+// compile and create vertex + pixel shaders
+void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path)
+{
+	// Create Vertex Shader
+	ID3DBlob *vsBlob;
+	{
+		ID3DBlob *shaderCompileErrorsBlob;
+		HRESULT hResult = D3DCompileFromFile(vs_path.c_str(), nullptr, nullptr, "vs_main", "vs_5_0", 0, 0, &vsBlob, &shaderCompileErrorsBlob);
+		if (FAILED(hResult))
+		{
+			const char *errorString = NULL;
+			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+				errorString = "Could not compile shader; file not found";
+			else if (shaderCompileErrorsBlob)
+			{
+				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+				shaderCompileErrorsBlob->Release();
+			}
+			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+			return;
+		}
+
+		hResult = d3d11Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &vertexShader);
+		assert(SUCCEEDED(hResult));
+	}
+
+	// Create Pixel Shader
+	{
+		ID3DBlob *psBlob;
+		ID3DBlob *shaderCompileErrorsBlob;
+		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, &shaderCompileErrorsBlob);
+		if (FAILED(hResult))
+		{
+			const char *errorString = NULL;
+			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+				errorString = "Could not compile shader; file not found";
+			else if (shaderCompileErrorsBlob)
+			{
+				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+				shaderCompileErrorsBlob->Release();
+			}
+			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+			return;
+		}
+
+		hResult = d3d11Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
+		assert(SUCCEEDED(hResult));
+		psBlob->Release();
+	}
+
+	// Create Input Layout
+	{
+		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
+			{
+				{"POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"COL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+
+		HRESULT hResult = d3d11Device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
+		assert(SUCCEEDED(hResult));
+		vsBlob->Release();
+	}
+
+	// Create Vertex Buffer
+	UINT numVerts;
+	UINT stride;
+	UINT offset;
+	{
+		float vertexData[] = {// x, y, r, g, b, a
+							  0.0f, 0.5f, 0.f, 1.f, 0.f, 1.f,
+							  0.5f, -0.5f, 1.f, 0.f, 0.f, 1.f,
+							  -0.5f, -0.5f, 0.f, 0.f, 1.f, 1.f};
+		stride = 6 * sizeof(float);
+		numVerts = sizeof(vertexData) / stride;
+		offset = 0;
+
+		D3D11_BUFFER_DESC vertexBufferDesc = {};
+		vertexBufferDesc.ByteWidth = sizeof(vertexData);
+		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+		D3D11_SUBRESOURCE_DATA vertexSubresourceData = {vertexData};
+
+		HRESULT hResult = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &vertexBuffer);
+		assert(SUCCEEDED(hResult));
+	}
+}
+
 void D3D11Wrapper::initD3D11()
 {
 	_d3d11_create_device();
@@ -131,6 +220,7 @@ void D3D11Wrapper::initD3D11()
 		_d3d11_set_debug_layer();
 	_d3d11_create_swapchain();
 	_d3d11_create_render_target();
+	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl",L"../../assets/shaders/shaders.hlsl");
 }
 
 void D3D11Wrapper::initWindow()
@@ -157,6 +247,26 @@ void D3D11Wrapper::mainLoop()
 		backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
 		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
 
+		RECT winRect;
+		GetClientRect(glfwGetWin32Window(window), &winRect);
+		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
+		d3d11DeviceContext->RSSetViewports(1, &viewport);
+
+		d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
+
+		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		d3d11DeviceContext->IASetInputLayout(inputLayout);
+
+		d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
+		d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
+
+		UINT stride = 6 * sizeof(float);
+		UINT numVerts = 3;
+		UINT offset = 0;
+		d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+
+		d3d11DeviceContext->Draw(numVerts, 0);
+
 		d3d11SwapChain->Present(1, 0);
 	}
 }
@@ -164,6 +274,10 @@ void D3D11Wrapper::mainLoop()
 void D3D11Wrapper::cleanup()
 {
 	std::cout << "Cleanup...\n";
+	vertexBuffer->Release();
+	inputLayout->Release();
+	vertexShader->Release();
+	pixelShader->Release();
 	d3d11FrameBufferView->Release();
 	d3d11SwapChain->Release();
 	d3d11DeviceContext->Release();

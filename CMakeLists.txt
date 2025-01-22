@@ -35,7 +35,7 @@ target_link_libraries(Vulkan_module PUBLIC glfw glm::glm Vulkan::Vulkan logger_m
 
 # d3d11 module library 
 add_library(D3D11_module STATIC ${D3D11_SRC})
-target_link_libraries(D3D11_module PUBLIC glfw d3d11.lib)
+target_link_libraries(D3D11_module PUBLIC glfw d3d11.lib d3dcompiler.lib)
 
 # render engine exe.
 add_executable(${PROJECT_NAME} ${SRC})
