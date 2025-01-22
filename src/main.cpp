@@ -1,7 +1,7 @@
 #include <cstdlib>
 
 #include "../include/renderEngine.h"
-// #include "../include/vulkanWrapper.h"
+#include "../include/vulkanWrapper.h"
 #include "../include/d3d11Wrapper.h"
 
 int main(int argc, char** argv)
