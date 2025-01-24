@@ -346,13 +346,13 @@ void Geometry::clipping()
 	// clipping base on drawing mode (points / lines / triangles)
 	switch (state->m_mode)
 	{
-	case DRAWING_MODE::POINTS:
+	case DRAWING_MODE::DRAWING_MODE_POINTS:
 		clip_triangles();
 		break;
-	case DRAWING_MODE::LINES:
+	case DRAWING_MODE::DRAWING_MODE_LINES:
 		clip_triangles();
 		break;
-	case DRAWING_MODE::TRIANGLES:
+	case DRAWING_MODE::DRAWING_MODE_TRIANGLES:
 		clip_triangles();
 		break;
 	default:
