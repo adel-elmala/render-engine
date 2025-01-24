@@ -6,11 +6,11 @@
 int main(int argc, char** argv)
 {
 
-	RenderEngine engine("../../assets/bunny/bunny.obj");
+	// RenderEngine engine("../../assets/bunny/bunny.obj");
 	//RenderEngine engine("../../assets/cube3/cube.obj");
 
-	// VulkanWrapper app;
-	// app.run();
+	VulkanWrapper app;
+	app.run();
 
 	return EXIT_SUCCESS;
 }

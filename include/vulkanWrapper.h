@@ -29,6 +29,7 @@ private:
 	void createCommandBuffers();
 	void destroyCommandBuffers();
 	void createSyncPrimitives();
+	void setupDepthStencil();
 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 	std::vector<const char*> getRequiredExtensions();
