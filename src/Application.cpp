@@ -133,7 +133,8 @@ void Application::parse_model(const std::string& path)
 void Application::load_texture(const std::string& path)
 {
 	Texture t = {};
-	t.bytes_per_pixel = state->m_swapchain.frame_bytes_per_pixel;
+
+	t.bytes_per_pixel = state->backend == BACKEND_SOFTWARE ? state->m_swapchain.frame_bytes_per_pixel : 4;
 
 	stbi_set_flip_vertically_on_load(true);
 	int n;

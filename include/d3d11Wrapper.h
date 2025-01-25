@@ -20,6 +20,9 @@ private:
 	void _d3d11_create_swapchain();
 	void _d3d11_create_render_target();
 	void _d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path);
+	void _d3d11_create_sampler_state();
+	void _d3d11_create_texture(Texture t);
+
 
 	Engine_State* state;
 	
@@ -32,6 +35,10 @@ private:
 	ID3D11PixelShader *pixelShader;
 	ID3D11InputLayout *inputLayout;
 	ID3D11Buffer *vertexBuffer;
+	ID3D11Texture2D *texture;
+	ID3D11ShaderResourceView *textureView;
+	ID3D11SamplerState *samplerState;
+
 
 #ifdef NDEBUG
 	const bool enableDebugLayer = false;

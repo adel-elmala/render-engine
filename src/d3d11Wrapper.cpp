@@ -170,7 +170,7 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 			{
 				{"POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				{"COL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+				{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}};
 
 		HRESULT hResult = d3d11Device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
 		assert(SUCCEEDED(hResult));
@@ -182,11 +182,14 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 	UINT stride;
 	UINT offset;
 	{
-		float vertexData[] = {// x, y, r, g, b, a
-							  0.0f, 0.5f, 0.f, 1.f, 0.f, 1.f,
-							  0.5f, -0.5f, 1.f, 0.f, 0.f, 1.f,
-							  -0.5f, -0.5f, 0.f, 0.f, 1.f, 1.f};
-		stride = 6 * sizeof(float);
+		float vertexData[] = {// x, y, u, v
+							  -0.5f, 0.5f, 0.f, 0.f,
+							  0.5f, -0.5f, 1.f, 1.f,
+							  -0.5f, -0.5f, 0.f, 1.f,
+							  -0.5f, 0.5f, 0.f, 0.f,
+							  0.5f, 0.5f, 1.f, 0.f,
+							  0.5f, -0.5f, 1.f, 1.f};
+		stride = 4 * sizeof(float);
 		numVerts = sizeof(vertexData) / stride;
 		offset = 0;
 
@@ -202,6 +205,43 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 	}
 }
 
+void D3D11Wrapper::_d3d11_create_sampler_state() 
+{
+	// Create Sampler State
+	D3D11_SAMPLER_DESC samplerDesc = {};
+    samplerDesc.Filter         = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    samplerDesc.AddressU       = D3D11_TEXTURE_ADDRESS_BORDER;
+    samplerDesc.AddressV       = D3D11_TEXTURE_ADDRESS_BORDER;
+    samplerDesc.AddressW       = D3D11_TEXTURE_ADDRESS_BORDER;
+    samplerDesc.BorderColor[0] = 1.0f;
+    samplerDesc.BorderColor[1] = 1.0f;
+    samplerDesc.BorderColor[2] = 1.0f;
+    samplerDesc.BorderColor[3] = 1.0f;
+    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+
+	d3d11Device->CreateSamplerState(&samplerDesc, &samplerState);
+}
+void D3D11Wrapper::_d3d11_create_texture(Texture t)
+{
+	// Create Texture
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = t.width;
+	textureDesc.Height = t.height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	D3D11_SUBRESOURCE_DATA textureSubresourceData = {};
+	textureSubresourceData.pSysMem = t.data;
+	textureSubresourceData.SysMemPitch = t.bytes_per_pixel * t.width;
+
+	d3d11Device->CreateTexture2D(&textureDesc, &textureSubresourceData, &texture);
+	d3d11Device->CreateShaderResourceView(texture, nullptr, &textureView);
+}
+
 void D3D11Wrapper::initD3D11()
 {
 	_d3d11_create_device();
@@ -210,6 +250,9 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_swapchain();
 	_d3d11_create_render_target();
 	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl",L"../../assets/shaders/shaders.hlsl");
+	_d3d11_create_sampler_state();
+	_d3d11_create_texture(state->m_model.textures[0]);
+
 }
 
 void D3D11Wrapper::render_frame()
@@ -232,8 +275,11 @@ void D3D11Wrapper::render_frame()
 	d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
 	d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
 
-	UINT stride = 6 * sizeof(float);
-	UINT numVerts = 3;
+	d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
+	d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
+
+	UINT stride = 4 * sizeof(float);
+	UINT numVerts = 6;
 	UINT offset = 0;
 	d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
 
