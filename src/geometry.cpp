@@ -16,7 +16,6 @@ void Geometry::update_world_transform()
 	model_world_transform = glm::identity<glm::mat4>();
 	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,state->m_view_volume.near_plane - (state->m_view_volume.near_plane - state->m_view_volume.far_plane) / 2 });
 	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.15f,-0.15f ,0.15f });
-	// model_world_transform = glm::scale(model_world_transform, glm::vec3{ 50,50 ,50 });
 }
 
 void Geometry::update_camera_transform()

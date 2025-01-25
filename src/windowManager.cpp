@@ -2,18 +2,16 @@
 
 #include <iostream>
 #include <SDL.h>
+#include <SDL_syswm.h>
 
 WindowManager::WindowManager() :m_width{ 800 }, m_height{ 600 }, state{}, draw_frame_callback{ nullptr }
 {
 	//ZoneScoped;
-
 }
 
 WindowManager::~WindowManager()
 {
 	//ZoneScoped;
-
-	//event_loop.join();
 	SDL_DestroyWindow(m_window_handle);
 	SDL_Quit();
 }
@@ -21,15 +19,12 @@ WindowManager::~WindowManager()
 void WindowManager::run()
 {
 	//ZoneScoped;
-
 	init();
-	//event_loop = std::thread(&WindowManager::start_event_loop, this);
 }
 
 bool WindowManager::init()
 {
 	//ZoneScoped;
-
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
 		std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
@@ -66,6 +61,7 @@ bool WindowManager::init()
 		state->m_window.surface = m_window_surface->pixels;
 		state->m_window.width = m_width;
 		state->m_window.height = m_height;
+		state->m_window.win32_win = native_win32_handle();
 	}
 
 	// init ui state
@@ -97,14 +93,21 @@ bool WindowManager::resize()
 	return true;
 }
 
+HWND WindowManager::native_win32_handle()
+{
+	SDL_SysWMinfo systemInfo;
+	SDL_VERSION(&systemInfo.version);
+	SDL_GetWindowWMInfo(m_window_handle, &systemInfo);
+
+	return systemInfo.info.win.window;
+}
 
 void WindowManager::start_event_loop()
 {
 	//ZoneScoped;
-
 	SDL_Event event;
 	while (state->running) {
-
+		// std::scoped_lock lock(state->m_window.m);
 		while (SDL_PollEvent(&event) != 0)
 		{
 			switch (event.type)
@@ -187,7 +190,6 @@ void WindowManager::start_event_loop()
 void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int bytes_per_pixel, void* framebuffer))
 {
 	//ZoneScoped;
-
 	if (callback)
 		draw_frame_callback = callback;
 }
@@ -195,7 +197,6 @@ void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int b
 void WindowManager::update_surface()
 {
 	//ZoneScoped;
-
 	if (state->running)
 		SDL_UpdateWindowSurface(m_window_handle);
 }
@@ -203,14 +204,12 @@ void WindowManager::update_surface()
 void WindowManager::enable_window_resizing(bool enable)
 {
 	//ZoneScoped;
-
 	SDL_SetWindowResizable(m_window_handle, (SDL_bool)enable);
 }
 
 void WindowManager::update_window_title(const char* str)
 {
 	//ZoneScoped;
-
 	if (state->running)
 		SDL_SetWindowTitle(m_window_handle, str);
 }

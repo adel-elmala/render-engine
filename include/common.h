@@ -1,5 +1,8 @@
 #pragma once
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #define GLM_FORCE_INLINE
 #define GLM_FORCE_AVX2
 #define GLM_FORCE_ALIGNED
@@ -80,6 +83,7 @@ struct Window
 {
 	std::mutex m;
 	void* surface;
+	HWND win32_win;
 	int width;
 	int height;
 	unsigned int bytes_per_pixel;
@@ -95,6 +99,13 @@ struct Window
 	bool resized;
 };
 
+enum BACKEND
+{
+	BACKEND_SOFTWARE,
+	BACKEND_D3D11,
+	BACKEND_VULKAN
+};
+
 struct Engine_State
 {
 	Model m_model_original;
@@ -106,4 +117,5 @@ struct Engine_State
 	size_t n_threads;
 	DRAWING_MODE m_mode;
 	std::atomic_bool running;
+	BACKEND backend;
 };

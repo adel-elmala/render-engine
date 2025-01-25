@@ -1,20 +1,9 @@
 #include "../include/d3d11Wrapper.h"
 
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
-
 #include <d3dcompiler.h>
 
 #include<assert.h>
 #include<iostream>
-
-void D3D11Wrapper::run()
-{
-	initWindow();
-	initD3D11();
-	mainLoop();
-	cleanup();
-}
 
 // Create Device and Context
 void D3D11Wrapper::_d3d11_create_device()
@@ -106,7 +95,7 @@ void D3D11Wrapper::_d3d11_create_swapchain()
 	d3d11SwapChainDesc.Flags = 0;
 
 	HRESULT hResult = dxgiFactory->CreateSwapChainForHwnd(d3d11Device,
-														  glfwGetWin32Window(window),
+														  state->m_window.win32_win,
 														  &d3d11SwapChainDesc,
 														  0, 0, &d3d11SwapChain);
 	assert(SUCCEEDED(hResult));
@@ -223,52 +212,34 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl",L"../../assets/shaders/shaders.hlsl");
 }
 
-void D3D11Wrapper::initWindow()
-{
-	glfwInit();
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-	window = glfwCreateWindow(win_width, win_height, "Learning D3D11!", nullptr, nullptr);
-	assert(window);
-	if(window == NULL)
-	{
-		std::cerr << "Failed to create a window\n";
-	}
-}
-
-void D3D11Wrapper::mainLoop()
+void D3D11Wrapper::render_frame()
 {
 	FLOAT backgroundColor[4] = {0.1f, 0.2f, 0.6f, 1.0f};
-	while (!glfwWindowShouldClose(window))
-	{
-		glfwPollEvents();
 
-		backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
-		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
+	backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
+	d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
 
-		RECT winRect;
-		GetClientRect(glfwGetWin32Window(window), &winRect);
-		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
-		d3d11DeviceContext->RSSetViewports(1, &viewport);
+	RECT winRect;
+	GetClientRect(state->m_window.win32_win, &winRect);
+	D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
+	d3d11DeviceContext->RSSetViewports(1, &viewport);
 
-		d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
+	d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
 
-		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		d3d11DeviceContext->IASetInputLayout(inputLayout);
+	d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	d3d11DeviceContext->IASetInputLayout(inputLayout);
 
-		d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
-		d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
+	d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
+	d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
 
-		UINT stride = 6 * sizeof(float);
-		UINT numVerts = 3;
-		UINT offset = 0;
-		d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+	UINT stride = 6 * sizeof(float);
+	UINT numVerts = 3;
+	UINT offset = 0;
+	d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
 
-		d3d11DeviceContext->Draw(numVerts, 0);
+	d3d11DeviceContext->Draw(numVerts, 0);
 
-		d3d11SwapChain->Present(1, 0);
-	}
+	d3d11SwapChain->Present(1, 0);
 }
 
 void D3D11Wrapper::cleanup()
@@ -282,5 +253,4 @@ void D3D11Wrapper::cleanup()
 	d3d11SwapChain->Release();
 	d3d11DeviceContext->Release();
 	d3d11Device->Release();
-	glfwDestroyWindow(window);
 }

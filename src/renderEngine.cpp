@@ -3,13 +3,14 @@
 #include "../include/Application.h"
 #include "../include/geometry.h"
 #include "../include/rasterizer.h"
+#include "../include/d3d11Wrapper.h"
 
 #include <iostream>
 #include <chrono>
+
 using namespace std::chrono_literals;
 
-
-RenderEngine::RenderEngine(const std::string& model_path)
+void RenderEngine::RenderEngine_init_software(const std::string &model_path)
 {
 	//ZoneScoped;
 	state.m_window.height = 600;
@@ -27,6 +28,7 @@ RenderEngine::RenderEngine(const std::string& model_path)
 
 	m_application = std::make_unique<Application>(model_path);
 	m_application->bind_state(&state);
+	m_application->run();
 
 	m_geometry = std::make_unique<Geometry>();
 	m_geometry->bind_state(&state);
@@ -34,43 +36,130 @@ RenderEngine::RenderEngine(const std::string& model_path)
 	m_rasterizer = std::make_unique<Rasterizer>();
 	m_rasterizer->bind_state(&state);
 
-	engine_loop = std::thread(&RenderEngine::start_engine, this);
+	engine_loop = std::thread(&RenderEngine::render_frame, this);
 	// TODO[adel] add to run() in a seperate thread
 	m_win_manager->start_event_loop();
 }
 
-void RenderEngine::start_engine()
+void RenderEngine::RenderEngine_init_d3d11(const std::string &model_path)
 {
 	//ZoneScoped;
+	state.m_window.height = 600;
+	state.m_window.width = 800;
+	state.m_window.bytes_per_pixel = 4;
+	state.running = true;
+	init_camera();
+	init_view_volume();
+	set_drawing_mode(DRAWING_MODE::DRAWING_MODE_TRIANGLES);
+
+	m_win_manager = std::make_unique<WindowManager>();
+	m_win_manager->bind_state(&state);
+	m_win_manager->run();
+
+	m_application = std::make_unique<Application>(model_path);
+	m_application->bind_state(&state);
 	m_application->run();
 
+	m_d3d11_wrapper = std::make_unique<D3D11Wrapper>();
+	m_d3d11_wrapper->bind_state(&state);
+	m_d3d11_wrapper->initD3D11();
+
+	engine_loop = std::thread(&RenderEngine::render_frame, this);
+	// TODO[adel] add to run() in a seperate thread
+	m_win_manager->start_event_loop();
+}
+
+RenderEngine::RenderEngine(BACKEND backend, const std::string &model_path)
+{
+	state.backend = backend;
+	switch (backend)
+	{
+	case BACKEND_SOFTWARE:
+		RenderEngine_init_software(model_path);
+		break;
+	case BACKEND_D3D11:
+		RenderEngine_init_d3d11(model_path);
+		break;
+	case BACKEND_VULKAN:
+		break;
+	default:
+		break;
+	}
+}
+
+void RenderEngine::render_frame_software()
+{
+	// ZoneScoped;
+	auto start = std::chrono::system_clock::now();
+	state.m_model = state.m_model_original;
+	if (state.m_window.resized)
+		resize_swapchain();
+	m_geometry->run();
+	m_rasterizer->run();
+	present_swapchain();
+
+	auto end = std::chrono::system_clock::now();
+	auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+	// m_win_manager->update_window_title(std::to_string(1000000.0 / elapsed.count()).c_str());
+	std::cout << "\rFPS: " << 1000000 / elapsed.count();
+	// FrameMark;
+}
+
+void RenderEngine::render_frame_d3d11()
+{
+	// ZoneScoped;
+	auto start = std::chrono::system_clock::now();
+	state.m_model = state.m_model_original;
+	
+	// if (state.m_window.resized) ;
+	m_d3d11_wrapper->render_frame();
+
+	auto end = std::chrono::system_clock::now();
+	auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+	std::cout << "\rFPS: " << 1000000 / elapsed.count();
+	// FrameMark;
+}
+
+void RenderEngine::render_frame()
+{
 	while (state.running)
 	{
-		auto start = std::chrono::system_clock::now();
-
-		// render frame
-		state.m_model = state.m_model_original;
-		if (state.m_window.resized)
-			resize_swapchain();
-		m_geometry->run();
-		m_rasterizer->run();
-		present_swapchain();
-
-		auto end = std::chrono::system_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-		//m_win_manager->update_window_title(std::to_string(1000000.0 / elapsed.count()).c_str());
-		std::cout << "\rFPS: " << 1000000 / elapsed.count();
-		//FrameMark;
+		switch (state.backend)
+		{
+		case BACKEND_SOFTWARE:
+			render_frame_software();
+			break;
+		case BACKEND_D3D11:
+			render_frame_d3d11();
+			break;
+		case BACKEND_VULKAN:
+			break;
+		default:
+			break;
+		}
 	}
+}
+
+bool RenderEngine::should_exit()
+{
+	return !(state.running);
 }
 
 RenderEngine::~RenderEngine()
 {
-	//ZoneScoped;
-	engine_loop.join();
-	free(state.m_swapchain.back_buffer);
-	free(state.m_swapchain.front_buffer);
-	free(state.m_swapchain.z_buffer);
+	// ZoneScoped;
+	if (state.backend == BACKEND_SOFTWARE)
+	{
+		engine_loop.join();
+		free(state.m_swapchain.back_buffer);
+		free(state.m_swapchain.front_buffer);
+		free(state.m_swapchain.z_buffer);
+	}
+	else if (state.backend == BACKEND_D3D11)
+	{
+		engine_loop.join();
+		m_d3d11_wrapper->cleanup();
+	}
 }
 
 void RenderEngine::init_camera()

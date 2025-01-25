@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 # Engine src
 set(SRC "src/main.cpp" "src/renderEngine.cpp" "src/windowManager.cpp" "src/Application.cpp" "src/geometry.cpp" "src/rasterizer.cpp")
-set(HEADER "include/renderEngine.h" "include/windowManager.h" "include/geometry.h" "include/rasterizer.h")
+set(HEADER "include/renderEngine.h" "include/windowManager.h" "include/geometry.h" "include/rasterizer.h" "include/common.h")
 
 # vulkan module src
 set(VULKAN_SRC "src/vulkanWrapper.cpp" "include/vulkanWrapper.h")
@@ -35,15 +35,15 @@ target_link_libraries(Vulkan_module PUBLIC glfw glm::glm Vulkan::Vulkan logger_m
 
 # d3d11 module library 
 add_library(D3D11_module STATIC ${D3D11_SRC})
-target_link_libraries(D3D11_module PUBLIC glfw d3d11.lib d3dcompiler.lib)
+target_link_libraries(D3D11_module PUBLIC glm::glm d3d11.lib d3dcompiler.lib)
 
 # render engine exe.
-add_executable(${PROJECT_NAME} ${SRC})
+add_executable(${PROJECT_NAME} ${SRC} ${HEADER})
 
 target_link_libraries(${PROJECT_NAME}
 $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> # SDL2
 $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-Vulkan_module
+# Vulkan_module
 D3D11_module
 logger_module
 Tracy::TracyClient

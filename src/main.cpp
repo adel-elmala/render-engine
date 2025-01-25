@@ -1,18 +1,15 @@
 #include <cstdlib>
 
 #include "../include/renderEngine.h"
-#include "../include/vulkanWrapper.h"
-#include "../include/d3d11Wrapper.h"
+// #include "../include/vulkanWrapper.h"
 
 int main(int argc, char** argv)
 {
 
-	// RenderEngine engine("../../assets/bunny/bunny.obj");
-	// engine.start_engine();
+	RenderEngine engine(BACKEND_D3D11, "../../assets/bunny/bunny.obj");
 
 	//VulkanWrapper app;
-	D3D11Wrapper app;
-	app.run();
+	// app.run();
 
 	return EXIT_SUCCESS;
 }
