@@ -242,6 +242,31 @@ void D3D11Wrapper::_d3d11_create_texture(Texture t)
 	d3d11Device->CreateShaderResourceView(texture, nullptr, &textureView);
 }
 
+ID3D11Buffer* D3D11Wrapper::_d3d11_create_cbuffer(uint32_t size)
+{
+	// TODO[adel]: handle resources better, (i.e. push the resources handles to a vector, and release them on destruction...)
+	ID3D11Buffer *constantBuffer;
+	D3D11_BUFFER_DESC constantBufferDesc = {};
+	// ByteWidth must be a multiple of 16, per the docs
+	constantBufferDesc.ByteWidth = size + 0xf & 0xfffffff0;
+	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	HRESULT hResult = d3d11Device->CreateBuffer(&constantBufferDesc, nullptr, &constantBuffer);
+	assert(SUCCEEDED(hResult));
+	return constantBuffer;
+}
+
+void D3D11Wrapper::_d3d11_update_cbuffer(ID3D11Buffer *cbuffer, void *data, uint32_t size)
+{
+	// TODO[adel]: assert the cbuffer size eqauls the data size
+	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+	d3d11DeviceContext->Map(cbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
+	memcpy(mappedSubresource.pData, data, size);
+	d3d11DeviceContext->Unmap(cbuffer, 0);
+}
+
 void D3D11Wrapper::initD3D11()
 {
 	_d3d11_create_device();

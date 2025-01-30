@@ -22,7 +22,8 @@ private:
 	void _d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path);
 	void _d3d11_create_sampler_state();
 	void _d3d11_create_texture(Texture t);
-
+	ID3D11Buffer* _d3d11_create_cbuffer(uint32_t size);
+	void _d3d11_update_cbuffer(ID3D11Buffer *cbuffer, void *data, uint32_t size);
 
 	Engine_State* state;
 	
