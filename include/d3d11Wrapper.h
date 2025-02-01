@@ -40,6 +40,7 @@ private:
 	ID3D11InputLayout *inputLayout;
 	ID3D11Buffer *vertexBuffer;
 	ID3D11Buffer *indexBuffer;
+	ID3D11Buffer *cbuffer;
 	ID3D11Texture2D *texture;
 	ID3D11ShaderResourceView *textureView;
 	ID3D11SamplerState *samplerState;

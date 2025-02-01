@@ -1,11 +1,11 @@
 
-// cbuffer constants : register(b0)
-// {
-//     float4x4 modelViewProj;
-// };
+cbuffer constants : register(b0)
+{
+     float4x4 modelViewProj;
+};
 
 struct VS_Input {
-    float3 pos : POS;
+    float4 pos : POS;
 };
 
 struct VS_Output {
@@ -16,12 +16,13 @@ struct VS_Output {
 VS_Output vs_main(VS_Input input)
 {
     VS_Output output;
-    output.pos = float4(input.pos, 1);
+    output.pos = mul(input.pos, (modelViewProj));
+    // output.pos = mul(  transpose(modelViewProj), input.pos);
     output.color = input.pos + float3(0.5f, 0.5f, 0.5f);
     return output;
 }
 
 float4 ps_main(VS_Output input) : SV_Target
 {
-    return float4(abs(input.color), 1.0); 
+    return float4(1.0,0.0,0.0, 1.0); 
 }
