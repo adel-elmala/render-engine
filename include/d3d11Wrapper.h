@@ -24,6 +24,8 @@ private:
 	void _d3d11_create_texture(Texture t);
 	ID3D11Buffer* _d3d11_create_cbuffer(uint32_t size);
 	void _d3d11_update_cbuffer(ID3D11Buffer *cbuffer, void *data, uint32_t size);
+	void _d3d11_create_rasterizer_state();
+	void _d3d11_create_depth_stencil_state();
 
 	Engine_State* state;
 	
@@ -32,13 +34,18 @@ private:
 	ID3D11DeviceContext1 *d3d11DeviceContext;
 	IDXGISwapChain1 *d3d11SwapChain;
 	ID3D11RenderTargetView *d3d11FrameBufferView;
+	ID3D11DepthStencilView *d3d11DepthStencilView;
 	ID3D11VertexShader *vertexShader;
 	ID3D11PixelShader *pixelShader;
 	ID3D11InputLayout *inputLayout;
 	ID3D11Buffer *vertexBuffer;
+	ID3D11Buffer *indexBuffer;
 	ID3D11Texture2D *texture;
 	ID3D11ShaderResourceView *textureView;
 	ID3D11SamplerState *samplerState;
+	ID3D11RasterizerState *rasterizerState;
+	ID3D11DepthStencilState *depthStencilState;
+
 
 
 #ifdef NDEBUG

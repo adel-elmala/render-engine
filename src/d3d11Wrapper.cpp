@@ -112,7 +112,20 @@ void D3D11Wrapper::_d3d11_create_render_target()
 
 	hResult = d3d11Device->CreateRenderTargetView(d3d11FrameBuffer, 0, &d3d11FrameBufferView);
 	assert(SUCCEEDED(hResult));
-	d3d11FrameBuffer->Release();
+
+    D3D11_TEXTURE2D_DESC depthBufferDesc;
+    d3d11FrameBuffer->GetDesc(&depthBufferDesc);
+    depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    ID3D11Texture2D* depthBuffer;
+    d3d11Device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
+
+    d3d11Device->CreateDepthStencilView(depthBuffer, nullptr, &d3d11DepthStencilView);
+
+    d3d11FrameBuffer->Release();
+    depthBuffer->Release();
+
 }
 
 // compile and create vertex + pixel shaders
@@ -169,29 +182,47 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 	{
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 			{
-				{"POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+				{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			};
 
 		HRESULT hResult = d3d11Device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
 		assert(SUCCEEDED(hResult));
 		vsBlob->Release();
 	}
 
-	// Create Vertex Buffer
-	UINT numVerts;
+	// Create Vertex and Index Buffer
+	// UINT numVerts;
+	UINT numIndices;
 	UINT stride;
 	UINT offset;
 	{
-		float vertexData[] = {// x, y, u, v
-							  -0.5f, 0.5f, 0.f, 0.f,
-							  0.5f, -0.5f, 1.f, 1.f,
-							  -0.5f, -0.5f, 0.f, 1.f,
-							  -0.5f, 0.5f, 0.f, 0.f,
-							  0.5f, 0.5f, 1.f, 0.f,
-							  0.5f, -0.5f, 1.f, 1.f};
-		stride = 4 * sizeof(float);
-		numVerts = sizeof(vertexData) / stride;
+		float vertexData[] = {// x, y, z
+							  -0.5f, -0.5f, -0.5f,
+							  -0.5f, -0.5f, 0.5f,
+							  -0.5f, 0.5f, -0.5f,
+							  -0.5f, 0.5f, 0.5f,
+							  0.5f, -0.5f, -0.5f,
+							  0.5f, -0.5f, 0.5f,
+							  0.5f, 0.5f, -0.5f,
+							  0.5f, 0.5f, 0.5f};
+
+		uint16_t indices[] = {
+			0, 6, 4,
+			0, 2, 6,
+			0, 3, 2,
+			0, 1, 3,
+			2, 7, 6,
+			2, 3, 7,
+			4, 6, 7,
+			4, 7, 5,
+			0, 4, 5,
+			0, 5, 1,
+			1, 5, 7,
+			1, 7, 3};
+		stride = 3 * sizeof(float);
+		// numVerts = sizeof(vertexData) / stride;
 		offset = 0;
+		numIndices = sizeof(indices) / sizeof(indices[0]);
 
 		D3D11_BUFFER_DESC vertexBufferDesc = {};
 		vertexBufferDesc.ByteWidth = sizeof(vertexData);
@@ -202,7 +233,17 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 
 		HRESULT hResult = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &vertexBuffer);
 		assert(SUCCEEDED(hResult));
-	}
+
+		D3D11_BUFFER_DESC indexBufferDesc = {};
+		indexBufferDesc.ByteWidth = sizeof(indices);
+		indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+
+		D3D11_SUBRESOURCE_DATA indexSubresourceData = {indices};
+
+		hResult = d3d11Device->CreateBuffer(&indexBufferDesc, &indexSubresourceData, &indexBuffer);
+		assert(SUCCEEDED(hResult));
+ }
 }
 
 void D3D11Wrapper::_d3d11_create_sampler_state() 
@@ -221,6 +262,7 @@ void D3D11Wrapper::_d3d11_create_sampler_state()
 
 	d3d11Device->CreateSamplerState(&samplerDesc, &samplerState);
 }
+
 void D3D11Wrapper::_d3d11_create_texture(Texture t)
 {
 	// Create Texture
@@ -267,6 +309,26 @@ void D3D11Wrapper::_d3d11_update_cbuffer(ID3D11Buffer *cbuffer, void *data, uint
 	d3d11DeviceContext->Unmap(cbuffer, 0);
 }
 
+void D3D11Wrapper::_d3d11_create_rasterizer_state()
+{
+		D3D11_RASTERIZER_DESC rasterizerDesc = {};
+	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.FrontCounterClockwise = TRUE;
+
+	d3d11Device->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
+}
+
+void D3D11Wrapper::_d3d11_create_depth_stencil_state()
+{
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
+	depthStencilDesc.DepthEnable = TRUE;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+	d3d11Device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
+}
+
 void D3D11Wrapper::initD3D11()
 {
 	_d3d11_create_device();
@@ -275,8 +337,10 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_swapchain();
 	_d3d11_create_render_target();
 	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl",L"../../assets/shaders/shaders.hlsl");
-	_d3d11_create_sampler_state();
-	_d3d11_create_texture(state->m_model.textures[0]);
+	_d3d11_create_rasterizer_state();
+	_d3d11_create_depth_stencil_state();
+	// _d3d11_create_sampler_state();
+	// _d3d11_create_texture(state->m_model.textures[0]);
 
 }
 
@@ -286,6 +350,10 @@ void D3D11Wrapper::render_frame()
 
 	backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
 	d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
+	d3d11DeviceContext->ClearDepthStencilView(d3d11DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	d3d11DeviceContext->RSSetState(rasterizerState);
+	d3d11DeviceContext->OMSetDepthStencilState(depthStencilState, 0);
 
 	RECT winRect;
 	GetClientRect(state->m_window.win32_win, &winRect);
@@ -300,15 +368,16 @@ void D3D11Wrapper::render_frame()
 	d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
 	d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
 
-	d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
-	d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
+	// d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
+	// d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 
-	UINT stride = 4 * sizeof(float);
-	UINT numVerts = 6;
+	UINT stride = 3 * sizeof(float);
 	UINT offset = 0;
 	d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+	d3d11DeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
-	d3d11DeviceContext->Draw(numVerts, 0);
+	UINT numVerts = 6;
+	d3d11DeviceContext->DrawIndexed(12 * 3, 0, 0);
 
 	d3d11SwapChain->Present(1, 0);
 }
@@ -316,6 +385,7 @@ void D3D11Wrapper::render_frame()
 void D3D11Wrapper::cleanup()
 {
 	std::cout << "Cleanup...\n";
+	indexBuffer->Release();
 	vertexBuffer->Release();
 	inputLayout->Release();
 	vertexShader->Release();
