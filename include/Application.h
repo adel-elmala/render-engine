@@ -17,7 +17,8 @@ public:
 	void bind_state(Engine_State* engine_state) { if (engine_state) state = engine_state; }
 private:
 
-	void parse_model(const std::string& path);
+	void parse_model_cpu(const std::string& path);
+	void parse_model_gpu(const std::string& path);
 	void load_texture(const std::string& path);
 	void* m_mesh; // single model mesh for now
 	std::string m_model_path;

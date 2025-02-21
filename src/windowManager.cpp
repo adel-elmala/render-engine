@@ -65,7 +65,7 @@ bool WindowManager::init()
 	}
 
 	// init ui state
-	state->m_window.mouse_yaw = -90.0f;
+	state->m_window.mouse_yaw = state->backend == BACKEND_D3D11 ? 90.0f : -90.0f;
 	state->m_window.mouse_pitch = 0.0f;
 	state->m_window.cursor_dx = 0.0f;
 	state->m_window.cursor_dy = 0.0f;

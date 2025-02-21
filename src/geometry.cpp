@@ -13,9 +13,17 @@ void Geometry::update_world_transform()
 {
 	//ZoneScoped;
 	static char count = 0;
-	model_world_transform = glm::identity<glm::mat4>();
-	model_world_transform = glm::translate(model_world_transform, glm::vec3{ 0,0 ,state->m_view_volume.near_plane - (state->m_view_volume.near_plane - state->m_view_volume.far_plane) / 2 });
-	model_world_transform = glm::scale(model_world_transform, glm::vec3{ 0.15f,-0.15f ,0.15f });
+	if (state->backend == BACKEND_D3D11)
+	{
+		model_world_transform = glm::identity<glm::mat4>();
+		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, 0, - (state->m_view_volume.far_plane - ((state->m_view_volume.far_plane - state->m_view_volume.near_plane) / 2))});
+	}
+	else
+	{
+		model_world_transform = glm::identity<glm::mat4>();
+		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, 0, state->m_view_volume.near_plane - (state->m_view_volume.near_plane - state->m_view_volume.far_plane) / 2});
+		model_world_transform = glm::scale(model_world_transform, glm::vec3{0.15f, -0.15f, 0.15f});
+	}
 }
 
 void Geometry::update_camera_transform()
@@ -42,17 +50,23 @@ void Geometry::update_camera_transform()
 
 	// camera coords basis
 	auto w = -(glm::normalize(gaze));
-	auto u = glm::normalize(glm::cross(up, w));
-	auto v = glm::cross(w, u);
+	auto u = glm::normalize(glm::cross(w, up));
+	auto v = glm::cross(u, w);
+	// if(state->backend == BACKEND_D3D11)
+	// {
+	// 	auto w = glm::normalize(gaze);
+	// 	auto u = glm::normalize(glm::cross(w, up));
+	// 	auto v = glm::cross(u, w);
+	// }
 
 	if (state->m_window.move_cam_right)
 		state->m_camera.position += u * state->m_camera.sensitivity;
 	if (state->m_window.move_cam_left)
 		state->m_camera.position -= u * state->m_camera.sensitivity;
 	if (state->m_window.move_cam_forward)
-		state->m_camera.position -= w * state->m_camera.sensitivity;
+		state->m_camera.position -= state->backend == BACKEND_D3D11 ? -w * state->m_camera.sensitivity : w * state->m_camera.sensitivity;
 	if (state->m_window.move_cam_back)
-		state->m_camera.position += w * state->m_camera.sensitivity;
+		state->m_camera.position += state->backend == BACKEND_D3D11 ? -w * state->m_camera.sensitivity : w * state->m_camera.sensitivity;
 
 	glm::mat4 translate_eye_to_origin(
 		{ 1.0f, 0.0f, 0.0f, -eye.x },
@@ -80,10 +94,16 @@ void Geometry::update_perspective_transform()
 	auto l = state->m_view_volume.left_plane;
 	auto r = state->m_view_volume.right_plane;
 
+
 	glm::vec4 r0(2.0f / (r - l), 0.0f, 0.0f, -(r + l) / (r - l));
 	glm::vec4 r1(0.0f, 2.0f / (t - b), 0.0, -(t + b) / (t - b));
 	glm::vec4 r2(0.0f, 0.0f, 2.0f / (n - f), -(n + f) / (n - f));
 	glm::vec4 r3(0.0f, 0.0f, 0.0f, 1.0f);
+
+	if(state->backend == BACKEND_D3D11)
+	{
+		r2 = glm::vec4(0.0f, 0.0f, 1.0f / (f - n), (-n) / (f - n));
+	}
 
 	glm::mat4 orth(r0, r1, r2, r3);
 
@@ -96,7 +116,6 @@ void Geometry::update_perspective_transform()
 	glm::mat4 persp(rp0, rp1, rp2, rp3);
 
 	camera_ndc_transform = glm::transpose(orth) * glm::transpose(persp);
-
 }
 
 void Geometry::update_viewport_transform()
@@ -124,7 +143,7 @@ void Geometry::send_to_camera_space()
 	update_camera_transform();
 	auto m = world_camera_transform * model_world_transform;
 
-	auto& postions = state->m_model.positions;
+	auto& postions = state->m_model.m_cpu.positions;
 	size_t n_pos = postions.size();
 	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
@@ -162,7 +181,7 @@ void Geometry::send_to_camera_space()
 //		face_normal = m * face_normal;
 //	}
 
-	auto& normals = state->m_model.face_normals;
+	auto& normals = state->m_model.m_cpu.face_normals;
 	size_t n_normals = normals.size();
 	thread_share = n_normals / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
@@ -201,8 +220,8 @@ void Geometry::send_to_ndc_space()
 	update_perspective_transform();
 	auto m = camera_ndc_transform;
 
-	auto& postions = state->m_model.positions;
-	auto& save_w_coords = state->m_model.verts_w_coords;
+	auto& postions = state->m_model.m_cpu.positions;
+	auto& save_w_coords = state->m_model.m_cpu.verts_w_coords;
 	size_t n_pos = postions.size();
 	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
@@ -254,7 +273,7 @@ void Geometry::send_to_ndc_space()
 		//face_normal = m * face_normal;
 	//}
 
-	auto& normals = state->m_model.face_normals;
+	auto& normals = state->m_model.m_cpu.face_normals;
 	size_t n_normals = normals.size();
 	thread_share = n_normals / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
@@ -292,7 +311,7 @@ void Geometry::send_to_pixel_space()
 	update_viewport_transform();
 	auto m = ndc_pixel_transform;
 
-	auto& postions = state->m_model.positions;
+	auto& postions = state->m_model.m_cpu.positions;
 	size_t n_pos = postions.size();
 	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
@@ -362,8 +381,8 @@ void Geometry::clipping()
 void Geometry::backface_cull()
 {
 	//ZoneScoped;
-	auto& normals = state->m_model.face_normals;
-	auto& faces = state->m_model.faces;
+	auto& normals = state->m_model.m_cpu.face_normals;
+	auto& faces = state->m_model.m_cpu.faces;
 	size_t n_faces = faces.size();
 	size_t thread_share = n_faces / state->n_threads;
 
@@ -435,8 +454,8 @@ __forceinline bool Geometry::in_view_volume(glm::vec4& point)
 void Geometry::clip_triangles()
 {
 	//ZoneScoped;
-	auto& verticies = state->m_model.positions;
-	auto& faces = state->m_model.faces;
+	auto& verticies = state->m_model.m_cpu.positions;
+	auto& faces = state->m_model.m_cpu.faces;
 	size_t n_faces = faces.size();
 	size_t thread_share = n_faces / state->n_threads;
 

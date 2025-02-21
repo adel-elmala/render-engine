@@ -39,7 +39,7 @@ struct Texture
 	int bytes_per_pixel;
 };
 
-struct Model
+struct Model_CPU
 {
 	std::vector<glm::vec4> positions;
 	std::vector<float> verts_w_coords;
@@ -48,6 +48,27 @@ struct Model
 	std::vector<glm::vec2> tex_coords;
 	std::vector<Face> faces;
 	std::vector<Texture> textures;
+};
+
+#pragma pack(push,1)
+struct Vertex_attribute
+{
+	glm::vec4 pos;
+	// glm::vec4 normal;
+	glm::vec2 uv;
+};
+#pragma pack(pop)
+
+struct Model_GPU
+{
+	std::vector<Vertex_attribute> verts;
+	std::vector<Texture> textures;
+};
+
+struct Model
+{
+		Model_CPU m_cpu;	
+		Model_GPU m_gpu;	
 };
 
 struct Camera

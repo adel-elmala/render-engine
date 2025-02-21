@@ -18,20 +18,59 @@ Application::~Application()
 {
 	//ZoneScoped;
 	fast_obj_destroy((fastObjMesh*)m_mesh);
-	for (auto& texture : state->m_model.textures)
+	std::vector<Texture> t;
+	if(state->backend == BACKEND_SOFTWARE)
+		t = state->m_model.m_cpu.textures;
+	else
+		t = state->m_model.m_gpu.textures;
+
+	for (auto& texture : t)
 		stbi_image_free(texture.data);
 }
 
 void Application::run()
 {
 	//ZoneScoped;
-	parse_model(m_model_path);
 	load_texture("../../assets/bunny/bunny-atlas.jpg");
+	if(state->backend == BACKEND_SOFTWARE)
+	{
+		parse_model_cpu(m_model_path);
+		state->m_model_original.m_cpu = state->m_model.m_cpu;
+	}
+	else
+	{
+		parse_model_gpu(m_model_path);
+		state->m_model_original.m_gpu = state->m_model.m_gpu;
+	}
 	// load_texture("../../assets/cube3/cube.png");
-	state->m_model_original = state->m_model;
 }
 
-void Application::parse_model(const std::string& path)
+void Application::parse_model_gpu(const std::string& path)
+{
+	m_mesh = fast_obj_read(path.c_str());
+	fastObjMesh* mesh = (fastObjMesh*)m_mesh;
+
+	for (size_t i = 0; i < mesh->index_count; i++)
+	{
+		Vertex_attribute vt{};
+		auto vert_index = mesh->indices[i];
+
+		vt.pos = glm::vec4{mesh->positions[vert_index.p *3],
+						   mesh->positions[vert_index.p*3 + 1],
+						   mesh->positions[vert_index.p*3 + 2],
+						   1.0f};
+		vt.uv = glm::vec2{mesh->texcoords[vert_index.t *2],
+						  mesh->texcoords[vert_index.t*2 + 1]};
+
+		// vt.normal = glm::vec4{mesh->normals[vert_index.n],
+		// 					  mesh->normals[vert_index.n + 1],
+		// 					  mesh->normals[vert_index.n + 2],
+		// 					  1.0f};
+		state->m_model.m_gpu.verts.push_back(vt);
+	}
+}
+
+void Application::parse_model_cpu(const std::string& path)
 {
 	//ZoneScoped;
 	m_mesh = fast_obj_read(path.c_str());
@@ -43,17 +82,17 @@ void Application::parse_model(const std::string& path)
 	int32_t n_count = mesh->normal_count - 1;
 	int32_t f_count = mesh->face_count;
 
-	state->m_model.positions.resize(p_count);
-	state->m_model.verts_w_coords.resize(p_count);
-	state->m_model.colors.resize(c_count);
-	state->m_model.tex_coords.resize(t_count);
-	state->m_model.face_normals.resize(n_count);
-	state->m_model.faces.resize(f_count);
+	state->m_model.m_cpu.positions.resize(p_count);
+	state->m_model.m_cpu.verts_w_coords.resize(p_count);
+	state->m_model.m_cpu.colors.resize(c_count);
+	state->m_model.m_cpu.tex_coords.resize(t_count);
+	state->m_model.m_cpu.face_normals.resize(n_count);
+	state->m_model.m_cpu.faces.resize(f_count);
 
 	// copy positions
 	for (uint32_t i = 3, j = 0; j < p_count; i += 3, ++j)
 	{
-		state->m_model.positions[j] = glm::vec4{ mesh->positions[i],mesh->positions[i + 1],mesh->positions[i + 2] ,1.0f };
+		state->m_model.m_cpu.positions[j] = glm::vec4{ mesh->positions[i],mesh->positions[i + 1],mesh->positions[i + 2] ,1.0f };
 	}
 
 	if (c_count >= f_count)
@@ -61,12 +100,12 @@ void Application::parse_model(const std::string& path)
 		// copy colors
 		for (uint32_t i = 0, j = 0; j < c_count; i += 3, ++j)
 		{
-			state->m_model.colors[j] = glm::vec4{ mesh->colors[i],mesh->colors[i + 1],mesh->colors[i + 2] ,1.0f };
+			state->m_model.m_cpu.colors[j] = glm::vec4{ mesh->colors[i],mesh->colors[i + 1],mesh->colors[i + 2] ,1.0f };
 		}
 	}
 	else
 	{
-		state->m_model.colors.resize(p_count);
+		state->m_model.m_cpu.colors.resize(p_count);
 		uint32_t counter = 0;
 		// generate pseudo-colors
 		for (uint32_t i = 0, j = 0; j < p_count; i += 3, ++j)
@@ -75,20 +114,20 @@ void Application::parse_model(const std::string& path)
 			char red_channel = counter & 0x000000ff;
 			char green_channel = (counter & 0x0000ff00) >> 8;
 			char blue_channel = (counter & 0x00ff0000) >> 16;
-			state->m_model.colors[j] = glm::u8vec4{ red_channel,green_channel,blue_channel ,0xff };
+			state->m_model.m_cpu.colors[j] = glm::u8vec4{ red_channel,green_channel,blue_channel ,0xff };
 		}
 	}
 
 	// copy tex_coords	
 	for (uint32_t i = 2, j = 0; j < t_count; i += 2, ++j)
 	{
-		state->m_model.tex_coords[j] = glm::vec2{ mesh->texcoords[i],mesh->texcoords[i + 1] };
+		state->m_model.m_cpu.tex_coords[j] = glm::vec2{ mesh->texcoords[i],mesh->texcoords[i + 1] };
 	}
 
 	// face normals
 	for (uint32_t i = 3, j = 0; j < n_count; i += 3, ++j)
 	{
-		state->m_model.face_normals[j] = glm::vec4{ mesh->normals[i],mesh->normals[i + 1],mesh->normals[i + 2],0.0f };
+		state->m_model.m_cpu.face_normals[j] = glm::vec4{ mesh->normals[i],mesh->normals[i + 1],mesh->normals[i + 2],0.0f };
 	}
 
 	// copy faces
@@ -102,9 +141,9 @@ void Application::parse_model(const std::string& path)
 		// generate face normals if not found in the model
 		if (n_count < 1)
 		{
-			auto v0 = state->m_model.positions[tmp.p_indices[0]];
-			auto v1 = state->m_model.positions[tmp.p_indices[1]];
-			auto v2 = state->m_model.positions[tmp.p_indices[2]];
+			auto v0 = state->m_model.m_cpu.positions[tmp.p_indices[0]];
+			auto v1 = state->m_model.m_cpu.positions[tmp.p_indices[1]];
+			auto v2 = state->m_model.m_cpu.positions[tmp.p_indices[2]];
 
 			auto e0 = v0 - v1;
 			auto e1 = v2 - v1;
@@ -113,11 +152,11 @@ void Application::parse_model(const std::string& path)
 					glm::vec3(e0.x, e0.y, e0.z),
 					glm::vec3(e1.x, e1.y, e1.z))
 			);
-			state->m_model.face_normals.push_back(glm::vec4(n, 0.0f));
+			state->m_model.m_cpu.face_normals.push_back(glm::vec4(n, 0.0f));
 			tmp.n_indices = glm::vec3{ j,j,j };
 		}
 
-		state->m_model.faces[j] = tmp;
+		state->m_model.m_cpu.faces[j] = tmp;
 	}
 
 	if (f_count < 200)
@@ -143,5 +182,10 @@ void Application::load_texture(const std::string& path)
 	if (!t.data)
 		stbi_failure_reason();
 	else
-		state->m_model.textures.push_back(t);
+	{
+		if (state->backend == BACKEND_SOFTWARE)
+			state->m_model.m_cpu.textures.push_back(t);
+		else
+			state->m_model.m_gpu.textures.push_back(t);
+	}
 }

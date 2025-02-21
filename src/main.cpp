@@ -5,7 +5,6 @@
 
 int main(int argc, char** argv)
 {
-
 	RenderEngine engine(BACKEND_D3D11, "../../assets/bunny/bunny.obj");
 
 	//VulkanWrapper app;

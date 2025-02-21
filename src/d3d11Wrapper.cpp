@@ -9,6 +9,13 @@
 #include "glm/ext.hpp"
 #include <glm/gtc/matrix_access.hpp>
 
+struct Uniform
+{
+	glm::mat4 model_world;
+	glm::mat4 world_camera;
+	glm::mat4 camera_ndc;
+};
+
 // Create Device and Context
 void D3D11Wrapper::_d3d11_create_device()
 {
@@ -188,6 +195,7 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 			{
 				{"POS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			};
 
 		HRESULT hResult = d3d11Device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
@@ -197,42 +205,40 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 
 	// Create Vertex and Index Buffer
 	{
-		std::vector<float> positions {};
-		for(auto& p: state->m_model_original.positions)
+		std::vector<Vertex_attribute> verts {};
+		for(auto& v: state->m_model_original.m_gpu.verts)
 		{
-			positions.push_back(p.x);
-			positions.push_back(p.y);
-			positions.push_back(p.z);
-			positions.push_back(p.w);
+			verts.push_back(v);
 		}
 
 		D3D11_BUFFER_DESC vertexBufferDesc = {};
-		vertexBufferDesc.ByteWidth = positions.size() * sizeof(float);
+		auto vs =  sizeof(Vertex_attribute);
+		vertexBufferDesc.ByteWidth = verts.size() * vs;
 		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-		D3D11_SUBRESOURCE_DATA vertexSubresourceData = {positions.data()};
+		D3D11_SUBRESOURCE_DATA vertexSubresourceData = {verts.data()};
 
 		HRESULT hResult = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &vertexBuffer);
 		assert(SUCCEEDED(hResult));
 
-		std::vector<uint16_t> p_indecies {};
-		for (auto &face : state->m_model_original.faces)
-		{
-			p_indecies.push_back(face.p_indices.x);
-			p_indecies.push_back(face.p_indices.y);
-			p_indecies.push_back(face.p_indices.z);
-		}
+		// std::vector<uint16_t> p_indecies {};
+		// for (auto &face : state->m_model_original.m_cpu.faces)
+		// {
+		// 	p_indecies.push_back(face.p_indices.x);
+		// 	p_indecies.push_back(face.p_indices.y);
+		// 	p_indecies.push_back(face.p_indices.z);
+		// }
 
-		D3D11_BUFFER_DESC indexBufferDesc = {};
-		indexBufferDesc.ByteWidth = p_indecies.size() * sizeof(uint16_t);
-		indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		// D3D11_BUFFER_DESC indexBufferDesc = {};
+		// indexBufferDesc.ByteWidth = p_indecies.size() * sizeof(uint16_t);
+		// indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		// indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
-		D3D11_SUBRESOURCE_DATA indexSubresourceData = {p_indecies.data()};
+		// D3D11_SUBRESOURCE_DATA indexSubresourceData = {p_indecies.data()};
 
-		hResult = d3d11Device->CreateBuffer(&indexBufferDesc, &indexSubresourceData, &indexBuffer);
-		assert(SUCCEEDED(hResult));
+		// hResult = d3d11Device->CreateBuffer(&indexBufferDesc, &indexSubresourceData, &indexBuffer);
+		// assert(SUCCEEDED(hResult));
 	}
 }
 
@@ -301,9 +307,9 @@ void D3D11Wrapper::_d3d11_update_cbuffer(ID3D11Buffer *cbuffer, void *data, uint
 
 void D3D11Wrapper::_d3d11_create_rasterizer_state()
 {
-		D3D11_RASTERIZER_DESC rasterizerDesc = {};
+	D3D11_RASTERIZER_DESC rasterizerDesc = {};
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
 	rasterizerDesc.FrontCounterClockwise = TRUE;
 
 	d3d11Device->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
@@ -329,9 +335,9 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl",L"../../assets/shaders/shaders.hlsl");
 	_d3d11_create_rasterizer_state();
 	_d3d11_create_depth_stencil_state();
-	// _d3d11_create_sampler_state();
-	// _d3d11_create_texture(state->m_model.textures[0]);
-	cbuffer = _d3d11_create_cbuffer(sizeof(glm::mat4));
+	_d3d11_create_sampler_state();
+	_d3d11_create_texture(state->m_model.m_gpu.textures[0]);
+	cbuffer = _d3d11_create_cbuffer(sizeof(Uniform));
 
 }
 
@@ -358,36 +364,39 @@ void D3D11Wrapper::render_frame()
 	d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
 	d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
 
-	// d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
-	// d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
+	d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
+	d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 
 	Geometry gm;
 	gm.bind_state(state);
+	static bool once = true;
 	gm.update_world_transform();
 	gm.update_camera_transform();
 	gm.update_perspective_transform();
-	
-	gm.world_camera_transform[0][2] *= -1;
-	gm.world_camera_transform[1][2] *= -1;
-	gm.world_camera_transform[2][2] *= -1;
-	gm.world_camera_transform[3][2] *= -1;
-	
-	auto modelViewProj =
-		gm.camera_ndc_transform *
-		gm.world_camera_transform *
-		gm.model_world_transform;
+
+	// auto modelViewProj =
+	// 	gm.camera_ndc_transform *
+	// 	gm.world_camera_transform *
+	// 	gm.model_world_transform;
 
 	// modelViewProj = glm::transpose(modelViewProj);
-	_d3d11_update_cbuffer(cbuffer, glm::value_ptr(modelViewProj), sizeof(glm::mat4));
+	// _d3d11_update_cbuffer(cbuffer, glm::value_ptr(modelViewProj), sizeof(glm::mat4));
 
+	Uniform u{};
+	u.model_world = gm.model_world_transform;
+	u.world_camera = gm.world_camera_transform;
+	u.camera_ndc = gm.camera_ndc_transform;
+
+	_d3d11_update_cbuffer(cbuffer, &u, sizeof(Uniform));
     d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer);
 
-	UINT stride = sizeof(glm::vec4);
+	UINT stride = sizeof(Vertex_attribute);
 	UINT offset = 0;
 	d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-	d3d11DeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
+	// d3d11DeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
-	d3d11DeviceContext->DrawIndexed(state->m_model.faces.size() * 3, 0, 0);
+	// d3d11DeviceContext->Draw(state->m_model.m_gpu.faces.size() * 3, 0, 0);
+	d3d11DeviceContext->Draw(state->m_model.m_gpu.verts.size(), 0);
 
 	d3d11SwapChain->Present(1, 0);
 }
@@ -395,7 +404,7 @@ void D3D11Wrapper::render_frame()
 void D3D11Wrapper::cleanup()
 {
 	std::cout << "Cleanup...\n";
-	indexBuffer->Release();
+	// indexBuffer->Release();
 	vertexBuffer->Release();
 	inputLayout->Release();
 	vertexShader->Release();

@@ -91,7 +91,7 @@ void RenderEngine::render_frame_software()
 {
 	// ZoneScoped;
 	auto start = std::chrono::system_clock::now();
-	state.m_model = state.m_model_original;
+	state.m_model.m_cpu = state.m_model_original.m_cpu;
 	if (state.m_window.resized)
 		resize_swapchain();
 	m_geometry->run();
@@ -109,7 +109,7 @@ void RenderEngine::render_frame_d3d11()
 {
 	// ZoneScoped;
 	auto start = std::chrono::system_clock::now();
-	state.m_model = state.m_model_original;
+	state.m_model.m_gpu = state.m_model_original.m_gpu;
 	
 	// if (state.m_window.resized) ;
 	m_d3d11_wrapper->render_frame();
@@ -165,21 +165,43 @@ RenderEngine::~RenderEngine()
 void RenderEngine::init_camera()
 {
 	//ZoneScoped;
-	state.m_camera.position = glm::vec3{ 0.0f,0.0f,0.0f };
-	state.m_camera.lookat = glm::vec3{ 0.0f,0.0f,-1.0f };
-	state.m_camera.up = glm::vec3{ 0.0f,1.0f,0.0f };
-	state.m_camera.sensitivity = .3f;
+	if(state.backend == BACKEND_D3D11)
+	{
+		state.m_camera.position = glm::vec3{0.0f, 0.0f, 0.0f};
+		state.m_camera.lookat = glm::vec3{0.0f, 0.0f, 1.0f};
+		state.m_camera.up = glm::vec3{0.0f, 1.0f, 0.0f};
+		state.m_camera.sensitivity = .6f;
+	}
+	else
+	{
+		state.m_camera.position = glm::vec3{0.0f, 0.0f, 0.0f};
+		state.m_camera.lookat = glm::vec3{0.0f, 0.0f, -1.0f};
+		state.m_camera.up = glm::vec3{0.0f, 1.0f, 0.0f};
+		state.m_camera.sensitivity = .3f;
+	}
 }
 
 void RenderEngine::init_view_volume()
 {
 	//ZoneScoped;
-	state.m_view_volume.near_plane = -50.0f;
-	state.m_view_volume.far_plane = -150.0f;
-	state.m_view_volume.left_plane = -50.0f;
-	state.m_view_volume.right_plane = 50.0f;
-	state.m_view_volume.top_plane = 50.0f;
-	state.m_view_volume.bottom_plane = -50.0f;
+	if(state.backend == BACKEND_D3D11)
+	{
+		state.m_view_volume.near_plane = 50.0f;
+		state.m_view_volume.far_plane = 1500.0f;
+		state.m_view_volume.left_plane = -50.0f;
+		state.m_view_volume.right_plane = 50.0f;
+		state.m_view_volume.top_plane = 50.0f;
+		state.m_view_volume.bottom_plane = -50.0f;
+	}
+	else
+	{
+		state.m_view_volume.near_plane = -50.0f;
+		state.m_view_volume.far_plane = -150.0f;
+		state.m_view_volume.left_plane = -50.0f;
+		state.m_view_volume.right_plane = 50.0f;
+		state.m_view_volume.top_plane = 50.0f;
+		state.m_view_volume.bottom_plane = -50.0f;
+	}
 }
 
 void RenderEngine::set_drawing_mode(DRAWING_MODE mode)

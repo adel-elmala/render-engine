@@ -32,7 +32,7 @@ void Rasterizer::run()
 void Rasterizer::draw_points()
 {
 	//ZoneScoped;
-	auto& faces = state->m_model.faces;
+	auto& faces = state->m_model.m_cpu.faces;
 	size_t n_faces = faces.size();
 	size_t thread_share = n_faces / state->n_threads;
 
@@ -45,11 +45,11 @@ void Rasterizer::draw_points()
 				auto& face = faces[start];
 				if (face.erase)
 					continue;
-				glm::vec3 p0 = state->m_model.positions[face.p_indices.x];
-				glm::vec3 p1 = state->m_model.positions[face.p_indices.y];
-				glm::vec3 p2 = state->m_model.positions[face.p_indices.z];
+				glm::vec3 p0 = state->m_model.m_cpu.positions[face.p_indices.x];
+				glm::vec3 p1 = state->m_model.m_cpu.positions[face.p_indices.y];
+				glm::vec3 p2 = state->m_model.m_cpu.positions[face.p_indices.z];
 
-				auto c0 = state->m_model.colors[face.p_indices.x];
+				auto c0 = state->m_model.m_cpu.colors[face.p_indices.x];
 				draw_point(p0, c0);
 				draw_point(p1, c0);
 				draw_point(p2, c0);
@@ -65,11 +65,11 @@ void Rasterizer::draw_points()
 		auto& face = faces[start];
 		if (face.erase)
 			continue;
-		glm::vec3 p0 = state->m_model.positions[face.p_indices.x];
-		glm::vec3 p1 = state->m_model.positions[face.p_indices.y];
-		glm::vec3 p2 = state->m_model.positions[face.p_indices.z];
+		glm::vec3 p0 = state->m_model.m_cpu.positions[face.p_indices.x];
+		glm::vec3 p1 = state->m_model.m_cpu.positions[face.p_indices.y];
+		glm::vec3 p2 = state->m_model.m_cpu.positions[face.p_indices.z];
 
-		auto c0 = state->m_model.colors[face.p_indices.x];
+		auto c0 = state->m_model.m_cpu.colors[face.p_indices.x];
 		draw_point(p0, c0);
 		draw_point(p1, c0);
 		draw_point(p2, c0);
@@ -120,10 +120,10 @@ void Rasterizer::draw_point(glm::vec3& point, glm::u8vec4& color)
 void Rasterizer::draw_lines()
 {
 	//ZoneScoped;
-	auto& verticies = state->m_model.positions;
-	auto& colors = state->m_model.colors;
+	auto& verticies = state->m_model.m_cpu.positions;
+	auto& colors = state->m_model.m_cpu.colors;
 
-	auto& faces = state->m_model.faces;
+	auto& faces = state->m_model.m_cpu.faces;
 	size_t n_faces = faces.size();
 	size_t thread_share = n_faces / state->n_threads;
 
@@ -277,7 +277,7 @@ void Rasterizer::draw_line(glm::vec3& p1, glm::vec3& p2, glm::u8vec4& color)
 void Rasterizer::draw_triangles()
 {
 	//ZoneScoped;
-	auto& faces = state->m_model.faces;
+	auto& faces = state->m_model.m_cpu.faces;
 	size_t n_faces = faces.size();
 	size_t thread_share = n_faces / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
@@ -315,8 +315,8 @@ void Rasterizer::draw_triangle(Face& triangle)
 	//ZoneScoped;
 	if (triangle.erase)
 		return;
-	auto& verticies = state->m_model.positions;
-	auto& colors = state->m_model.colors;
+	auto& verticies = state->m_model.m_cpu.positions;
+	auto& colors = state->m_model.m_cpu.colors;
 
 	// face verts indices
 	auto v0_index = triangle.p_indices.x;
@@ -365,17 +365,17 @@ void Rasterizer::draw_triangle(Face& triangle)
 
 				// do a prespective-correct texture mapping
 				float w_recp =
-					(1 / state->m_model.verts_w_coords[v0_index]) * alpha +
-					(1 / state->m_model.verts_w_coords[v1_index]) * beta +
-					(1 / state->m_model.verts_w_coords[v2_index]) * gamma;
+					(1 / state->m_model.m_cpu.verts_w_coords[v0_index]) * alpha +
+					(1 / state->m_model.m_cpu.verts_w_coords[v1_index]) * beta +
+					(1 / state->m_model.m_cpu.verts_w_coords[v2_index]) * gamma;
 
 				glm::vec2 t =
-					(state->m_model.tex_coords[triangle.t_indices.x] / state->m_model.verts_w_coords[v0_index]) * alpha +
-					(state->m_model.tex_coords[triangle.t_indices.y] / state->m_model.verts_w_coords[v1_index]) * beta +
-					(state->m_model.tex_coords[triangle.t_indices.z] / state->m_model.verts_w_coords[v2_index]) * gamma;
+					(state->m_model.m_cpu.tex_coords[triangle.t_indices.x] / state->m_model.m_cpu.verts_w_coords[v0_index]) * alpha +
+					(state->m_model.m_cpu.tex_coords[triangle.t_indices.y] / state->m_model.m_cpu.verts_w_coords[v1_index]) * beta +
+					(state->m_model.m_cpu.tex_coords[triangle.t_indices.z] / state->m_model.m_cpu.verts_w_coords[v2_index]) * gamma;
 				t /= w_recp;
 
-				auto c = sample_texture(state->m_model.textures[0], t);
+				auto c = sample_texture(state->m_model.m_cpu.textures[0], t);
 				draw_point(candidate_pixel, c);
 			}
 		}
