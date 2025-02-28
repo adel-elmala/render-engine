@@ -170,7 +170,7 @@ void RenderEngine::init_camera()
 		state.m_camera.position = glm::vec3{0.0f, 0.0f, 0.0f};
 		state.m_camera.lookat = glm::vec3{0.0f, 0.0f, 1.0f};
 		state.m_camera.up = glm::vec3{0.0f, 1.0f, 0.0f};
-		state.m_camera.sensitivity = .6f;
+		state.m_camera.sensitivity = 3.5f;
 	}
 	else
 	{

@@ -147,7 +147,7 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 	ID3DBlob *vsBlob;
 	{
 		ID3DBlob *shaderCompileErrorsBlob;
-		HRESULT hResult = D3DCompileFromFile(vs_path.c_str(), nullptr, nullptr, "vs_main", "vs_5_0", D3DCOMPILE_DEBUG, 0, &vsBlob, &shaderCompileErrorsBlob);
+		HRESULT hResult = D3DCompileFromFile(vs_path.c_str(), nullptr, nullptr, "vs_main", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 1, &vsBlob, &shaderCompileErrorsBlob);
 		if (FAILED(hResult))
 		{
 			const char *errorString = NULL;
@@ -170,7 +170,7 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 	{
 		ID3DBlob *psBlob;
 		ID3DBlob *shaderCompileErrorsBlob;
-		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &psBlob, &shaderCompileErrorsBlob);
+		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG |  D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
 		if (FAILED(hResult))
 		{
 			const char *errorString = NULL;
@@ -195,6 +195,7 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 			{
 				{"POS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 				{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			};
 
@@ -309,7 +310,7 @@ void D3D11Wrapper::_d3d11_create_rasterizer_state()
 {
 	D3D11_RASTERIZER_DESC rasterizerDesc = {};
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.CullMode = D3D11_CULL_NONE;
+	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FrontCounterClockwise = TRUE;
 
 	d3d11Device->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
@@ -337,7 +338,9 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_depth_stencil_state();
 	_d3d11_create_sampler_state();
 	_d3d11_create_texture(state->m_model.m_gpu.textures[0]);
-	cbuffer = _d3d11_create_cbuffer(sizeof(Uniform));
+	cbuffer_0 = _d3d11_create_cbuffer(sizeof(Uniform));
+	cbuffer_1 = _d3d11_create_cbuffer(sizeof(PointLight));
+	cbuffer_2 = _d3d11_create_cbuffer(sizeof(Material));
 
 }
 
@@ -387,8 +390,23 @@ void D3D11Wrapper::render_frame()
 	u.world_camera = gm.world_camera_transform;
 	u.camera_ndc = gm.camera_ndc_transform;
 
-	_d3d11_update_cbuffer(cbuffer, &u, sizeof(Uniform));
-    d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer);
+	Material mtl{};
+	mtl.ka = state->m_model.mtl.ka;
+	mtl.kd = state->m_model.mtl.kd;
+	mtl.ks = state->m_model.mtl.ks;
+	mtl.ns = state->m_model.mtl.ns;
+
+	PointLight light{};
+	light.position = glm::vec3(1000.0f, 0.0f, 0.0f); // in camera space
+	light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
+	light.intensity = 4.0f;
+
+	_d3d11_update_cbuffer(cbuffer_0, &u, sizeof(Uniform));
+	_d3d11_update_cbuffer(cbuffer_1, &light, sizeof(PointLight));
+	_d3d11_update_cbuffer(cbuffer_2, &mtl, sizeof(Material));
+    d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_0);
+    d3d11DeviceContext->VSSetConstantBuffers(1, 1, &cbuffer_1);
+    d3d11DeviceContext->VSSetConstantBuffers(2, 1, &cbuffer_2);
 
 	UINT stride = sizeof(Vertex_attribute);
 	UINT offset = 0;

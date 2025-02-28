@@ -50,14 +50,14 @@ struct Model_CPU
 	std::vector<Texture> textures;
 };
 
-#pragma pack(push,1)
+// #pragma pack(push,1)
 struct Vertex_attribute
 {
 	glm::vec4 pos;
-	// glm::vec4 normal;
+	glm::vec4 normal;
 	glm::vec2 uv;
 };
-#pragma pack(pop)
+// #pragma pack(pop)
 
 struct Model_GPU
 {
@@ -65,10 +65,20 @@ struct Model_GPU
 	std::vector<Texture> textures;
 };
 
+struct Material
+{
+	glm::vec3 ka;
+	glm::vec3 kd;
+	glm::vec3 ks;
+	uint32_t ns; 
+};
+
 struct Model
 {
-		Model_CPU m_cpu;	
-		Model_GPU m_gpu;	
+	Model_CPU m_cpu;
+	Model_GPU m_gpu;
+	Material mtl;
+	std::string map_kd;
 };
 
 struct Camera
@@ -78,6 +88,24 @@ struct Camera
 	glm::vec3 up;
 	float sensitivity;
 };
+
+struct DirLight
+{
+	glm::vec3 direction;
+	glm::vec3 color;
+	float intensity;
+};
+
+struct PointLight
+{
+	glm::vec3 position;
+	// float padding_0 = 0.0f;
+	glm::vec3 color;
+	// float padding_1 = 0.0f;
+	float intensity;
+	// glm::vec3 padding_2{};
+};
+// TODO(adel): spot light
 
 struct SwapChain
 {

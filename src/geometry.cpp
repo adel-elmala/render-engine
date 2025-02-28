@@ -33,8 +33,9 @@ void Geometry::update_camera_transform()
 	// update the camera state according to Keyboard/Mouse input
 	if (state->m_window.enable_mouse_movement)
 	{
-		state->m_window.mouse_yaw += state->m_window.cursor_dx * state->m_camera.sensitivity;
-		state->m_window.mouse_pitch += state->m_window.cursor_dy * state->m_camera.sensitivity;
+		auto sensitivity = 0.7f;
+		state->m_window.mouse_yaw += state->m_window.cursor_dx * sensitivity;
+		state->m_window.mouse_pitch += state->m_window.cursor_dy * sensitivity;
 		// reset cursor deltas, otherwise the camera will continue to drift in the last registered direction
 		state->m_window.cursor_dx = 0;
 		state->m_window.cursor_dy = 0;

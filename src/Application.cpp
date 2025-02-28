@@ -31,7 +31,6 @@ Application::~Application()
 void Application::run()
 {
 	//ZoneScoped;
-	load_texture("../../assets/bunny/bunny-atlas.jpg");
 	if(state->backend == BACKEND_SOFTWARE)
 	{
 		parse_model_cpu(m_model_path);
@@ -42,31 +41,83 @@ void Application::run()
 		parse_model_gpu(m_model_path);
 		state->m_model_original.m_gpu = state->m_model.m_gpu;
 	}
+	load_texture(state->m_model.map_kd);
 	// load_texture("../../assets/cube3/cube.png");
 }
 
 void Application::parse_model_gpu(const std::string& path)
 {
 	m_mesh = fast_obj_read(path.c_str());
-	fastObjMesh* mesh = (fastObjMesh*)m_mesh;
+	fastObjMesh *mesh = (fastObjMesh *)m_mesh;
 
-	for (size_t i = 0; i < mesh->index_count; i++)
+	for (size_t i = 0; i < mesh->index_count;)
 	{
-		Vertex_attribute vt{};
-		auto vert_index = mesh->indices[i];
+		Vertex_attribute vt_0{};
+		Vertex_attribute vt_1{};
+		Vertex_attribute vt_2{};
+		
+		auto vert_0_index = mesh->indices[i];
+		auto vert_1_index = mesh->indices[i + 1];
+		auto vert_2_index = mesh->indices[i + 2];
 
-		vt.pos = glm::vec4{mesh->positions[vert_index.p *3],
-						   mesh->positions[vert_index.p*3 + 1],
-						   mesh->positions[vert_index.p*3 + 2],
-						   1.0f};
-		vt.uv = glm::vec2{mesh->texcoords[vert_index.t *2],
-						  mesh->texcoords[vert_index.t*2 + 1]};
+		vt_0.pos = glm::vec4{mesh->positions[vert_0_index.p * 3],
+							 mesh->positions[vert_0_index.p * 3 + 1],
+							 mesh->positions[vert_0_index.p * 3 + 2],
+							 1.0f};
 
-		// vt.normal = glm::vec4{mesh->normals[vert_index.n],
-		// 					  mesh->normals[vert_index.n + 1],
-		// 					  mesh->normals[vert_index.n + 2],
-		// 					  1.0f};
-		state->m_model.m_gpu.verts.push_back(vt);
+		vt_1.pos = glm::vec4{mesh->positions[vert_1_index.p * 3],
+							 mesh->positions[vert_1_index.p * 3 + 1],
+							 mesh->positions[vert_1_index.p * 3 + 2],
+							 1.0f};
+
+		vt_2.pos = glm::vec4{mesh->positions[vert_2_index.p * 3],
+							 mesh->positions[vert_2_index.p * 3 + 1],
+							 mesh->positions[vert_2_index.p * 3 + 2],
+							 1.0f};
+
+		vt_0.uv = glm::vec2{mesh->texcoords[vert_0_index.t * 2],
+							mesh->texcoords[vert_0_index.t * 2 + 1]};
+
+		vt_1.uv = glm::vec2{mesh->texcoords[vert_1_index.t * 2],
+							mesh->texcoords[vert_1_index.t * 2 + 1]};
+
+		vt_2.uv = glm::vec2{mesh->texcoords[vert_2_index.t * 2],
+							mesh->texcoords[vert_2_index.t * 2 + 1]};
+
+		glm::vec4 t01 = glm::normalize(vt_1.pos - vt_0.pos);
+		glm::vec4 t21 = glm::normalize(vt_2.pos - vt_0.pos);
+		// vt_0.normal = glm::normalize(glm::vec4(glm::cross(glm::vec3(t21), glm::vec3(t01)), 0.0));
+		vt_0.normal = glm::normalize(glm::vec4(glm::cross(glm::vec3(t01), glm::vec3(t21)), 0.0));
+		vt_1.normal = vt_0.normal;
+		vt_2.normal = vt_0.normal;
+
+		state->m_model.m_gpu.verts.push_back(vt_0);
+		state->m_model.m_gpu.verts.push_back(vt_1);
+		state->m_model.m_gpu.verts.push_back(vt_2);
+		i += 3;
+	}
+	// TODO(adel): fix this later, handle mtl array properly
+	if (mesh->material_count != 0)
+	{
+		state->m_model.mtl.ka = glm::vec3(
+			mesh->materials[0].Ka[0],
+			mesh->materials[0].Ka[1],
+			mesh->materials[0].Ka[2]);
+
+		state->m_model.mtl.kd = glm::vec3(
+			mesh->materials[0].Kd[0],
+			mesh->materials[0].Kd[1],
+			mesh->materials[0].Kd[2]);
+
+		state->m_model.mtl.ks = glm::vec3(
+			mesh->materials[0].Ks[0],
+			mesh->materials[0].Ks[1],
+			mesh->materials[0].Ks[2]);
+
+		state->m_model.mtl.ns = mesh->materials[0].Ns;
+
+		if (mesh->materials[0].map_Kd.path)
+			state->m_model.map_kd = std::string(mesh->materials[0].map_Kd.path);
 	}
 }
 
