@@ -59,18 +59,18 @@ VS_Output vs_main(VS_Input input)
 	float3 ambient_color = light.intensity * mtl.ka;
 
 	// diffuse component
-	float3 light_dir = normalize( light.position - pos_cs.xyz);
+	float3 light_dir = normalize( mul(worldCamera,float4(light.position,1)).xyz - pos_cs.xyz);
 	float3 incident_light = light.intensity * clamp(dot(input.normal.xyz, light_dir), 0, 1);
 	float3 diffuse_color = incident_light * mtl.kd;
 
 	// specular component
 	float3 view_dir = -normalize(pos_cs.xyz);
-	float3 half_dir = (view_dir + light_dir) / normalize(view_dir + light_dir);
-	float3 specular_color = incident_light * clamp( dot(input.normal.xyz, half_dir), 0, 1) * mtl.ks;
+	float3 half_dir = (view_dir + light_dir) / length(view_dir + light_dir);
+	float3 specular_color = incident_light * pow(clamp(dot(input.normal.xyz, half_dir), 0, 1), 100) * mtl.ks;
 
 	VS_Output output;
 	output.pos = mul(cameraNDC, pos_cs);
-	output.color = ambient_color + diffuse_color + specular_color;
+	output.color = ambient_color + diffuse_color + specular_color ;
 	output.uv = input.uv;
 	return output;
 }

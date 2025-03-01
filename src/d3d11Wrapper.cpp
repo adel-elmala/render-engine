@@ -397,7 +397,7 @@ void D3D11Wrapper::render_frame()
 	mtl.ns = state->m_model.mtl.ns;
 
 	PointLight light{};
-	light.position = glm::vec3(1000.0f, 0.0f, 0.0f); // in camera space
+	light.position = glm::vec3(100.0f, 100.0f, 100.0f); // in world space
 	light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
 	light.intensity = 4.0f;
 

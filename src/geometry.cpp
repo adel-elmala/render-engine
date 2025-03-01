@@ -16,7 +16,8 @@ void Geometry::update_world_transform()
 	if (state->backend == BACKEND_D3D11)
 	{
 		model_world_transform = glm::identity<glm::mat4>();
-		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, 0, - (state->m_view_volume.far_plane - ((state->m_view_volume.far_plane - state->m_view_volume.near_plane) / 2))});
+		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, 0, (state->m_view_volume.near_plane + ((state->m_view_volume.far_plane - state->m_view_volume.near_plane) / 2))});
+		model_world_transform = glm::scale(model_world_transform, glm::vec3{0.5f, 0.5f, 0.5f});
 	}
 	else
 	{
@@ -33,7 +34,7 @@ void Geometry::update_camera_transform()
 	// update the camera state according to Keyboard/Mouse input
 	if (state->m_window.enable_mouse_movement)
 	{
-		auto sensitivity = 0.7f;
+		auto sensitivity = 0.3f;
 		state->m_window.mouse_yaw += state->m_window.cursor_dx * sensitivity;
 		state->m_window.mouse_pitch += state->m_window.cursor_dy * sensitivity;
 		// reset cursor deltas, otherwise the camera will continue to drift in the last registered direction
@@ -50,15 +51,15 @@ void Geometry::update_camera_transform()
 	auto up = state->m_camera.up;
 
 	// camera coords basis
-	auto w = -(glm::normalize(gaze));
+	auto w = (glm::normalize(gaze));
 	auto u = glm::normalize(glm::cross(w, up));
 	auto v = glm::cross(u, w);
-	// if(state->backend == BACKEND_D3D11)
-	// {
-	// 	auto w = glm::normalize(gaze);
-	// 	auto u = glm::normalize(glm::cross(w, up));
-	// 	auto v = glm::cross(u, w);
-	// }
+	if(state->backend == BACKEND_D3D11)
+	{
+		w = glm::normalize(gaze);
+		u = -glm::normalize(glm::cross(w, up));
+		v = -glm::cross(u, w);
+	}
 
 	if (state->m_window.move_cam_right)
 		state->m_camera.position += u * state->m_camera.sensitivity;

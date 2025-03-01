@@ -62,17 +62,17 @@ void Application::parse_model_gpu(const std::string& path)
 
 		vt_0.pos = glm::vec4{mesh->positions[vert_0_index.p * 3],
 							 mesh->positions[vert_0_index.p * 3 + 1],
-							 mesh->positions[vert_0_index.p * 3 + 2],
+							 -mesh->positions[vert_0_index.p * 3 + 2],
 							 1.0f};
 
 		vt_1.pos = glm::vec4{mesh->positions[vert_1_index.p * 3],
 							 mesh->positions[vert_1_index.p * 3 + 1],
-							 mesh->positions[vert_1_index.p * 3 + 2],
+							 -mesh->positions[vert_1_index.p * 3 + 2],
 							 1.0f};
 
 		vt_2.pos = glm::vec4{mesh->positions[vert_2_index.p * 3],
 							 mesh->positions[vert_2_index.p * 3 + 1],
-							 mesh->positions[vert_2_index.p * 3 + 2],
+							 -mesh->positions[vert_2_index.p * 3 + 2],
 							 1.0f};
 
 		vt_0.uv = glm::vec2{mesh->texcoords[vert_0_index.t * 2],
@@ -86,8 +86,8 @@ void Application::parse_model_gpu(const std::string& path)
 
 		glm::vec4 t01 = glm::normalize(vt_1.pos - vt_0.pos);
 		glm::vec4 t21 = glm::normalize(vt_2.pos - vt_0.pos);
-		// vt_0.normal = glm::normalize(glm::vec4(glm::cross(glm::vec3(t21), glm::vec3(t01)), 0.0));
-		vt_0.normal = glm::normalize(glm::vec4(glm::cross(glm::vec3(t01), glm::vec3(t21)), 0.0));
+		vt_0.normal = glm::normalize(glm::vec4(glm::cross(glm::vec3(t21), glm::vec3(t01)), 0.0));
+		// vt_0.normal = glm::normalize(glm::vec4(glm::cross(glm::vec3(t01), glm::vec3(t21)), 0.0));
 		vt_1.normal = vt_0.normal;
 		vt_2.normal = vt_0.normal;
 
