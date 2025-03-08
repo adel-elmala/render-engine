@@ -3,8 +3,8 @@
 
 #include <d3dcompiler.h>
 
-#include<assert.h>
-#include<iostream>
+#include <assert.h>
+#include <iostream>
 
 #include "glm/ext.hpp"
 #include <glm/gtc/matrix_access.hpp>
@@ -125,19 +125,18 @@ void D3D11Wrapper::_d3d11_create_render_target()
 	hResult = d3d11Device->CreateRenderTargetView(d3d11FrameBuffer, 0, &d3d11FrameBufferView);
 	assert(SUCCEEDED(hResult));
 
-    D3D11_TEXTURE2D_DESC depthBufferDesc;
-    d3d11FrameBuffer->GetDesc(&depthBufferDesc);
-    depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	D3D11_TEXTURE2D_DESC depthBufferDesc;
+	d3d11FrameBuffer->GetDesc(&depthBufferDesc);
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 
-    ID3D11Texture2D* depthBuffer;
-    d3d11Device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
+	ID3D11Texture2D *depthBuffer;
+	d3d11Device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
 
-    d3d11Device->CreateDepthStencilView(depthBuffer, nullptr, &d3d11DepthStencilView);
+	d3d11Device->CreateDepthStencilView(depthBuffer, nullptr, &d3d11DepthStencilView);
 
-    d3d11FrameBuffer->Release();
-    depthBuffer->Release();
-
+	d3d11FrameBuffer->Release();
+	depthBuffer->Release();
 }
 
 // compile and create vertex + pixel shaders
@@ -170,7 +169,7 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 	{
 		ID3DBlob *psBlob;
 		ID3DBlob *shaderCompileErrorsBlob;
-		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG |  D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
+		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
 		if (FAILED(hResult))
 		{
 			const char *errorString = NULL;
@@ -206,14 +205,14 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 
 	// Create Vertex and Index Buffer
 	{
-		std::vector<Vertex_attribute> verts {};
-		for(auto& v: state->m_model_original.m_gpu.verts)
+		std::vector<Vertex_attribute> verts{};
+		for (auto &v : state->m_model_original.m_gpu.verts)
 		{
 			verts.push_back(v);
 		}
 
 		D3D11_BUFFER_DESC vertexBufferDesc = {};
-		auto vs =  sizeof(Vertex_attribute);
+		auto vs = sizeof(Vertex_attribute);
 		vertexBufferDesc.ByteWidth = verts.size() * vs;
 		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -243,19 +242,19 @@ void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_p
 	}
 }
 
-void D3D11Wrapper::_d3d11_create_sampler_state() 
+void D3D11Wrapper::_d3d11_create_sampler_state()
 {
 	// Create Sampler State
 	D3D11_SAMPLER_DESC samplerDesc = {};
-    samplerDesc.Filter         = D3D11_FILTER_MIN_MAG_MIP_POINT;
-    samplerDesc.AddressU       = D3D11_TEXTURE_ADDRESS_BORDER;
-    samplerDesc.AddressV       = D3D11_TEXTURE_ADDRESS_BORDER;
-    samplerDesc.AddressW       = D3D11_TEXTURE_ADDRESS_BORDER;
-    samplerDesc.BorderColor[0] = 1.0f;
-    samplerDesc.BorderColor[1] = 1.0f;
-    samplerDesc.BorderColor[2] = 1.0f;
-    samplerDesc.BorderColor[3] = 1.0f;
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.BorderColor[0] = 1.0f;
+	samplerDesc.BorderColor[1] = 1.0f;
+	samplerDesc.BorderColor[2] = 1.0f;
+	samplerDesc.BorderColor[3] = 1.0f;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
 	d3d11Device->CreateSamplerState(&samplerDesc, &samplerState);
 }
@@ -281,7 +280,7 @@ void D3D11Wrapper::_d3d11_create_texture(Texture t)
 	d3d11Device->CreateShaderResourceView(texture, nullptr, &textureView);
 }
 
-ID3D11Buffer* D3D11Wrapper::_d3d11_create_cbuffer(uint32_t size)
+ID3D11Buffer *D3D11Wrapper::_d3d11_create_cbuffer(uint32_t size)
 {
 	// TODO[adel]: handle resources better, (i.e. push the resources handles to a vector, and release them on destruction...)
 	ID3D11Buffer *constantBuffer;
@@ -329,11 +328,11 @@ void D3D11Wrapper::_d3d11_create_depth_stencil_state()
 void D3D11Wrapper::initD3D11()
 {
 	_d3d11_create_device();
-	if(enableDebugLayer)
+	if (enableDebugLayer)
 		_d3d11_set_debug_layer();
 	_d3d11_create_swapchain();
 	_d3d11_create_render_target();
-	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl",L"../../assets/shaders/shaders.hlsl");
+	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl", L"../../assets/shaders/shaders.hlsl");
 	_d3d11_create_rasterizer_state();
 	_d3d11_create_depth_stencil_state();
 	_d3d11_create_sampler_state();
@@ -341,7 +340,6 @@ void D3D11Wrapper::initD3D11()
 	cbuffer_0 = _d3d11_create_cbuffer(sizeof(Uniform));
 	cbuffer_1 = _d3d11_create_cbuffer(sizeof(PointLight));
 	cbuffer_2 = _d3d11_create_cbuffer(sizeof(Material));
-
 }
 
 void D3D11Wrapper::render_frame()
@@ -397,16 +395,16 @@ void D3D11Wrapper::render_frame()
 	mtl.ns = state->m_model.mtl.ns;
 
 	PointLight light{};
-	light.position = glm::vec3(100.0f, 100.0f, 100.0f); // in world space
+	light.position = glm::vec3(100.0f, 100.0f, 100.0f);						// in world space
 	light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
 	light.intensity = 4.0f;
 
 	_d3d11_update_cbuffer(cbuffer_0, &u, sizeof(Uniform));
 	_d3d11_update_cbuffer(cbuffer_1, &light, sizeof(PointLight));
 	_d3d11_update_cbuffer(cbuffer_2, &mtl, sizeof(Material));
-    d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_0);
-    d3d11DeviceContext->VSSetConstantBuffers(1, 1, &cbuffer_1);
-    d3d11DeviceContext->VSSetConstantBuffers(2, 1, &cbuffer_2);
+	d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_0);
+	d3d11DeviceContext->VSSetConstantBuffers(1, 1, &cbuffer_1);
+	d3d11DeviceContext->VSSetConstantBuffers(2, 1, &cbuffer_2);
 
 	UINT stride = sizeof(Vertex_attribute);
 	UINT offset = 0;
