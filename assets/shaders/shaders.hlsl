@@ -80,5 +80,4 @@ float4 ps_main(VS_Output input) : SV_Target
 	return clamp(t.Sample(s, input.uv) * float4(input.color,1.0), 0.0,1.0);
 	// return float4(input.color,1.0);
 	// return t.Sample(s, input.uv) ;
-	// return float4(input.color,1.0bunny/bunny.obj); 
 }

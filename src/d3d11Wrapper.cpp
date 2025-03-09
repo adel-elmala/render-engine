@@ -61,7 +61,7 @@ void D3D11Wrapper::_d3d11_set_debug_layer()
 		{
 			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
 			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
-			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, true);
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, false);
 			d3dInfoQueue->Release();
 		}
 		d3dDebug->Release();
@@ -116,6 +116,40 @@ void D3D11Wrapper::_d3d11_create_swapchain()
 }
 
 // Create Framebuffer Render Target
+void D3D11Wrapper::_d3d11_create_render_texture()
+{
+	// Create Texture
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = state->m_window.width;
+	textureDesc.Height = state->m_window.height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+
+	auto hResult = d3d11Device->CreateTexture2D(&textureDesc, nullptr, &renderTexture);
+	assert(SUCCEEDED(hResult));
+	d3d11Device->CreateShaderResourceView(renderTexture, nullptr, &renderTextureView);
+
+	hResult = d3d11Device->CreateRenderTargetView(renderTexture, 0, &renderTargetTextureView);
+	assert(SUCCEEDED(hResult));
+
+	D3D11_TEXTURE2D_DESC depthBufferDesc = textureDesc;
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+	ID3D11Texture2D *depthBuffer;
+	d3d11Device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
+
+	d3d11Device->CreateDepthStencilView(depthBuffer, nullptr, &renderTargetDepthStencilView);
+
+	renderTexture->Release();
+	depthBuffer->Release();
+}
+
+// Create Framebuffer Render Target
 void D3D11Wrapper::_d3d11_create_render_target()
 {
 	ID3D11Texture2D *d3d11FrameBuffer;
@@ -125,18 +159,58 @@ void D3D11Wrapper::_d3d11_create_render_target()
 	hResult = d3d11Device->CreateRenderTargetView(d3d11FrameBuffer, 0, &d3d11FrameBufferView);
 	assert(SUCCEEDED(hResult));
 
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
-	d3d11FrameBuffer->GetDesc(&depthBufferDesc);
-	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-
-	ID3D11Texture2D *depthBuffer;
-	d3d11Device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
-
-	d3d11Device->CreateDepthStencilView(depthBuffer, nullptr, &d3d11DepthStencilView);
-
 	d3d11FrameBuffer->Release();
-	depthBuffer->Release();
+}
+
+// compile and create vertex + pixel shaders
+void D3D11Wrapper::_d3d11_create_overlay_shader(std::wstring vs_path, std::wstring ps_path)
+{
+	// Create Vertex Shader
+	ID3DBlob *vsBlob;
+	{
+		ID3DBlob *shaderCompileErrorsBlob;
+		HRESULT hResult = D3DCompileFromFile(vs_path.c_str(), nullptr, nullptr, "vs_main", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 1, &vsBlob, &shaderCompileErrorsBlob);
+		if (FAILED(hResult))
+		{
+			const char *errorString = NULL;
+			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+				errorString = "Could not compile shader; file not found";
+			else if (shaderCompileErrorsBlob)
+			{
+				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+				shaderCompileErrorsBlob->Release();
+			}
+			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+			return;
+		}
+
+		hResult = d3d11Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &overlayVertexShader);
+		assert(SUCCEEDED(hResult));
+	}
+
+	// Create Pixel Shader
+	{
+		ID3DBlob *psBlob;
+		ID3DBlob *shaderCompileErrorsBlob;
+		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
+		if (FAILED(hResult))
+		{
+			const char *errorString = NULL;
+			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+				errorString = "Could not compile shader; file not found";
+			else if (shaderCompileErrorsBlob)
+			{
+				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+				shaderCompileErrorsBlob->Release();
+			}
+			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+			return;
+		}
+
+		hResult = d3d11Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &overlayPixelShader);
+		assert(SUCCEEDED(hResult));
+		psBlob->Release();
+	}
 }
 
 // compile and create vertex + pixel shaders
@@ -331,7 +405,9 @@ void D3D11Wrapper::initD3D11()
 	if (enableDebugLayer)
 		_d3d11_set_debug_layer();
 	_d3d11_create_swapchain();
+	_d3d11_create_render_texture();
 	_d3d11_create_render_target();
+	_d3d11_create_overlay_shader(L"../../assets/shaders/overlay.hlsl", L"../../assets/shaders/overlay.hlsl");
 	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl", L"../../assets/shaders/shaders.hlsl");
 	_d3d11_create_rasterizer_state();
 	_d3d11_create_depth_stencil_state();
@@ -346,8 +422,8 @@ void D3D11Wrapper::render_frame()
 {
 	FLOAT backgroundColor[4] = {0.1f, 0.2f, 0.6f, 1.0f};
 	backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
-	d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
-	d3d11DeviceContext->ClearDepthStencilView(d3d11DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	d3d11DeviceContext->ClearRenderTargetView(renderTargetTextureView, backgroundColor);
+	d3d11DeviceContext->ClearDepthStencilView(renderTargetDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	d3d11DeviceContext->RSSetState(rasterizerState);
 	d3d11DeviceContext->OMSetDepthStencilState(depthStencilState, 0);
@@ -357,7 +433,7 @@ void D3D11Wrapper::render_frame()
 	D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
 	d3d11DeviceContext->RSSetViewports(1, &viewport);
 
-	d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, d3d11DepthStencilView);
+	d3d11DeviceContext->OMSetRenderTargets(1, &renderTargetTextureView, renderTargetDepthStencilView);
 
 	d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	d3d11DeviceContext->IASetInputLayout(inputLayout);
@@ -374,14 +450,6 @@ void D3D11Wrapper::render_frame()
 	gm.update_world_transform();
 	gm.update_camera_transform();
 	gm.update_perspective_transform();
-
-	// auto modelViewProj =
-	// 	gm.camera_ndc_transform *
-	// 	gm.world_camera_transform *
-	// 	gm.model_world_transform;
-
-	// modelViewProj = glm::transpose(modelViewProj);
-	// _d3d11_update_cbuffer(cbuffer, glm::value_ptr(modelViewProj), sizeof(glm::mat4));
 
 	Uniform u{};
 	u.model_world = gm.model_world_transform;
@@ -413,7 +481,24 @@ void D3D11Wrapper::render_frame()
 
 	// d3d11DeviceContext->Draw(state->m_model.m_gpu.faces.size() * 3, 0, 0);
 	d3d11DeviceContext->Draw(state->m_model.m_gpu.verts.size(), 0);
+	d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
+	// overlay rendered texture onto swapchain
+	{
+		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
+
+		d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
+
+		d3d11DeviceContext->VSSetShader(overlayVertexShader, nullptr, 0);
+		d3d11DeviceContext->PSSetShader(overlayPixelShader, nullptr, 0);
+		
+		// ID3D11ShaderResourceView* srvNULL = {nullptr};
+		// d3d11DeviceContext->PSSetShaderResources(0, 1, &srvNULL);
+		d3d11DeviceContext->PSSetShaderResources(0, 1, &renderTextureView);
+		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
+		d3d11DeviceContext->Draw(6, 0);
+		d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+	}
 	d3d11SwapChain->Present(1, 0);
 }
 
@@ -423,9 +508,13 @@ void D3D11Wrapper::cleanup()
 	// indexBuffer->Release();
 	vertexBuffer->Release();
 	inputLayout->Release();
+	overlayVertexShader->Release();
+	overlayPixelShader->Release();
 	vertexShader->Release();
 	pixelShader->Release();
 	d3d11FrameBufferView->Release();
+	renderTextureView->Release();
+	renderTargetDepthStencilView->Release();
 	d3d11SwapChain->Release();
 	d3d11DeviceContext->Release();
 	d3d11Device->Release();
