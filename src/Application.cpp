@@ -26,6 +26,13 @@ Application::~Application()
 
 	for (auto& texture : t)
 		stbi_image_free(texture.data);
+
+	stbi_image_free(state->m_model.env_map.front.data);
+	stbi_image_free(state->m_model.env_map.back.data);
+	stbi_image_free(state->m_model.env_map.left.data);
+	stbi_image_free(state->m_model.env_map.right.data);
+	stbi_image_free(state->m_model.env_map.top.data);
+	stbi_image_free(state->m_model.env_map.bottom.data);
 }
 
 void Application::run()

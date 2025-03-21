@@ -604,7 +604,7 @@ void D3D11Wrapper::render_frame()
 		d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_3);
 
 		d3d11DeviceContext->Draw(6, 0);
-		d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);	
+		d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 	}
 
 	// overlay rendered texture onto swapchain pass
@@ -630,8 +630,15 @@ void D3D11Wrapper::cleanup()
 {
 	std::cout << "Cleanup...\n";
 	// indexBuffer->Release();
+	cbuffer_0->Release();
+	cbuffer_1->Release();
+	cbuffer_2->Release();
+	cbuffer_3->Release();
+	envMapView->Release();
 	vertexBuffer->Release();
 	inputLayout->Release();
+	envMapVertexShader->Release();
+	envMapPixelShader->Release();
 	overlayVertexShader->Release();
 	overlayPixelShader->Release();
 	vertexShader->Release();
