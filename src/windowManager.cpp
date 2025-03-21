@@ -44,7 +44,12 @@ bool WindowManager::init()
 			return false;
 		}
 	}
-
+	SDL_DisplayMode md{};
+	SDL_GetCurrentDisplayMode(0, &md);
+	state->m_window.screen_width = md.w;
+	state->m_window.screen_height = md.h;
+	state->m_window.window_origin_x = md.w / 2 - m_width / 2;
+	state->m_window.window_origin_y = md.h / 2 - m_height / 2;
 	m_window_surface = SDL_GetWindowSurface(m_window_handle);
 	if (NULL == m_window_surface)
 	{
@@ -119,6 +124,8 @@ void WindowManager::start_event_loop()
 			case SDL_MOUSEMOTION:
 				state->m_window.cursor_dx = event.motion.xrel;
 				state->m_window.cursor_dy = event.motion.yrel;
+				state->m_window.cursor_x = event.motion.x;
+				state->m_window.cursor_y = event.motion.y;
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 				if (event.button.button == 1)

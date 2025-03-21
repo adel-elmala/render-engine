@@ -1,5 +1,6 @@
 #include "../include/geometry.h"
 #include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
+#include <iostream>
 
 Geometry::Geometry()
 {
@@ -13,6 +14,8 @@ void Geometry::update_world_transform()
 {
 	//ZoneScoped;
 	static char count = 0;
+	static float dx = 0.0f;
+	static float dy = 0.0f;
 	if (state->backend == BACKEND_D3D11)
 	{
 		model_world_transform = glm::identity<glm::mat4>();
@@ -25,6 +28,14 @@ void Geometry::update_world_transform()
 		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, 0, state->m_view_volume.near_plane - (state->m_view_volume.near_plane - state->m_view_volume.far_plane) / 2});
 		model_world_transform = glm::scale(model_world_transform, glm::vec3{0.15f, -0.15f, 0.15f});
 	}
+
+	if (state->m_window.enable_mouse_movement)
+	{
+		dx = (state->m_window.window_origin_x + state->m_window.cursor_x) / state->m_window.screen_width - 0.5f;
+		dy = (state->m_window.window_origin_y + state->m_window.cursor_y) / state->m_window.screen_height - 0.5f;
+	}
+	model_world_transform = glm::rotate(model_world_transform, dx * glm::radians(360.0f), glm::vec3(0, 1, 0));
+	model_world_transform = glm::rotate(model_world_transform, dy * glm::radians(360.0f), glm::vec3(1, 0, 0));
 }
 
 void Geometry::update_camera_transform()
@@ -32,19 +43,19 @@ void Geometry::update_camera_transform()
 	//ZoneScoped;
 
 	// update the camera state according to Keyboard/Mouse input
-	if (state->m_window.enable_mouse_movement)
-	{
-		auto sensitivity = 0.3f;
-		state->m_window.mouse_yaw += state->m_window.cursor_dx * sensitivity;
-		state->m_window.mouse_pitch += state->m_window.cursor_dy * sensitivity;
-		// reset cursor deltas, otherwise the camera will continue to drift in the last registered direction
-		state->m_window.cursor_dx = 0;
-		state->m_window.cursor_dy = 0;
+	// if (state->m_window.enable_mouse_movement)
+	// {
+	// 	auto sensitivity = 0.3f;
+	// 	state->m_window.mouse_yaw += state->m_window.cursor_dx * sensitivity;
+	// 	state->m_window.mouse_pitch += state->m_window.cursor_dy * sensitivity;
+	// 	// reset cursor deltas, otherwise the camera will continue to drift in the last registered direction
+	// 	state->m_window.cursor_dx = 0;
+	// 	state->m_window.cursor_dy = 0;
 
-		state->m_camera.lookat.x = cos(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
-		state->m_camera.lookat.y = sin(glm::radians(state->m_window.mouse_pitch));
-		state->m_camera.lookat.z = sin(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
-	}
+	// 	state->m_camera.lookat.x = cos(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
+	// 	state->m_camera.lookat.y = sin(glm::radians(state->m_window.mouse_pitch));
+	// 	state->m_camera.lookat.z = sin(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
+	// }
 
 	auto& eye = state->m_camera.position;
 	auto gaze = state->m_camera.lookat;

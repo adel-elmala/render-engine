@@ -135,9 +135,15 @@ struct Window
 	HWND win32_win;
 	int width;
 	int height;
+	int screen_width;
+	int screen_height;
+	int window_origin_x;
+	int window_origin_y;
 	unsigned int bytes_per_pixel;
 	float cursor_dx;
 	float cursor_dy;
+	float cursor_x;
+	float cursor_y;
 	float mouse_yaw;
 	float mouse_pitch;
 	bool enable_mouse_movement;
