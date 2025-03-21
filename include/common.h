@@ -39,6 +39,16 @@ struct Texture
 	int bytes_per_pixel;
 };
 
+struct Env_map
+{
+	Texture front;
+	Texture back;
+	Texture left;
+	Texture right;
+	Texture top;
+	Texture bottom;
+};
+
 struct Model_CPU
 {
 	std::vector<glm::vec4> positions;
@@ -77,6 +87,7 @@ struct Model
 {
 	Model_CPU m_cpu;
 	Model_GPU m_gpu;
+	Env_map env_map;
 	Material mtl;
 	std::string map_kd;
 };

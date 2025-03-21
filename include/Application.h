@@ -19,7 +19,8 @@ private:
 
 	void parse_model_cpu(const std::string& path);
 	void parse_model_gpu(const std::string& path);
-	void load_texture(const std::string& path);
+	Texture load_texture(const std::string& path, bool flip_vertically = false);
+	Env_map load_env_texture_cube(const std::string& path);
 	void* m_mesh; // single model mesh for now
 	std::string m_model_path;
 	Engine_State* state;

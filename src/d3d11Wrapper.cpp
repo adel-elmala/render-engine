@@ -214,6 +214,57 @@ void D3D11Wrapper::_d3d11_create_overlay_shader(std::wstring vs_path, std::wstri
 }
 
 // compile and create vertex + pixel shaders
+void D3D11Wrapper::_d3d11_create_env_map_shader(std::wstring vs_path, std::wstring ps_path)
+{
+	// Create Vertex Shader
+	ID3DBlob *vsBlob;
+	{
+		ID3DBlob *shaderCompileErrorsBlob;
+		HRESULT hResult = D3DCompileFromFile(vs_path.c_str(), nullptr, nullptr, "vs_main", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 1, &vsBlob, &shaderCompileErrorsBlob);
+		if (FAILED(hResult))
+		{
+			const char *errorString = NULL;
+			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+				errorString = "Could not compile shader; file not found";
+			else if (shaderCompileErrorsBlob)
+			{
+				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+				shaderCompileErrorsBlob->Release();
+			}
+			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+			return;
+		}
+
+		hResult = d3d11Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &envMapVertexShader);
+		assert(SUCCEEDED(hResult));
+	}
+
+	// Create Pixel Shader
+	{
+		ID3DBlob *psBlob;
+		ID3DBlob *shaderCompileErrorsBlob;
+		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
+		if (FAILED(hResult))
+		{
+			const char *errorString = NULL;
+			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+				errorString = "Could not compile shader; file not found";
+			else if (shaderCompileErrorsBlob)
+			{
+				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+				shaderCompileErrorsBlob->Release();
+			}
+			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+			return;
+		}
+
+		hResult = d3d11Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &envMapPixelShader);
+		assert(SUCCEEDED(hResult));
+		psBlob->Release();
+	}
+}
+
+// compile and create vertex + pixel shaders
 void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path)
 {
 	// Create Vertex Shader
@@ -354,6 +405,59 @@ void D3D11Wrapper::_d3d11_create_texture(Texture t)
 	d3d11Device->CreateShaderResourceView(texture, nullptr, &textureView);
 }
 
+void D3D11Wrapper::_d3d11_create_env_map()
+{
+	// Create Texture
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = state->m_model.env_map.front.width;
+	textureDesc.Height = state->m_model.env_map.front.height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 6;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRViewDesc;
+	SRViewDesc.Format = textureDesc.Format;
+	SRViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	SRViewDesc.TextureCube.MipLevels = textureDesc.MipLevels;
+	SRViewDesc.TextureCube.MostDetailedMip = 0;
+
+	D3D11_SUBRESOURCE_DATA textureCubeSubresourceData[6];
+
+	textureCubeSubresourceData[0].pSysMem = state->m_model.env_map.right.data;
+	textureCubeSubresourceData[0].SysMemPitch = state->m_model.env_map.right.bytes_per_pixel * state->m_model.env_map.right.width;
+	textureCubeSubresourceData[0].SysMemSlicePitch = 0;
+
+	textureCubeSubresourceData[1].pSysMem = state->m_model.env_map.left.data;
+	textureCubeSubresourceData[1].SysMemPitch = state->m_model.env_map.left.bytes_per_pixel * state->m_model.env_map.left.width;
+	textureCubeSubresourceData[1].SysMemSlicePitch = 0;
+
+	textureCubeSubresourceData[2].pSysMem = state->m_model.env_map.top.data;
+	textureCubeSubresourceData[2].SysMemPitch = state->m_model.env_map.top.bytes_per_pixel * state->m_model.env_map.top.width;
+	textureCubeSubresourceData[2].SysMemSlicePitch = 0;
+
+	textureCubeSubresourceData[3].pSysMem = state->m_model.env_map.bottom.data;
+	textureCubeSubresourceData[3].SysMemPitch = state->m_model.env_map.bottom.bytes_per_pixel * state->m_model.env_map.bottom.width;
+	textureCubeSubresourceData[3].SysMemSlicePitch = 0;
+
+	textureCubeSubresourceData[4].pSysMem = state->m_model.env_map.front.data;
+	textureCubeSubresourceData[4].SysMemPitch = state->m_model.env_map.front.bytes_per_pixel * state->m_model.env_map.front.width;
+	textureCubeSubresourceData[4].SysMemSlicePitch = 0;
+
+	textureCubeSubresourceData[5].pSysMem = state->m_model.env_map.back.data;
+	textureCubeSubresourceData[5].SysMemPitch = state->m_model.env_map.back.bytes_per_pixel * state->m_model.env_map.back.width;
+	textureCubeSubresourceData[5].SysMemSlicePitch = 0;
+
+	d3d11Device->CreateTexture2D(&textureDesc, &textureCubeSubresourceData[0], &envMap);
+	d3d11Device->CreateShaderResourceView(envMap, &SRViewDesc, &envMapView);
+}
+
 ID3D11Buffer *D3D11Wrapper::_d3d11_create_cbuffer(uint32_t size)
 {
 	// TODO[adel]: handle resources better, (i.e. push the resources handles to a vector, and release them on destruction...)
@@ -407,46 +511,27 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_swapchain();
 	_d3d11_create_render_texture();
 	_d3d11_create_render_target();
+	_d3d11_create_env_map_shader(L"../../assets/shaders/envMap.hlsl", L"../../assets/shaders/envMap.hlsl");
 	_d3d11_create_overlay_shader(L"../../assets/shaders/overlay.hlsl", L"../../assets/shaders/overlay.hlsl");
 	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl", L"../../assets/shaders/shaders.hlsl");
 	_d3d11_create_rasterizer_state();
 	_d3d11_create_depth_stencil_state();
 	_d3d11_create_sampler_state();
 	_d3d11_create_texture(state->m_model.m_gpu.textures[0]);
+	_d3d11_create_env_map();
 	cbuffer_0 = _d3d11_create_cbuffer(sizeof(Uniform));
 	cbuffer_1 = _d3d11_create_cbuffer(sizeof(PointLight));
 	cbuffer_2 = _d3d11_create_cbuffer(sizeof(Material));
+	cbuffer_3 = _d3d11_create_cbuffer(sizeof(glm::mat4));
 }
 
 void D3D11Wrapper::render_frame()
 {
 	FLOAT backgroundColor[4] = {0.1f, 0.2f, 0.6f, 1.0f};
 	backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
-	d3d11DeviceContext->ClearRenderTargetView(renderTargetTextureView, backgroundColor);
-	d3d11DeviceContext->ClearDepthStencilView(renderTargetDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-	d3d11DeviceContext->RSSetState(rasterizerState);
-	d3d11DeviceContext->OMSetDepthStencilState(depthStencilState, 0);
-
-	RECT winRect;
-	GetClientRect(state->m_window.win32_win, &winRect);
-	D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
-	d3d11DeviceContext->RSSetViewports(1, &viewport);
-
-	d3d11DeviceContext->OMSetRenderTargets(1, &renderTargetTextureView, renderTargetDepthStencilView);
-
-	d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	d3d11DeviceContext->IASetInputLayout(inputLayout);
-
-	d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
-	d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
-
-	d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
-	d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 
 	Geometry gm;
 	gm.bind_state(state);
-	static bool once = true;
 	gm.update_world_transform();
 	gm.update_camera_transform();
 	gm.update_perspective_transform();
@@ -456,34 +541,73 @@ void D3D11Wrapper::render_frame()
 	u.world_camera = gm.world_camera_transform;
 	u.camera_ndc = gm.camera_ndc_transform;
 
-	Material mtl{};
-	mtl.ka = state->m_model.mtl.ka;
-	mtl.kd = state->m_model.mtl.kd;
-	mtl.ks = state->m_model.mtl.ks;
-	mtl.ns = state->m_model.mtl.ns;
+	// common to all passes
+	{
+		d3d11DeviceContext->RSSetState(rasterizerState);
+		d3d11DeviceContext->OMSetDepthStencilState(depthStencilState, 0);
 
-	PointLight light{};
-	light.position = glm::vec3(100.0f, 100.0f, 100.0f);						// in world space
-	light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
-	light.intensity = 4.0f;
+		RECT winRect;
+		GetClientRect(state->m_window.win32_win, &winRect);
+		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
+		d3d11DeviceContext->RSSetViewports(1, &viewport);
+		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	_d3d11_update_cbuffer(cbuffer_0, &u, sizeof(Uniform));
-	_d3d11_update_cbuffer(cbuffer_1, &light, sizeof(PointLight));
-	_d3d11_update_cbuffer(cbuffer_2, &mtl, sizeof(Material));
-	d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_0);
-	d3d11DeviceContext->VSSetConstantBuffers(1, 1, &cbuffer_1);
-	d3d11DeviceContext->VSSetConstantBuffers(2, 1, &cbuffer_2);
+		d3d11DeviceContext->ClearRenderTargetView(renderTargetTextureView, backgroundColor);
+		d3d11DeviceContext->ClearDepthStencilView(renderTargetDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	}
+	// render geometery to texture pass
+	{
+		d3d11DeviceContext->OMSetRenderTargets(1, &renderTargetTextureView, renderTargetDepthStencilView);
+		d3d11DeviceContext->IASetInputLayout(inputLayout);
 
-	UINT stride = sizeof(Vertex_attribute);
-	UINT offset = 0;
-	d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-	// d3d11DeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
+		d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
+		d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
 
-	// d3d11DeviceContext->Draw(state->m_model.m_gpu.faces.size() * 3, 0, 0);
-	d3d11DeviceContext->Draw(state->m_model.m_gpu.verts.size(), 0);
-	d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+		d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
+		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 
-	// overlay rendered texture onto swapchain
+		Material mtl{};
+		mtl.ka = state->m_model.mtl.ka;
+		mtl.kd = state->m_model.mtl.kd;
+		mtl.ks = state->m_model.mtl.ks;
+		mtl.ns = state->m_model.mtl.ns;
+
+		PointLight light{};
+		light.position = glm::vec3(100.0f, 100.0f, 100.0f);						// in world space
+		light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
+		light.intensity = 4.0f;
+
+		_d3d11_update_cbuffer(cbuffer_0, &u, sizeof(Uniform));
+		_d3d11_update_cbuffer(cbuffer_1, &light, sizeof(PointLight));
+		_d3d11_update_cbuffer(cbuffer_2, &mtl, sizeof(Material));
+		d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_0);
+		d3d11DeviceContext->VSSetConstantBuffers(1, 1, &cbuffer_1);
+		d3d11DeviceContext->VSSetConstantBuffers(2, 1, &cbuffer_2);
+
+		UINT stride = sizeof(Vertex_attribute);
+		UINT offset = 0;
+		d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+
+		d3d11DeviceContext->Draw(state->m_model.m_gpu.verts.size(), 0);
+	}
+
+	// render skybox pass
+	{
+		d3d11DeviceContext->VSSetShader(envMapVertexShader, nullptr, 0);
+		d3d11DeviceContext->PSSetShader(envMapPixelShader, nullptr, 0);
+
+		d3d11DeviceContext->PSSetShaderResources(0, 1, &envMapView);
+		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
+
+		glm::mat4 ndc_to_world = glm::inverse(u.world_camera) * glm::inverse(u.camera_ndc);
+		_d3d11_update_cbuffer(cbuffer_3, glm::value_ptr(ndc_to_world), sizeof(glm::mat4));
+		d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_3);
+
+		d3d11DeviceContext->Draw(6, 0);
+		d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);	
+	}
+
+	// overlay rendered texture onto swapchain pass
 	{
 		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
 

@@ -41,7 +41,13 @@ void Application::run()
 		parse_model_gpu(m_model_path);
 		state->m_model_original.m_gpu = state->m_model.m_gpu;
 	}
-	load_texture(state->m_model.map_kd);
+	auto t = load_texture(state->m_model.map_kd , true);
+	if (state->backend == BACKEND_SOFTWARE)
+		state->m_model.m_cpu.textures.push_back(t);
+	else
+		state->m_model.m_gpu.textures.push_back(t);
+	auto env = load_env_texture_cube("../../assets/skybox/");
+	state->m_model.env_map = env;
 	// load_texture("../../assets/cube3/cube.png");
 }
 
@@ -220,23 +226,37 @@ void Application::parse_model_cpu(const std::string& path)
 		state->n_threads = std::thread::hardware_concurrency();
 }
 
-void Application::load_texture(const std::string& path)
+Texture Application::load_texture(const std::string& path, bool flip_vertically)
 {
 	Texture t = {};
 
 	t.bytes_per_pixel = state->backend == BACKEND_SOFTWARE ? state->m_swapchain.frame_bytes_per_pixel : 4;
 
-	stbi_set_flip_vertically_on_load(true);
+	stbi_set_flip_vertically_on_load(flip_vertically);
 	int n;
 	t.data = (char*)stbi_load(path.c_str(), &(t.width), &(t.height), &n, t.bytes_per_pixel);
 
 	if (!t.data)
 		stbi_failure_reason();
-	else
-	{
-		if (state->backend == BACKEND_SOFTWARE)
-			state->m_model.m_cpu.textures.push_back(t);
-		else
-			state->m_model.m_gpu.textures.push_back(t);
-	}
+	// else
+	// {
+	// 	if (state->backend == BACKEND_SOFTWARE)
+	// 		state->m_model.m_cpu.textures.push_back(t);
+	// 	else
+	// 		state->m_model.m_gpu.textures.push_back(t);
+	// }
+	return t;
+}
+
+Env_map Application::load_env_texture_cube(const std::string& path)
+{
+	Env_map env = {};
+	env.front = load_texture(path + "front.jpg");
+	env.back = load_texture(path + "back.jpg");
+	env.left = load_texture(path + "left.jpg");
+	env.right = load_texture(path + "right.jpg");
+	env.top = load_texture(path + "top.jpg");
+	env.bottom = load_texture(path + "bottom.jpg");
+
+	return env;
 }
