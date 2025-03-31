@@ -446,7 +446,7 @@ void D3D11Wrapper::_d3d11_create_rasterizer_state()
 {
 	D3D11_RASTERIZER_DESC rasterizerDesc = {};
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
 	rasterizerDesc.FrontCounterClockwise = TRUE;
 
 	d3d11Device->CreateRasterizerState(&rasterizerDesc, &rasterizerState);

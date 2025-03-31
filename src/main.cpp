@@ -2,6 +2,7 @@
 
 #include "../include/renderEngine.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
 
 struct _pass_0_mats
 {
@@ -93,7 +94,13 @@ int main(int argc, char **argv)
 		auto pass_0 = engine.create_render_pass(pass_0_prog, pass_0_render_target);
 	}
 
-	// pass 1 - render skybox
+	// pass 1 - render refelcted bunny to texture
+	{
+		auto prev_pass = engine.passes.back();
+		auto pass_1 = engine.create_render_pass(prev_pass.used_prog, engine.passes.back().render_target);
+	}
+
+	// pass 2 - render skybox
 	{
 		_pass_1_mat mat{};
 		mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
@@ -162,10 +169,16 @@ int main(int argc, char **argv)
 		mats.world_camera = engine.m_geometry->world_camera_transform;
 		mats.camera_ndc = engine.m_geometry->camera_ndc_transform;
 		engine.passes[0].used_prog.vs.uniforms[0].data = &mats;
-
+		
+		_pass_0_mats mats_2{};
+		mats_2.model_world =glm::translate(glm::scale(engine.m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0,500 ,0));;
+		mats_2.world_camera = engine.m_geometry->world_camera_transform;
+		mats_2.camera_ndc = engine.m_geometry->camera_ndc_transform;
+		engine.passes[1].used_prog.vs.uniforms[0].data = &mats_2;
+		
 		_pass_1_mat mat{};
 		mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
-		engine.passes[1].used_prog.vs.uniforms[0].data = &mat;
+		engine.passes[2].used_prog.vs.uniforms[0].data = &mat;
 
 		engine.render_frame();
 		engine.m_win_manager->start_event_loop();
