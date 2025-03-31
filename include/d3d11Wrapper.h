@@ -3,8 +3,15 @@
 #include <d3d11_1.h>
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include "../include/common.h"
+
+enum TEXTURE_BIND_FLAGS
+{
+	TEXTURE_BIND_FLAGS_COLOR_TEXTURE,
+	TEXTURE_BIND_FLAGS_RENDER_TARGET,
+};
 
 class D3D11Wrapper
 {
@@ -12,27 +19,40 @@ public:
 	void initD3D11();
 	void render_frame();
 	void cleanup();
-	void bind_state(Engine_State* engine_state) { if (engine_state) state = engine_state; }
+	void bind_state(Engine_State *engine_state) { if (engine_state) state = engine_state; }
 
-private:
 	void _d3d11_create_device();
 	void _d3d11_set_debug_layer();
 	void _d3d11_create_swapchain();
-	void _d3d11_create_render_texture();
+
 	void _d3d11_create_render_target();
-	void _d3d11_create_overlay_shader(std::wstring vs_path, std::wstring ps_path);
-	void _d3d11_create_env_map_shader(std::wstring vs_path, std::wstring ps_path);
+
+	ID3D11VertexShader *_d3d11_create_vertex_shader(std::wstring path , std::string entry);
+	ID3D11PixelShader *_d3d11_create_pixel_shader(std::wstring path, std::string entry);
+	std::pair<ID3D11VertexShader*, ID3D11PixelShader*> _d3d11_create_overlay_shader(std::wstring path, std::string vs_entry, std::string ps_entry);
+	std::pair<ID3D11VertexShader*, ID3D11PixelShader*> _d3d11_create_env_map_shader(std::wstring path, std::string vs_entry, std::string ps_entry);
 	void _d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path);
-	void _d3d11_create_sampler_state();
-	void _d3d11_create_texture(Texture t);
-	void _d3d11_create_env_map();
-	ID3D11Buffer* _d3d11_create_cbuffer(uint32_t size);
+
+	ID3D11InputLayout* _d3d11_create_input_layout(Shader vs, Input_Layout layout);
+	ID3D11Buffer* _d3d11_create_vertex_buffer(void *data, size_t n_bytes);
+
+	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(Texture& t);
+	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FLAGS flags, void *data, size_t bytes_per_pixel = 4);
+	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture_cube(size_t width, size_t height, size_t bytes_per_pixel, void *data[6]);
+	std::pair<ID3D11Texture2D *, ID3D11DepthStencilView *> _d3d11_create_depth_texture(size_t width, size_t height, size_t bytes_per_pixel);
+	std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *>
+	_d3d11_create_render_texture();
+
+	ID3D11Buffer *_d3d11_create_cbuffer(uint32_t size);
 	void _d3d11_update_cbuffer(ID3D11Buffer *cbuffer, void *data, uint32_t size);
+
 	void _d3d11_create_rasterizer_state();
 	void _d3d11_create_depth_stencil_state();
+	void _d3d11_create_sampler_state();
 
-	Engine_State* state;
-	
+private:
+	Engine_State *state;
+
 	// d3d11 handles
 	ID3D11Device1 *d3d11Device;
 	ID3D11DeviceContext1 *d3d11DeviceContext;
@@ -64,7 +84,14 @@ private:
 	ID3D11RasterizerState *rasterizerState;
 	ID3D11DepthStencilState *depthStencilState;
 
-
+	// resources
+	std::vector<ID3D11Resource *> textures;
+	std::vector<ID3D11View *> texture_views;
+	std::vector<ID3D11Buffer *> buffers;
+	std::vector<ID3D11DeviceChild*> shaders;
+	std::vector<ID3D11InputLayout*> input_layouts;
+	std::unordered_map<ID3D11VertexShader*, ID3DBlob *> compiled_vs_shaders;
+	std::unordered_map<ID3D11PixelShader*, ID3DBlob*> compiled_ps_shaders;
 
 #ifdef NDEBUG
 	const bool enableDebugLayer = false;

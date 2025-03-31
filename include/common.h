@@ -15,6 +15,7 @@
 
 //#include <tracy/Tracy.hpp>
 //#define TRACY_ENABLE
+using Handle_t = void *;
 
 enum DRAWING_MODE
 {
@@ -33,6 +34,10 @@ struct Face
 
 struct Texture
 {
+	Handle_t texture_handle;
+	Handle_t view_handle;
+	size_t binding_point;
+	const char* name;
 	char* data;
 	int width;
 	int height;
@@ -184,4 +189,74 @@ struct Engine_State
 	DRAWING_MODE m_mode;
 	std::atomic_bool running;
 	BACKEND backend;
+};
+
+struct Uniform
+{
+	Handle_t handle;
+	void* data;
+	const char* name;
+	size_t size;
+	size_t binding_point;
+};
+
+enum FORMAT
+{
+	FORMAT_R32G32B32A32_FLOAT,
+	FORMAT_R32G32_FLOAT,
+};
+
+enum V_ATTRIBUTE_FREQ
+{
+	V_ATTRIBUTE_FREQ_PER_VERTEX,
+	V_ATTRIBUTE_FREQ_PER_INSTANCE,
+};
+
+enum V_ATTRIBUTE_TYPE
+{
+	V_ATTRIBUTE_TYPE_POSITION,
+	V_ATTRIBUTE_TYPE_NORMAL,
+	V_ATTRIBUTE_TYPE_TEXTURE_COORD,
+};
+
+struct Element_Desc
+{
+	V_ATTRIBUTE_TYPE type;
+	FORMAT format;
+	V_ATTRIBUTE_FREQ freq;
+};
+
+struct Input_Layout
+{
+	std::vector<Element_Desc> elements;
+};
+
+enum SHADER_STAGE
+{
+	SHADER_STAGE_VERTEX,
+	SHADER_STAGE_PIXEL,
+};
+
+struct Shader
+{
+	Handle_t handle;
+	std::wstring path;
+	std::string entry;
+	std::vector<Uniform> uniforms;
+	std::vector<Texture> textures;
+};
+
+struct Program
+{
+	Shader vs;
+	Shader ps;
+	// Input_Layout attributes_layout;
+	Handle_t vertex_buffer;
+	Handle_t vertex_buffer_layout;
+};
+
+struct Render_Pass
+{
+	Program used_prog;
+	Texture render_target;
 };

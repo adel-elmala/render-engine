@@ -109,87 +109,85 @@ HWND WindowManager::native_win32_handle()
 
 void WindowManager::start_event_loop()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	SDL_Event event;
-	while (state->running) {
-		// std::scoped_lock lock(state->m_window.m);
-		while (SDL_PollEvent(&event) != 0)
+	// std::scoped_lock lock(state->m_window.m);
+	while (SDL_PollEvent(&event) != 0)
+	{
+		switch (event.type)
 		{
-			switch (event.type)
+		case SDL_QUIT:
+			std::cout << "Exiting..\n";
+			state->running = false;
+			break;
+		case SDL_MOUSEMOTION:
+			state->m_window.cursor_dx = event.motion.xrel;
+			state->m_window.cursor_dy = event.motion.yrel;
+			state->m_window.cursor_x = event.motion.x;
+			state->m_window.cursor_y = event.motion.y;
+			break;
+		case SDL_MOUSEBUTTONDOWN:
+			if (event.button.button == 1)
+				state->m_window.enable_mouse_movement = true;
+			break;
+		case SDL_MOUSEBUTTONUP:
+			if (event.button.button == 1)
+				state->m_window.enable_mouse_movement = false;
+			break;
+		case SDL_KEYDOWN:
+			switch (event.key.keysym.sym)
 			{
-			case SDL_QUIT:
-				std::cout << "Exiting..\n";
+			case SDLK_w:
+				state->m_window.move_cam_forward = true;
+				break;
+			case SDLK_s:
+				state->m_window.move_cam_back = true;
+				break;
+			case SDLK_d:
+				state->m_window.move_cam_right = true;
+				break;
+			case SDLK_a:
+				state->m_window.move_cam_left = true;
+				break;
+			case SDLK_ESCAPE:
 				state->running = false;
-				break;
-			case SDL_MOUSEMOTION:
-				state->m_window.cursor_dx = event.motion.xrel;
-				state->m_window.cursor_dy = event.motion.yrel;
-				state->m_window.cursor_x = event.motion.x;
-				state->m_window.cursor_y = event.motion.y;
-				break;
-			case SDL_MOUSEBUTTONDOWN:
-				if (event.button.button == 1)
-					state->m_window.enable_mouse_movement = true;
-				break;
-			case SDL_MOUSEBUTTONUP:
-				if (event.button.button == 1)
-					state->m_window.enable_mouse_movement = false;
-				break;
-			case SDL_KEYDOWN:
-				switch (event.key.keysym.sym)
-				{
-				case SDLK_w:
-					state->m_window.move_cam_forward = true;
-					break;
-				case SDLK_s:
-					state->m_window.move_cam_back = true;
-					break;
-				case SDLK_d:
-					state->m_window.move_cam_right = true;
-					break;
-				case SDLK_a:
-					state->m_window.move_cam_left = true;
-					break;
-				case SDLK_ESCAPE:
-					state->running = false;
-					break;
-				default:
-					break;
-				}
-				break;
-			case SDL_KEYUP:
-				switch (event.key.keysym.sym)
-				{
-				case SDLK_w:
-					state->m_window.move_cam_forward = false;
-					break;
-				case SDLK_s:
-					state->m_window.move_cam_back = false;
-					break;
-				case SDLK_d:
-					state->m_window.move_cam_right = false;
-					break;
-				case SDLK_a:
-					state->m_window.move_cam_left = false;
-					break;
-				default:
-					break;
-				}
-				break;
-			case SDL_WINDOWEVENT: // resize event
-				switch (event.window.event)
-				{
-				case SDL_WINDOWEVENT_RESIZED:
-				case SDL_WINDOWEVENT_SIZE_CHANGED:
-					resize();
-					break;
-				default:
-					break;
-				}
 				break;
 			default:
 				break;
 			}
+			break;
+		case SDL_KEYUP:
+			switch (event.key.keysym.sym)
+			{
+			case SDLK_w:
+				state->m_window.move_cam_forward = false;
+				break;
+			case SDLK_s:
+				state->m_window.move_cam_back = false;
+				break;
+			case SDLK_d:
+				state->m_window.move_cam_right = false;
+				break;
+			case SDLK_a:
+				state->m_window.move_cam_left = false;
+				break;
+			default:
+				break;
+			}
+			break;
+		case SDL_WINDOWEVENT: // resize event
+			switch (event.window.event)
+			{
+			case SDL_WINDOWEVENT_RESIZED:
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
+				resize();
+				break;
+			default:
+				break;
+			}
+			break;
+		default:
+			break;
 		}
 	}
 }

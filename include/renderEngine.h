@@ -3,10 +3,13 @@
 #include <memory>
 #include <string>
 #include "common.h"
+#include "geometry.h"
+#include "Application.h"
+#include "windowManager.h"
 
-class WindowManager;
-class Application;
-class Geometry;
+// class WindowManager;
+// class Application;
+// class Geometry;
 class Rasterizer;
 class D3D11Wrapper;
 
@@ -19,8 +22,21 @@ public:
 	~RenderEngine();
 	void set_drawing_mode(DRAWING_MODE mode);
 	void render_frame();
+	void flush_frame();
 	bool should_exit();
+	Render_Pass create_render_pass(Program& p, Texture& render_target);
+	Program create_program(Shader& vs, Shader& ps, Input_Layout& layout, void* vertex_buffer_data, size_t buffer_size);
+	Shader create_shader(std::wstring path, std::string entry,SHADER_STAGE stage, std::vector<Uniform>& uniforms, std::vector<Texture>& textures);
+	Uniform create_uniform(const char* name,void* data, size_t size, size_t binding_point);
+	Texture create_texture(const char *name, void *data, int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
+	Texture create_render_target(const char *name, int width, int height, int bytes_per_pixel);
 
+
+	std::unique_ptr<Application> m_application;
+	std::unique_ptr<WindowManager> m_win_manager;
+	std::unique_ptr<Geometry> m_geometry;
+	Engine_State state;
+	std::vector<Render_Pass> passes;
 private:
 	void RenderEngine_init_software(const std::string &model_path);
 	void RenderEngine_init_d3d11(const std::string &model_path);
@@ -32,12 +48,9 @@ private:
 	void init_swapchain();
 	void resize_swapchain();
 	void present_swapchain();
-	
-	std::unique_ptr<WindowManager> m_win_manager;
-	std::unique_ptr<Application> m_application;
-	std::unique_ptr<Geometry> m_geometry;
+
 	std::unique_ptr<Rasterizer> m_rasterizer;
 	std::unique_ptr<D3D11Wrapper> m_d3d11_wrapper;
 	std::thread engine_loop;
-	Engine_State state;
+
 };

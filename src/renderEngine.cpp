@@ -36,9 +36,9 @@ void RenderEngine::RenderEngine_init_software(const std::string &model_path)
 	m_rasterizer = std::make_unique<Rasterizer>();
 	m_rasterizer->bind_state(&state);
 
-	engine_loop = std::thread(&RenderEngine::render_frame, this);
+	// engine_loop = std::thread(&RenderEngine::render_frame, this);
 	// TODO[adel] add to run() in a seperate thread
-	m_win_manager->start_event_loop();
+	// m_win_manager->start_event_loop();
 }
 
 void RenderEngine::RenderEngine_init_d3d11(const std::string &model_path)
@@ -60,13 +60,16 @@ void RenderEngine::RenderEngine_init_d3d11(const std::string &model_path)
 	m_application->bind_state(&state);
 	m_application->run();
 
+	m_geometry = std::make_unique<Geometry>();
+	m_geometry->bind_state(&state);
+
 	m_d3d11_wrapper = std::make_unique<D3D11Wrapper>();
 	m_d3d11_wrapper->bind_state(&state);
 	m_d3d11_wrapper->initD3D11();
 
-	engine_loop = std::thread(&RenderEngine::render_frame, this);
+	// engine_loop = std::thread(&RenderEngine::render_frame, this);
 	// TODO[adel] add to run() in a seperate thread
-	m_win_manager->start_event_loop();
+	// m_win_manager->start_event_loop();
 }
 
 RenderEngine::RenderEngine(BACKEND backend, const std::string &model_path)
@@ -122,22 +125,24 @@ void RenderEngine::render_frame_d3d11()
 
 void RenderEngine::render_frame()
 {
-	while (state.running)
+	switch (state.backend)
 	{
-		switch (state.backend)
-		{
-		case BACKEND_SOFTWARE:
-			render_frame_software();
-			break;
-		case BACKEND_D3D11:
-			render_frame_d3d11();
-			break;
-		case BACKEND_VULKAN:
-			break;
-		default:
-			break;
-		}
+	case BACKEND_SOFTWARE:
+		engine_loop = std::thread(&RenderEngine::render_frame_software, this);
+		break;
+	case BACKEND_D3D11:
+		engine_loop = std::thread(&RenderEngine::render_frame_d3d11, this);
+		break;
+	case BACKEND_VULKAN:
+		break;
+	default:
+		break;
 	}
+}
+
+void RenderEngine::flush_frame()
+{
+	engine_loop.join();
 }
 
 bool RenderEngine::should_exit()
@@ -150,14 +155,14 @@ RenderEngine::~RenderEngine()
 	// ZoneScoped;
 	if (state.backend == BACKEND_SOFTWARE)
 	{
-		engine_loop.join();
+		// engine_loop.join();
 		free(state.m_swapchain.back_buffer);
 		free(state.m_swapchain.front_buffer);
 		free(state.m_swapchain.z_buffer);
 	}
 	else if (state.backend == BACKEND_D3D11)
 	{
-		engine_loop.join();
+		// engine_loop.join();
 		m_d3d11_wrapper->cleanup();
 	}
 }
@@ -278,4 +283,89 @@ void RenderEngine::present_swapchain()
 	memcpy(state.m_window.surface, state.m_swapchain.front_buffer, smaller_size);
 
 	m_win_manager->update_surface();
+}
+
+Render_Pass RenderEngine::create_render_pass(Program& p, Texture& render_target)
+{
+	Render_Pass pass{};
+	pass.used_prog = p;
+	pass.render_target = render_target;
+	passes.push_back(pass);
+
+	return  pass;
+}
+
+Program RenderEngine::create_program(Shader& vs, Shader& ps, Input_Layout& layout, void* vertex_buffer_data, size_t buffer_size)
+{
+	Program p{};
+	p.vs = vs;
+	p.ps = ps;
+	if (state.backend == BACKEND_D3D11)
+	{
+		p.vertex_buffer_layout = (void *)m_d3d11_wrapper->_d3d11_create_input_layout(vs, layout);
+		p.vertex_buffer = (void *)m_d3d11_wrapper->_d3d11_create_vertex_buffer(vertex_buffer_data, buffer_size);
+	}
+	return p;
+}
+
+Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures)
+{
+	Shader s{};
+	s.path = path;
+	s.entry = entry;
+	s.uniforms = uniforms;
+	s.textures = textures;	
+	if (state.backend == BACKEND_D3D11)
+	{
+		if (stage == SHADER_STAGE_VERTEX)
+			s.handle = (void *)m_d3d11_wrapper->_d3d11_create_vertex_shader(path, entry);
+		else
+			s.handle = (void *)m_d3d11_wrapper->_d3d11_create_pixel_shader(path, entry);
+
+	}
+	return s;
+}
+
+Uniform RenderEngine::create_uniform(const char *name, void *data, size_t size, size_t binding_point)
+{
+	Uniform u{};
+	u.name = name;
+	u.size = size;
+	u.data = data;
+	u.binding_point = binding_point;
+	if (state.backend == BACKEND_D3D11)
+	{
+		u.handle = (void *)m_d3d11_wrapper->_d3d11_create_cbuffer(size);
+	}
+	return u;
+}
+
+Texture RenderEngine::create_texture(const char *name, void *data, int width, int height, int bytes_per_pixel, size_t size, size_t binding_point)
+{
+	Texture t{};
+	t.name = name;
+	t.binding_point = binding_point;
+	t.width = width;
+	t.height = height;
+	t.bytes_per_pixel = bytes_per_pixel;
+	t.data = (char *)data;
+	if (state.backend == BACKEND_D3D11)
+	{
+		m_d3d11_wrapper->_d3d11_create_texture(t);
+	}
+	return t;
+}
+
+Texture RenderEngine::create_render_target(const char *name, int width, int height, int bytes_per_pixel)
+{
+	Texture t{};
+	t.name = name;
+	t.width = width;
+	t.height = height;
+	t.bytes_per_pixel = bytes_per_pixel;
+	if (state.backend == BACKEND_D3D11)
+	{
+		std::tie(t.texture_handle, t.view_handle) = m_d3d11_wrapper->_d3d11_create_texture(width, height, TEXTURE_BIND_FLAGS_RENDER_TARGET, nullptr);
+	}
+	return t;
 }
