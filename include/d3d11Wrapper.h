@@ -37,8 +37,8 @@ public:
 	ID3D11Buffer* _d3d11_create_vertex_buffer(void *data, size_t n_bytes);
 
 	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(Texture& t);
-	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FLAGS flags, void *data, size_t bytes_per_pixel = 4);
-	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture_cube(size_t width, size_t height, size_t bytes_per_pixel, void *data[6]);
+	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FLAGS flags, char *data, size_t bytes_per_pixel = 4);
+	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture_cube(size_t width, size_t height, size_t bytes_per_pixel, char *data[6]);
 	std::pair<ID3D11Texture2D *, ID3D11DepthStencilView *> _d3d11_create_depth_texture(size_t width, size_t height, size_t bytes_per_pixel);
 	std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *>
 	_d3d11_create_render_texture(size_t width, size_t height, size_t bytes_per_pixel = 4);
@@ -57,29 +57,10 @@ private:
 	ID3D11Device1 *d3d11Device;
 	ID3D11DeviceContext1 *d3d11DeviceContext;
 	IDXGISwapChain1 *d3d11SwapChain;
-	ID3D11RenderTargetView *renderTargetTextureView;
-	ID3D11DepthStencilView *renderTargetDepthStencilView;
 	ID3D11RenderTargetView *d3d11FrameBufferView;
 	ID3D11DepthStencilView *d3d11DepthStencilView;
-	ID3D11VertexShader *envMapVertexShader;
-	ID3D11VertexShader *vertexShader;
 	ID3D11VertexShader *overlayVertexShader;
-	ID3D11PixelShader *envMapPixelShader;
-	ID3D11PixelShader *pixelShader;
 	ID3D11PixelShader *overlayPixelShader;
-	ID3D11InputLayout *inputLayout;
-	ID3D11Buffer *vertexBuffer;
-	ID3D11Buffer *indexBuffer;
-	ID3D11Buffer *cbuffer_0;
-	ID3D11Buffer *cbuffer_1;
-	ID3D11Buffer *cbuffer_2;
-	ID3D11Buffer *cbuffer_3;
-	ID3D11Texture2D *texture;
-	ID3D11Texture2D *envMap;
-	ID3D11Texture2D *renderTexture;
-	ID3D11ShaderResourceView *textureView;
-	ID3D11ShaderResourceView *envMapView;
-	ID3D11ShaderResourceView *renderTextureView;
 	ID3D11SamplerState *samplerState;
 	ID3D11RasterizerState *rasterizerState;
 	ID3D11DepthStencilState *depthStencilState;

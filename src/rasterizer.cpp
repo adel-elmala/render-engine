@@ -412,6 +412,6 @@ glm::u8vec4 Rasterizer::sample_texture(Texture& t, glm::vec2 uv)
 	size_t row = (t.height - 1) * uv.y;
 	size_t col = (t.width - 1) * uv.x;
 
-	char* start = t.data + row * (t.width * t.bytes_per_pixel) + (col * t.bytes_per_pixel);
+	char* start = t.data[0] + row * (t.width * t.bytes_per_pixel) + (col * t.bytes_per_pixel);
 	return glm::u8vec4{ *start , *(start + 1), *(start + 2) , 0xff };
 }

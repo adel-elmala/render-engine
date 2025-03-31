@@ -343,7 +343,7 @@ Uniform RenderEngine::create_uniform(const char *name, void *data, size_t size, 
 	return u;
 }
 
-Texture RenderEngine::create_texture(const char *name, void *data, int width, int height, int bytes_per_pixel, size_t size, size_t binding_point)
+Texture RenderEngine::create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point)
 {
 	Texture t{};
 	t.name = name;
@@ -351,10 +351,22 @@ Texture RenderEngine::create_texture(const char *name, void *data, int width, in
 	t.width = width;
 	t.height = height;
 	t.bytes_per_pixel = bytes_per_pixel;
-	t.data = (char *)data;
+	t.data[0] = data[0];
+	t.data[1] = data[1];
+	t.data[2] = data[2];
+	t.data[3] = data[3];
+	t.data[4] = data[4];
+	t.data[5] = data[5];
 	if (state.backend == BACKEND_D3D11)
 	{
-		m_d3d11_wrapper->_d3d11_create_texture(t);
+		if (dimensions == Texture::DIM_CUBE)
+		{
+			auto [tcube, vcube] = m_d3d11_wrapper->_d3d11_create_texture_cube(width, height, bytes_per_pixel, data);
+			t.texture_handle = (void*) tcube;
+			t.view_handle = (void*) vcube;
+		}
+		else if (dimensions == Texture::DIM_2D)
+			m_d3d11_wrapper->_d3d11_create_texture(t);
 	}
 	return t;
 }

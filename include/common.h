@@ -34,11 +34,18 @@ struct Face
 
 struct Texture
 {
+	enum DIM 
+	{
+		DIM_2D,
+		DIM_CUBE
+	};
+
+	DIM dimensions;
 	Handle_t texture_handle;
 	Handle_t view_handle;
 	size_t binding_point;
 	const char* name;
-	char* data;
+	char* data[6];
 	int width;
 	int height;
 	int bytes_per_pixel;

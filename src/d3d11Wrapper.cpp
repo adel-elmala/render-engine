@@ -294,108 +294,108 @@ ID3D11Buffer *D3D11Wrapper::_d3d11_create_vertex_buffer(void *data, size_t n_byt
 	return vbuffer;
 }
 
-// compile and create vertex + pixel shaders
-void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path)
-{
-	// Create Vertex Shader
-	ID3DBlob *vsBlob;
-	{
-		ID3DBlob *shaderCompileErrorsBlob;
-		HRESULT hResult = D3DCompileFromFile(vs_path.c_str(), nullptr, nullptr, "vs_main", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 1, &vsBlob, &shaderCompileErrorsBlob);
-		if (FAILED(hResult))
-		{
-			const char *errorString = NULL;
-			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-				errorString = "Could not compile shader; file not found";
-			else if (shaderCompileErrorsBlob)
-			{
-				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
-				shaderCompileErrorsBlob->Release();
-			}
-			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
-			return;
-		}
+// // compile and create vertex + pixel shaders
+// void D3D11Wrapper::_d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path)
+// {
+// 	// Create Vertex Shader
+// 	ID3DBlob *vsBlob;
+// 	{
+// 		ID3DBlob *shaderCompileErrorsBlob;
+// 		HRESULT hResult = D3DCompileFromFile(vs_path.c_str(), nullptr, nullptr, "vs_main", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 1, &vsBlob, &shaderCompileErrorsBlob);
+// 		if (FAILED(hResult))
+// 		{
+// 			const char *errorString = NULL;
+// 			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+// 				errorString = "Could not compile shader; file not found";
+// 			else if (shaderCompileErrorsBlob)
+// 			{
+// 				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+// 				shaderCompileErrorsBlob->Release();
+// 			}
+// 			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+// 			return;
+// 		}
 
-		hResult = d3d11Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &vertexShader);
-		assert(SUCCEEDED(hResult));
-	}
+// 		hResult = d3d11Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &vertexShader);
+// 		assert(SUCCEEDED(hResult));
+// 	}
 
-	// Create Pixel Shader
-	{
-		ID3DBlob *psBlob;
-		ID3DBlob *shaderCompileErrorsBlob;
-		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
-		if (FAILED(hResult))
-		{
-			const char *errorString = NULL;
-			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-				errorString = "Could not compile shader; file not found";
-			else if (shaderCompileErrorsBlob)
-			{
-				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
-				shaderCompileErrorsBlob->Release();
-			}
-			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
-			return;
-		}
+// 	// Create Pixel Shader
+// 	{
+// 		ID3DBlob *psBlob;
+// 		ID3DBlob *shaderCompileErrorsBlob;
+// 		HRESULT hResult = D3DCompileFromFile(ps_path.c_str(), nullptr, nullptr, "ps_main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
+// 		if (FAILED(hResult))
+// 		{
+// 			const char *errorString = NULL;
+// 			if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+// 				errorString = "Could not compile shader; file not found";
+// 			else if (shaderCompileErrorsBlob)
+// 			{
+// 				errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+// 				shaderCompileErrorsBlob->Release();
+// 			}
+// 			std::cerr << "Shader Compiler Error: " << errorString << std::endl;
+// 			return;
+// 		}
 
-		hResult = d3d11Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
-		assert(SUCCEEDED(hResult));
-		psBlob->Release();
-	}
+// 		hResult = d3d11Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
+// 		assert(SUCCEEDED(hResult));
+// 		psBlob->Release();
+// 	}
 
-	// Create Input Layout
-	{
-		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
-			{
-				{"POS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				{"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			};
+// 	// Create Input Layout
+// 	{
+// 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
+// 			{
+// 				{"POS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+// 				{"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+// 				{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+// 			};
 
-		HRESULT hResult = d3d11Device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
-		assert(SUCCEEDED(hResult));
-		vsBlob->Release();
-	}
+// 		HRESULT hResult = d3d11Device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
+// 		assert(SUCCEEDED(hResult));
+// 		vsBlob->Release();
+// 	}
 
-	// Create Vertex and Index Buffer
-	{
-		std::vector<Vertex_attribute> verts{};
-		for (auto &v : state->m_model_original.m_gpu.verts)
-		{
-			verts.push_back(v);
-		}
+// 	// Create Vertex and Index Buffer
+// 	{
+// 		std::vector<Vertex_attribute> verts{};
+// 		for (auto &v : state->m_model_original.m_gpu.verts)
+// 		{
+// 			verts.push_back(v);
+// 		}
 
-		D3D11_BUFFER_DESC vertexBufferDesc = {};
-		auto vs = sizeof(Vertex_attribute);
-		vertexBufferDesc.ByteWidth = verts.size() * vs;
-		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+// 		D3D11_BUFFER_DESC vertexBufferDesc = {};
+// 		auto vs = sizeof(Vertex_attribute);
+// 		vertexBufferDesc.ByteWidth = verts.size() * vs;
+// 		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+// 		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-		D3D11_SUBRESOURCE_DATA vertexSubresourceData = {verts.data()};
+// 		D3D11_SUBRESOURCE_DATA vertexSubresourceData = {verts.data()};
 
-		HRESULT hResult = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &vertexBuffer);
-		assert(SUCCEEDED(hResult));
+// 		HRESULT hResult = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &vertexBuffer);
+// 		assert(SUCCEEDED(hResult));
 
-		// std::vector<uint16_t> p_indecies {};
-		// for (auto &face : state->m_model_original.m_cpu.faces)
-		// {
-		// 	p_indecies.push_back(face.p_indices.x);
-		// 	p_indecies.push_back(face.p_indices.y);
-		// 	p_indecies.push_back(face.p_indices.z);
-		// }
+// 		// std::vector<uint16_t> p_indecies {};
+// 		// for (auto &face : state->m_model_original.m_cpu.faces)
+// 		// {
+// 		// 	p_indecies.push_back(face.p_indices.x);
+// 		// 	p_indecies.push_back(face.p_indices.y);
+// 		// 	p_indecies.push_back(face.p_indices.z);
+// 		// }
 
-		// D3D11_BUFFER_DESC indexBufferDesc = {};
-		// indexBufferDesc.ByteWidth = p_indecies.size() * sizeof(uint16_t);
-		// indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		// indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+// 		// D3D11_BUFFER_DESC indexBufferDesc = {};
+// 		// indexBufferDesc.ByteWidth = p_indecies.size() * sizeof(uint16_t);
+// 		// indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+// 		// indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
-		// D3D11_SUBRESOURCE_DATA indexSubresourceData = {p_indecies.data()};
+// 		// D3D11_SUBRESOURCE_DATA indexSubresourceData = {p_indecies.data()};
 
-		// hResult = d3d11Device->CreateBuffer(&indexBufferDesc, &indexSubresourceData, &indexBuffer);
-		// assert(SUCCEEDED(hResult));
-	}
-}
+// 		// hResult = d3d11Device->CreateBuffer(&indexBufferDesc, &indexSubresourceData, &indexBuffer);
+// 		// assert(SUCCEEDED(hResult));
+// 	}
+// }
 
 void D3D11Wrapper::_d3d11_create_sampler_state()
 {
@@ -417,14 +417,14 @@ void D3D11Wrapper::_d3d11_create_sampler_state()
 std::pair<ID3D11Texture2D*, ID3D11ShaderResourceView *>
 D3D11Wrapper::_d3d11_create_texture(Texture& t)
 {
-	auto [tex, view] =  _d3d11_create_texture(t.width, t.height, TEXTURE_BIND_FLAGS_COLOR_TEXTURE, t.data, t.bytes_per_pixel);
+	auto [tex, view] =  _d3d11_create_texture(t.width, t.height, TEXTURE_BIND_FLAGS_COLOR_TEXTURE, t.data[0], t.bytes_per_pixel);
 	t.texture_handle = (void*) tex;
 	t.view_handle = (void*) view;
 	return {tex , view};
 }
 
 std::pair<ID3D11Texture2D*, ID3D11ShaderResourceView *>
-D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FLAGS flags, void *data, size_t bytes_per_pixel)
+D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FLAGS flags, char *data, size_t bytes_per_pixel)
 {
 	ID3D11Texture2D *texture;
 	ID3D11ShaderResourceView *srv;
@@ -492,7 +492,7 @@ D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t by
 }
 
 std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *>
-D3D11Wrapper::_d3d11_create_texture_cube(size_t width, size_t height, size_t bytes_per_pixel, void *data[6])
+D3D11Wrapper::_d3d11_create_texture_cube(size_t width, size_t height, size_t bytes_per_pixel, char *data[6])
 {
 	ID3D11Texture2D *texture{};
 	ID3D11ShaderResourceView *view{};
@@ -604,32 +604,9 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_swapchain();
 	// std::tie(renderTexture, renderTextureView, renderTargetTextureView, std::ignore, renderTargetDepthStencilView) = _d3d11_create_render_texture();
 	_d3d11_create_render_target();
-	std::tie(envMapVertexShader, envMapPixelShader) = _d3d11_create_env_map_shader(L"../../assets/shaders/envMap.hlsl", "vs_main", "ps_main");
 	std::tie(overlayVertexShader, overlayPixelShader) = _d3d11_create_overlay_shader(L"../../assets/shaders/overlay.hlsl", "vs_main", "ps_main");
-	_d3d11_create_shaders(L"../../assets/shaders/shaders.hlsl", L"../../assets/shaders/shaders.hlsl");
 	_d3d11_create_rasterizer_state();
 	_d3d11_create_depth_stencil_state();
-	_d3d11_create_sampler_state();
-	std::tie(texture, textureView) = _d3d11_create_texture(state->m_model.m_gpu.textures[0]);
-
-	void *cube_texture_face[6] = {
-		state->m_model.env_map.right.data,
-		state->m_model.env_map.left.data,
-		state->m_model.env_map.top.data,
-		state->m_model.env_map.bottom.data,
-		state->m_model.env_map.front.data,
-		state->m_model.env_map.back.data,
-	};
-	std::tie(envMap, envMapView) = _d3d11_create_texture_cube(
-		state->m_model.env_map.front.width,
-		state->m_model.env_map.front.height,
-		4,
-		cube_texture_face);
-
-	cbuffer_0 = _d3d11_create_cbuffer(sizeof(Uniform));
-	cbuffer_1 = _d3d11_create_cbuffer(sizeof(PointLight));
-	cbuffer_2 = _d3d11_create_cbuffer(sizeof(Material));
-	cbuffer_3 = _d3d11_create_cbuffer(sizeof(glm::mat4));
 }
 
 void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
@@ -693,7 +670,6 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 	// overlay rendered texture onto swapchain pass
 	{
 		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
-
 		d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
 
 		d3d11DeviceContext->VSSetShader(overlayVertexShader, nullptr, 0);
@@ -732,11 +708,6 @@ void D3D11Wrapper::cleanup()
 	for (auto &s : shaders)
 		s->Release();
 
-	vertexBuffer->Release();
-	// indexBuffer->Release();
-	inputLayout->Release();
-	vertexShader->Release();
-	pixelShader->Release();
 	d3d11SwapChain->Release();
 	d3d11DeviceContext->Release();
 	d3d11Device->Release();

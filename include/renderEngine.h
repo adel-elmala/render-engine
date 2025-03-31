@@ -28,7 +28,7 @@ public:
 	Program create_program(Shader& vs, Shader& ps, Input_Layout& layout, void* vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes);
 	Shader create_shader(std::wstring path, std::string entry,SHADER_STAGE stage, std::vector<Uniform>& uniforms, std::vector<Texture>& textures);
 	Uniform create_uniform(const char* name,void* data, size_t size, size_t binding_point);
-	Texture create_texture(const char *name, void *data, int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
+	Texture create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
 	Render_Target create_render_target(const char *name, int width, int height, int bytes_per_pixel);
 
 

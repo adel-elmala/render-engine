@@ -2,9 +2,6 @@
 
 #include "../include/renderEngine.h"
 #include <glm/glm.hpp>
-#include "glm/ext.hpp"
-#include <glm/gtc/matrix_access.hpp>
-// #include "../include/vulkanWrapper.h"
 
 struct _pass_0_mats
 {
@@ -57,6 +54,7 @@ int main(int argc, char** argv)
 		auto model_texture = engine.state.m_model.m_gpu.textures[0];
 		auto pass_0_ps_t = engine.create_texture(
 			"t",
+			Texture::DIM_2D,
 			model_texture.data,
 			model_texture.width, model_texture.height,
 			model_texture.bytes_per_pixel,
@@ -95,51 +93,60 @@ int main(int argc, char** argv)
 	}
 
 	// pass 1 - render skybox
-	// {
-	// 	_pass_1_mat mat{};
-	// 	mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
+	{
+		_pass_1_mat mat{};
+		mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
 
-	// 	auto pass_1_vs_uniform_mat = engine.create_uniform("mats", &mat, sizeof(mat), 0);
-	// 	std::vector<Uniform> pass_1_vs_uniforms = {pass_1_vs_uniform_mat};
-	// 	std::vector<Texture> pass_1_vs_textures = {};
+		auto pass_1_vs_uniform_mat = engine.create_uniform("mats", &mat, sizeof(mat), 0);
+		std::vector<Uniform> pass_1_vs_uniforms = {pass_1_vs_uniform_mat};
+		std::vector<Texture> pass_1_vs_textures = {};
 
-	// 	auto pass_1_vs = engine.create_shader(
-	// 		L"../../assets/shaders/envMap.hlsl",
-	// 		"vs_main",
-	// 		SHADER_STAGE_VERTEX,
-	// 		pass_1_vs_uniforms,
-	// 		pass_1_vs_textures);
+		auto pass_1_vs = engine.create_shader(
+			L"../../assets/shaders/envMap.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			pass_1_vs_uniforms,
+			pass_1_vs_textures);
 
-	// 	std::vector<Uniform> pass_1_ps_uniforms = {};
-	// 	// TODO(adel): handle cube texture - engine side
-	// 	auto model_texture = engine.state.m_model.m_gpu.textures[0];
-	// 	auto pass_1_ps_t = engine.create_texture(
-	// 		"t",
-	// 		model_texture.data,
-	// 		model_texture.width, model_texture.height,
-	// 		model_texture.bytes_per_pixel,
-	// 		model_texture.height * model_texture.width * model_texture.bytes_per_pixel,
-	// 		0);
-	// 	std::vector<Texture> pass_1_ps_textures = {pass_1_ps_t};
-	// 	auto pass_1_ps = engine.create_shader(
-	// 		L"../../assets/shaders/envMap.hlsl",
-	// 		"ps_main",
-	// 		SHADER_STAGE_PIXEL,
-	// 		pass_1_ps_uniforms,
-	// 		pass_1_ps_textures);
+		std::vector<Uniform> pass_1_ps_uniforms = {};
+		// TODO(adel): handle cube texture - engine side
+		auto env_map = engine.state.m_model.env_map;
+		char *cube_data[6] = {
+			env_map.right.data[0],
+			env_map.left.data[0],
+			env_map.top.data[0],
+			env_map.bottom.data[0],
+			env_map.front.data[0],
+			env_map.back.data[0],
+		};
+		auto pass_1_ps_t = engine.create_texture(
+			"t",
+			Texture::DIM_CUBE,
+			cube_data,
+			env_map.back.width, env_map.back.height,
+			env_map.back.bytes_per_pixel,
+			env_map.back.height * env_map.back.width * env_map.back.bytes_per_pixel,
+			0);
+		std::vector<Texture> pass_1_ps_textures = {pass_1_ps_t};
+		auto pass_1_ps = engine.create_shader(
+			L"../../assets/shaders/envMap.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			pass_1_ps_uniforms,
+			pass_1_ps_textures);
 
-	// 	Input_Layout layout{};
-	// 	auto pass_1_prog = engine.create_program(
-	// 		pass_1_vs,
-	// 		pass_1_ps,
-	// 		layout,
-	// 		nullptr,
-	// 		0,
-	// 		0, 0, 6);
+		Input_Layout layout{};
+		auto pass_1_prog = engine.create_program(
+			pass_1_vs,
+			pass_1_ps,
+			layout,
+			nullptr,
+			0,
+			0, 0, 6);
 
-	// 	auto pass_1_render_target = engine.passes.back().render_target;
-	// 	auto pass_1 = engine.create_render_pass(pass_1_prog, pass_1_render_target);
-	// }
+		auto pass_1_render_target = engine.passes.back().render_target;
+		auto pass_1 = engine.create_render_pass(pass_1_prog, pass_1_render_target);
+	}
 
 	while(engine.should_exit() == false)
 	{
@@ -154,12 +161,15 @@ int main(int argc, char** argv)
 		mats.camera_ndc = engine.m_geometry->camera_ndc_transform;
 		engine.passes[0].used_prog.vs.uniforms[0].data = &mats;
 
+		_pass_1_mat mat{};
+		mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
+		engine.passes[1].used_prog.vs.uniforms[0].data = &mat;
+
+
 		engine.render_frame();
 		engine.m_win_manager->start_event_loop();
 		engine.flush_frame();
 	}
-	//VulkanWrapper app;
-	// app.run();
 
 	return EXIT_SUCCESS;
 }

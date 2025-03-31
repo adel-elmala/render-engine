@@ -25,14 +25,14 @@ Application::~Application()
 		t = state->m_model.m_gpu.textures;
 
 	for (auto& texture : t)
-		stbi_image_free(texture.data);
+		stbi_image_free(texture.data[0]);
 
-	stbi_image_free(state->m_model.env_map.front.data);
-	stbi_image_free(state->m_model.env_map.back.data);
-	stbi_image_free(state->m_model.env_map.left.data);
-	stbi_image_free(state->m_model.env_map.right.data);
-	stbi_image_free(state->m_model.env_map.top.data);
-	stbi_image_free(state->m_model.env_map.bottom.data);
+	stbi_image_free(state->m_model.env_map.front.data[0]);
+	stbi_image_free(state->m_model.env_map.back.data[0]);
+	stbi_image_free(state->m_model.env_map.left.data[0]);
+	stbi_image_free(state->m_model.env_map.right.data[0]);
+	stbi_image_free(state->m_model.env_map.top.data[0]);
+	stbi_image_free(state->m_model.env_map.bottom.data[0]);
 }
 
 void Application::run()
@@ -236,12 +236,13 @@ void Application::parse_model_cpu(const std::string& path)
 Texture Application::load_texture(const std::string& path, bool flip_vertically)
 {
 	Texture t = {};
+	t.dimensions = Texture::DIM_2D;
 
 	t.bytes_per_pixel = state->backend == BACKEND_SOFTWARE ? state->m_swapchain.frame_bytes_per_pixel : 4;
 
 	stbi_set_flip_vertically_on_load(flip_vertically);
 	int n;
-	t.data = (char*)stbi_load(path.c_str(), &(t.width), &(t.height), &n, t.bytes_per_pixel);
+	t.data[0] = (char*)stbi_load(path.c_str(), &(t.width), &(t.height), &n, t.bytes_per_pixel);
 
 	if (!t.data)
 		stbi_failure_reason();
