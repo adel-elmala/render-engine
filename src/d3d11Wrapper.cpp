@@ -109,13 +109,13 @@ void D3D11Wrapper::_d3d11_create_swapchain()
 }
 
 // Create Framebuffer Render Target
-std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *> 
+std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *>
 D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
 	// Create Texture
 	auto [texture, srv] = _d3d11_create_texture(width, height, TEXTURE_BIND_FLAGS_RENDER_TARGET, nullptr);
 
-	ID3D11RenderTargetView* rtv{};
+	ID3D11RenderTargetView *rtv{};
 	auto hResult = d3d11Device->CreateRenderTargetView(texture, 0, &rtv);
 	assert(SUCCEEDED(hResult));
 
@@ -138,12 +138,12 @@ void D3D11Wrapper::_d3d11_create_render_target()
 	this->texture_views.push_back(d3d11FrameBufferView);
 }
 
-ID3D11VertexShader* D3D11Wrapper::_d3d11_create_vertex_shader(std::wstring path, std::string entry)
+ID3D11VertexShader *D3D11Wrapper::_d3d11_create_vertex_shader(std::wstring path, std::string entry)
 {
 	// Create Vertex Shader
 	ID3DBlob *vsBlob;
 	ID3DBlob *shaderCompileErrorsBlob;
-	ID3D11VertexShader* shader;
+	ID3D11VertexShader *shader;
 
 	HRESULT hResult = D3DCompileFromFile(path.c_str(), nullptr, nullptr, entry.c_str(), "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 1, &vsBlob, &shaderCompileErrorsBlob);
 	if (FAILED(hResult))
@@ -168,12 +168,12 @@ ID3D11VertexShader* D3D11Wrapper::_d3d11_create_vertex_shader(std::wstring path,
 	return shader;
 }
 
-ID3D11PixelShader* D3D11Wrapper::_d3d11_create_pixel_shader(std::wstring path, std::string entry)
+ID3D11PixelShader *D3D11Wrapper::_d3d11_create_pixel_shader(std::wstring path, std::string entry)
 {
 	// Create Pixel Shader
 	ID3DBlob *psBlob;
 	ID3DBlob *shaderCompileErrorsBlob;
-	ID3D11PixelShader* shader;
+	ID3D11PixelShader *shader;
 
 	HRESULT hResult = D3DCompileFromFile(path.c_str(), nullptr, nullptr, entry.c_str(), "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &psBlob, &shaderCompileErrorsBlob);
 	if (FAILED(hResult))
@@ -220,6 +220,7 @@ DXGI_FORMAT _d3d11_engine_format_to_dxgi_format(FORMAT f)
 		return DXGI_FORMAT_R32G32_FLOAT;
 	}
 }
+
 // Create Input Layout
 ID3D11InputLayout *D3D11Wrapper::_d3d11_create_input_layout(Shader vs, Input_Layout layout)
 {
@@ -236,7 +237,7 @@ ID3D11InputLayout *D3D11Wrapper::_d3d11_create_input_layout(Shader vs, Input_Lay
 		desc.SemanticIndex = 0;
 		desc.Format = _d3d11_engine_format_to_dxgi_format(elmt_desc.format);
 		desc.InputSlotClass = elmt_desc.freq == V_ATTRIBUTE_FREQ_PER_VERTEX ? D3D11_INPUT_PER_VERTEX_DATA : D3D11_INPUT_PER_INSTANCE_DATA;
-		desc.SemanticName = _d3d11_v_attribute_type_to_semantic_name(elmt_desc.type); 
+		desc.SemanticName = _d3d11_v_attribute_type_to_semantic_name(elmt_desc.type);
 
 		inputElementDesc.push_back(desc);
 	}
@@ -256,7 +257,7 @@ ID3D11Buffer *D3D11Wrapper::_d3d11_create_vertex_buffer(void *data, size_t n_byt
 {
 	if (data == nullptr)
 		return nullptr;
-	ID3D11Buffer* vbuffer;
+	ID3D11Buffer *vbuffer;
 
 	D3D11_BUFFER_DESC vertexBufferDesc = {};
 	vertexBufferDesc.ByteWidth = n_bytes;
@@ -288,16 +289,16 @@ void D3D11Wrapper::_d3d11_create_sampler_state()
 	d3d11Device->CreateSamplerState(&samplerDesc, &samplerState);
 }
 
-std::pair<ID3D11Texture2D*, ID3D11ShaderResourceView *>
-D3D11Wrapper::_d3d11_create_texture(Texture& t)
+std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *>
+D3D11Wrapper::_d3d11_create_texture(Texture &t)
 {
-	auto [tex, view] =  _d3d11_create_texture(t.width, t.height, TEXTURE_BIND_FLAGS_COLOR_TEXTURE, t.data[0], t.bytes_per_pixel);
-	t.texture_handle = (void*) tex;
-	t.view_handle = (void*) view;
-	return {tex , view};
+	auto [tex, view] = _d3d11_create_texture(t.width, t.height, TEXTURE_BIND_FLAGS_COLOR_TEXTURE, t.data[0], t.bytes_per_pixel);
+	t.texture_handle = (void *)tex;
+	t.view_handle = (void *)view;
+	return {tex, view};
 }
 
-std::pair<ID3D11Texture2D*, ID3D11ShaderResourceView *>
+std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *>
 D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FLAGS flags, char *data, size_t bytes_per_pixel)
 {
 	ID3D11Texture2D *texture;
@@ -330,7 +331,7 @@ D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FL
 	{
 		d3d11Device->CreateTexture2D(&textureDesc, nullptr, &texture);
 	}
-	
+
 	d3d11Device->CreateShaderResourceView(texture, nullptr, &srv);
 
 	this->textures.push_back(texture);
@@ -339,7 +340,7 @@ D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FL
 	return {texture, srv};
 }
 
-std::pair<ID3D11Texture2D*, ID3D11DepthStencilView *>
+std::pair<ID3D11Texture2D *, ID3D11DepthStencilView *>
 D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
 	ID3D11Texture2D *texture;
@@ -576,7 +577,7 @@ void D3D11Wrapper::cleanup()
 	for (auto &b : buffers)
 		b->Release();
 
-	for(auto& il: input_layouts)
+	for (auto &il : input_layouts)
 		il->Release();
 
 	for (auto &[vs, blob] : compiled_vs_shaders)

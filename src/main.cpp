@@ -15,7 +15,7 @@ struct _pass_1_mat
 	glm::mat4 NDCWorld;
 };
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 	RenderEngine engine(BACKEND_D3D11, "../../assets/bunny/bunny.obj");
 
@@ -150,13 +150,13 @@ int main(int argc, char** argv)
 		auto pass_1 = engine.create_render_pass(pass_1_prog, pass_1_render_target);
 	}
 
-	while(engine.should_exit() == false)
+	while (engine.should_exit() == false)
 	{
 		// update uniforms
 		engine.m_geometry->update_world_transform();
 		engine.m_geometry->update_camera_transform();
 		engine.m_geometry->update_perspective_transform();
-	
+
 		_pass_0_mats mats{};
 		mats.model_world = engine.m_geometry->model_world_transform;
 		mats.world_camera = engine.m_geometry->world_camera_transform;
@@ -166,7 +166,6 @@ int main(int argc, char** argv)
 		_pass_1_mat mat{};
 		mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
 		engine.passes[1].used_prog.vs.uniforms[0].data = &mat;
-
 
 		engine.render_frame();
 		engine.m_win_manager->start_event_loop();

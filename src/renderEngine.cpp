@@ -12,7 +12,7 @@ using namespace std::chrono_literals;
 
 void RenderEngine::RenderEngine_init_software(const std::string &model_path)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	state.m_window.height = 600;
 	state.m_window.width = 800;
 	state.m_window.bytes_per_pixel = 4;
@@ -43,7 +43,7 @@ void RenderEngine::RenderEngine_init_software(const std::string &model_path)
 
 void RenderEngine::RenderEngine_init_d3d11(const std::string &model_path)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	state.m_window.height = 600;
 	state.m_window.width = 800;
 	state.m_window.bytes_per_pixel = 4;
@@ -113,7 +113,7 @@ void RenderEngine::render_frame_d3d11(std::vector<Render_Pass> passes)
 	// ZoneScoped;
 	auto start = std::chrono::system_clock::now();
 	state.m_model.m_gpu = state.m_model_original.m_gpu;
-	
+
 	// if (state.m_window.resized) ;
 	m_d3d11_wrapper->render_frame(passes);
 
@@ -169,8 +169,8 @@ RenderEngine::~RenderEngine()
 
 void RenderEngine::init_camera()
 {
-	//ZoneScoped;
-	if(state.backend == BACKEND_D3D11)
+	// ZoneScoped;
+	if (state.backend == BACKEND_D3D11)
 	{
 		state.m_camera.position = glm::vec3{0.0f, 0.0f, 0.0f};
 		state.m_camera.lookat = glm::vec3{0.0f, 0.0f, 1.0f};
@@ -188,8 +188,8 @@ void RenderEngine::init_camera()
 
 void RenderEngine::init_view_volume()
 {
-	//ZoneScoped;
-	if(state.backend == BACKEND_D3D11)
+	// ZoneScoped;
+	if (state.backend == BACKEND_D3D11)
 	{
 		state.m_view_volume.near_plane = 50.0f;
 		state.m_view_volume.far_plane = 1500.0f;
@@ -211,17 +211,17 @@ void RenderEngine::init_view_volume()
 
 void RenderEngine::set_drawing_mode(DRAWING_MODE mode)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	state.m_mode = mode;
 }
 
 void RenderEngine::init_swapchain()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	std::unique_lock lock(state.m_swapchain.m);
-	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
-	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
-	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.height * state.m_window.width * sizeof(float));
+	state.m_swapchain.back_buffer = (char *)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.front_buffer = (char *)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.z_buffer = (float *)malloc(state.m_window.height * state.m_window.width * sizeof(float));
 
 	state.m_swapchain.frame_height = state.m_window.height;
 	state.m_swapchain.frame_width = state.m_window.width;
@@ -229,8 +229,8 @@ void RenderEngine::init_swapchain()
 
 	// reset z_buffer
 	auto z_buffer_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width;
-	float* z_buffer_end_p = state.m_swapchain.z_buffer + z_buffer_size;
-	for (float* start = state.m_swapchain.z_buffer; start < z_buffer_end_p; ++start)
+	float *z_buffer_end_p = state.m_swapchain.z_buffer + z_buffer_size;
+	for (float *start = state.m_swapchain.z_buffer; start < z_buffer_end_p; ++start)
 	{
 		*start = -1.0f;
 	}
@@ -238,16 +238,16 @@ void RenderEngine::init_swapchain()
 
 void RenderEngine::resize_swapchain()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	std::unique_lock lock(state.m_swapchain.m);
 	// free old swap chain
 	free(state.m_swapchain.back_buffer);
 	free(state.m_swapchain.front_buffer);
 	free(state.m_swapchain.z_buffer);
 	// allocate new swap chain with new dimenstions
-	state.m_swapchain.back_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
-	state.m_swapchain.front_buffer = (char*)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
-	state.m_swapchain.z_buffer = (float*)malloc(state.m_window.height * state.m_window.width * sizeof(float));
+	state.m_swapchain.back_buffer = (char *)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.front_buffer = (char *)malloc(state.m_window.height * state.m_window.width * state.m_window.bytes_per_pixel);
+	state.m_swapchain.z_buffer = (float *)malloc(state.m_window.height * state.m_window.width * sizeof(float));
 
 	state.m_swapchain.frame_height = state.m_window.height;
 	state.m_swapchain.frame_width = state.m_window.width;
@@ -258,7 +258,7 @@ void RenderEngine::resize_swapchain()
 
 void RenderEngine::present_swapchain()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	std::scoped_lock lock(state.m_swapchain.m, state.m_window.m);
 
 	// swap front and back buffers
@@ -270,8 +270,8 @@ void RenderEngine::present_swapchain()
 
 	// reset z_buffer
 	auto z_buffer_size = state.m_swapchain.frame_height * state.m_swapchain.frame_width;
-	float* z_buffer_end_p = state.m_swapchain.z_buffer + z_buffer_size;
-	for (float* start = state.m_swapchain.z_buffer; start < z_buffer_end_p; ++start)
+	float *z_buffer_end_p = state.m_swapchain.z_buffer + z_buffer_size;
+	for (float *start = state.m_swapchain.z_buffer; start < z_buffer_end_p; ++start)
 	{
 		*start = -1.0f;
 	}
@@ -285,14 +285,14 @@ void RenderEngine::present_swapchain()
 	m_win_manager->update_surface();
 }
 
-Render_Pass RenderEngine::create_render_pass(Program& p, Render_Target& render_target)
+Render_Pass RenderEngine::create_render_pass(Program &p, Render_Target &render_target)
 {
 	Render_Pass pass{};
 	pass.used_prog = p;
 	pass.render_target = render_target;
 	passes.push_back(pass);
 
-	return  pass;
+	return pass;
 }
 
 Program RenderEngine::create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes)
@@ -317,14 +317,13 @@ Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_
 	s.path = path;
 	s.entry = entry;
 	s.uniforms = uniforms;
-	s.textures = textures;	
+	s.textures = textures;
 	if (state.backend == BACKEND_D3D11)
 	{
 		if (stage == SHADER_STAGE_VERTEX)
 			s.handle = (void *)m_d3d11_wrapper->_d3d11_create_vertex_shader(path, entry);
 		else
 			s.handle = (void *)m_d3d11_wrapper->_d3d11_create_pixel_shader(path, entry);
-
 	}
 	return s;
 }
@@ -362,8 +361,8 @@ Texture RenderEngine::create_texture(const char *name, Texture::DIM dimensions, 
 		if (dimensions == Texture::DIM_CUBE)
 		{
 			auto [tcube, vcube] = m_d3d11_wrapper->_d3d11_create_texture_cube(width, height, bytes_per_pixel, data);
-			t.texture_handle = (void*) tcube;
-			t.view_handle = (void*) vcube;
+			t.texture_handle = (void *)tcube;
+			t.view_handle = (void *)vcube;
 		}
 		else if (dimensions == Texture::DIM_2D)
 			m_d3d11_wrapper->_d3d11_create_texture(t);

@@ -4,27 +4,27 @@
 #include <SDL.h>
 #include <SDL_syswm.h>
 
-WindowManager::WindowManager() :m_width{ 800 }, m_height{ 600 }, state{}, draw_frame_callback{ nullptr }
+WindowManager::WindowManager() : m_width{800}, m_height{600}, state{}, draw_frame_callback{nullptr}
 {
-	//ZoneScoped;
+	// ZoneScoped;
 }
 
 WindowManager::~WindowManager()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	SDL_DestroyWindow(m_window_handle);
 	SDL_Quit();
 }
 
 void WindowManager::run()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	init();
 }
 
 bool WindowManager::init()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
 		std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
@@ -36,8 +36,7 @@ bool WindowManager::init()
 			"window title",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			m_width, m_height,
-			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
-		);
+			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 		if (NULL == m_window_handle)
 		{
 			std::cerr << "SDL could not create a window! SDL_Error: " << SDL_GetError() << std::endl;
@@ -85,9 +84,9 @@ bool WindowManager::init()
 
 bool WindowManager::resize()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	std::unique_lock lock(state->m_window.m);
-	SDL_GetWindowSize(m_window_handle, (int*)&m_width, (int*)&m_height);
+	SDL_GetWindowSize(m_window_handle, (int *)&m_width, (int *)&m_height);
 	m_window_surface = SDL_GetWindowSurface(m_window_handle);
 	state->m_window.width = m_width;
 	state->m_window.height = m_height;
@@ -192,29 +191,29 @@ void WindowManager::start_event_loop()
 	}
 }
 
-void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int bytes_per_pixel, void* framebuffer))
+void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int bytes_per_pixel, void *framebuffer))
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	if (callback)
 		draw_frame_callback = callback;
 }
 
 void WindowManager::update_surface()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	if (state->running)
 		SDL_UpdateWindowSurface(m_window_handle);
 }
 
 void WindowManager::enable_window_resizing(bool enable)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	SDL_SetWindowResizable(m_window_handle, (SDL_bool)enable);
 }
 
-void WindowManager::update_window_title(const char* str)
+void WindowManager::update_window_title(const char *str)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	if (state->running)
 		SDL_SetWindowTitle(m_window_handle, str);
 }

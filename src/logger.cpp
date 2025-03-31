@@ -13,15 +13,12 @@ Loger::~Loger()
 
 void Loger::info(std::string message)
 {
-
 }
 void Loger::warning(std::string message)
 {
-
 }
 void Loger::error(std::string message)
 {
-
 }
 
 void Loger::log(std::string message, STATUS log_state)

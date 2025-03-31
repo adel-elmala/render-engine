@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "common.h"
 
@@ -8,7 +8,11 @@ public:
 	Geometry();
 	~Geometry();
 
-	void bind_state(Engine_State* engine_state) { if (engine_state) state = engine_state; }
+	void bind_state(Engine_State *engine_state)
+	{
+		if (engine_state)
+			state = engine_state;
+	}
 	void run();
 
 	void update_viewport_transform();
@@ -22,17 +26,15 @@ public:
 	glm::mat4 ndc_pixel_transform;
 
 private:
-
 	void lighting_calc();
 	void clipping();
 	void backface_cull();
 	void clip_triangles();
-	bool in_view_volume(glm::vec4& point);
+	bool in_view_volume(glm::vec4 &point);
 
 	void send_to_camera_space();
 	void send_to_ndc_space();
 	void send_to_pixel_space();
 
-
-	Engine_State* state;
+	Engine_State *state;
 };

@@ -8,23 +8,23 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-Application::Application(const std::string& model_path)
+Application::Application(const std::string &model_path)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	m_model_path = model_path;
 }
 
 Application::~Application()
 {
-	//ZoneScoped;
-	fast_obj_destroy((fastObjMesh*)m_mesh);
+	// ZoneScoped;
+	fast_obj_destroy((fastObjMesh *)m_mesh);
 	std::vector<Texture> t;
-	if(state->backend == BACKEND_SOFTWARE)
+	if (state->backend == BACKEND_SOFTWARE)
 		t = state->m_model.m_cpu.textures;
 	else
 		t = state->m_model.m_gpu.textures;
 
-	for (auto& texture : t)
+	for (auto &texture : t)
 		stbi_image_free(texture.data[0]);
 
 	stbi_image_free(state->m_model.env_map.front.data[0]);
@@ -37,8 +37,8 @@ Application::~Application()
 
 void Application::run()
 {
-	//ZoneScoped;
-	if(state->backend == BACKEND_SOFTWARE)
+	// ZoneScoped;
+	if (state->backend == BACKEND_SOFTWARE)
 	{
 		parse_model_cpu(m_model_path);
 		state->m_model_original.m_cpu = state->m_model.m_cpu;
@@ -48,7 +48,7 @@ void Application::run()
 		parse_model_gpu(m_model_path);
 		state->m_model_original.m_gpu = state->m_model.m_gpu;
 	}
-	auto t = load_texture(state->m_model.map_kd , true);
+	auto t = load_texture(state->m_model.map_kd, true);
 	if (state->backend == BACKEND_SOFTWARE)
 		state->m_model.m_cpu.textures.push_back(t);
 	else
@@ -58,7 +58,7 @@ void Application::run()
 	// load_texture("../../assets/cube3/cube.png");
 }
 
-void Application::parse_model_gpu(const std::string& path)
+void Application::parse_model_gpu(const std::string &path)
 {
 	m_mesh = fast_obj_read(path.c_str());
 	fastObjMesh *mesh = (fastObjMesh *)m_mesh;
@@ -68,7 +68,7 @@ void Application::parse_model_gpu(const std::string& path)
 		Vertex_attribute vt_0{};
 		Vertex_attribute vt_1{};
 		Vertex_attribute vt_2{};
-		
+
 		auto vert_0_index = mesh->indices[i];
 		auto vert_1_index = mesh->indices[i + 1];
 		auto vert_2_index = mesh->indices[i + 2];
@@ -134,11 +134,11 @@ void Application::parse_model_gpu(const std::string& path)
 	}
 }
 
-void Application::parse_model_cpu(const std::string& path)
+void Application::parse_model_cpu(const std::string &path)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	m_mesh = fast_obj_read(path.c_str());
-	fastObjMesh* mesh = (fastObjMesh*)m_mesh;
+	fastObjMesh *mesh = (fastObjMesh *)m_mesh;
 
 	int32_t p_count = mesh->position_count - 1;
 	int32_t c_count = mesh->color_count;
@@ -156,7 +156,7 @@ void Application::parse_model_cpu(const std::string& path)
 	// copy positions
 	for (uint32_t i = 3, j = 0; j < p_count; i += 3, ++j)
 	{
-		state->m_model.m_cpu.positions[j] = glm::vec4{ mesh->positions[i],mesh->positions[i + 1],mesh->positions[i + 2] ,1.0f };
+		state->m_model.m_cpu.positions[j] = glm::vec4{mesh->positions[i], mesh->positions[i + 1], mesh->positions[i + 2], 1.0f};
 	}
 
 	if (c_count >= f_count)
@@ -164,7 +164,7 @@ void Application::parse_model_cpu(const std::string& path)
 		// copy colors
 		for (uint32_t i = 0, j = 0; j < c_count; i += 3, ++j)
 		{
-			state->m_model.m_cpu.colors[j] = glm::vec4{ mesh->colors[i],mesh->colors[i + 1],mesh->colors[i + 2] ,1.0f };
+			state->m_model.m_cpu.colors[j] = glm::vec4{mesh->colors[i], mesh->colors[i + 1], mesh->colors[i + 2], 1.0f};
 		}
 	}
 	else
@@ -178,29 +178,29 @@ void Application::parse_model_cpu(const std::string& path)
 			char red_channel = counter & 0x000000ff;
 			char green_channel = (counter & 0x0000ff00) >> 8;
 			char blue_channel = (counter & 0x00ff0000) >> 16;
-			state->m_model.m_cpu.colors[j] = glm::u8vec4{ red_channel,green_channel,blue_channel ,0xff };
+			state->m_model.m_cpu.colors[j] = glm::u8vec4{red_channel, green_channel, blue_channel, 0xff};
 		}
 	}
 
-	// copy tex_coords	
+	// copy tex_coords
 	for (uint32_t i = 2, j = 0; j < t_count; i += 2, ++j)
 	{
-		state->m_model.m_cpu.tex_coords[j] = glm::vec2{ mesh->texcoords[i],mesh->texcoords[i + 1] };
+		state->m_model.m_cpu.tex_coords[j] = glm::vec2{mesh->texcoords[i], mesh->texcoords[i + 1]};
 	}
 
 	// face normals
 	for (uint32_t i = 3, j = 0; j < n_count; i += 3, ++j)
 	{
-		state->m_model.m_cpu.face_normals[j] = glm::vec4{ mesh->normals[i],mesh->normals[i + 1],mesh->normals[i + 2],0.0f };
+		state->m_model.m_cpu.face_normals[j] = glm::vec4{mesh->normals[i], mesh->normals[i + 1], mesh->normals[i + 2], 0.0f};
 	}
 
 	// copy faces
 	for (uint32_t i = 0, j = 0; j < f_count; i += 3, ++j)
 	{
 		Face tmp{};
-		tmp.p_indices = glm::vec3{ mesh->indices[i].p - 1 ,mesh->indices[i + 1].p - 1,mesh->indices[i + 2].p - 1 };
-		tmp.n_indices = glm::vec3{ mesh->indices[i].n - 1,mesh->indices[i + 1].n - 1,mesh->indices[i + 2].n - 1 };
-		tmp.t_indices = glm::vec3{ mesh->indices[i].t - 1,mesh->indices[i + 1].t - 1 ,mesh->indices[i + 2].t - 1 };
+		tmp.p_indices = glm::vec3{mesh->indices[i].p - 1, mesh->indices[i + 1].p - 1, mesh->indices[i + 2].p - 1};
+		tmp.n_indices = glm::vec3{mesh->indices[i].n - 1, mesh->indices[i + 1].n - 1, mesh->indices[i + 2].n - 1};
+		tmp.t_indices = glm::vec3{mesh->indices[i].t - 1, mesh->indices[i + 1].t - 1, mesh->indices[i + 2].t - 1};
 
 		// generate face normals if not found in the model
 		if (n_count < 1)
@@ -214,10 +214,9 @@ void Application::parse_model_cpu(const std::string& path)
 			auto n = glm::normalize(
 				glm::cross(
 					glm::vec3(e0.x, e0.y, e0.z),
-					glm::vec3(e1.x, e1.y, e1.z))
-			);
+					glm::vec3(e1.x, e1.y, e1.z)));
 			state->m_model.m_cpu.face_normals.push_back(glm::vec4(n, 0.0f));
-			tmp.n_indices = glm::vec3{ j,j,j };
+			tmp.n_indices = glm::vec3{j, j, j};
 		}
 
 		state->m_model.m_cpu.faces[j] = tmp;
@@ -233,7 +232,7 @@ void Application::parse_model_cpu(const std::string& path)
 		state->n_threads = std::thread::hardware_concurrency();
 }
 
-Texture Application::load_texture(const std::string& path, bool flip_vertically)
+Texture Application::load_texture(const std::string &path, bool flip_vertically)
 {
 	Texture t = {};
 	t.dimensions = Texture::DIM_2D;
@@ -242,7 +241,7 @@ Texture Application::load_texture(const std::string& path, bool flip_vertically)
 
 	stbi_set_flip_vertically_on_load(flip_vertically);
 	int n;
-	t.data[0] = (char*)stbi_load(path.c_str(), &(t.width), &(t.height), &n, t.bytes_per_pixel);
+	t.data[0] = (char *)stbi_load(path.c_str(), &(t.width), &(t.height), &n, t.bytes_per_pixel);
 
 	if (!t.data)
 		stbi_failure_reason();
@@ -256,7 +255,7 @@ Texture Application::load_texture(const std::string& path, bool flip_vertically)
 	return t;
 }
 
-Env_map Application::load_env_texture_cube(const std::string& path)
+Env_map Application::load_env_texture_cube(const std::string &path)
 {
 	Env_map env = {};
 	env.front = load_texture(path + "front.jpg");

@@ -7,11 +7,13 @@
 #include <vector>
 #include <optional>
 
-class VulkanWrapper {
+class VulkanWrapper
+{
 public:
 	VulkanWrapper();
 	~VulkanWrapper();
 	void run();
+
 private:
 	void initVulkan();
 	void mainLoop();
@@ -32,13 +34,13 @@ private:
 	void setupDepthStencil();
 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-	std::vector<const char*> getRequiredExtensions();
+	std::vector<const char *> getRequiredExtensions();
 
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debug_messenger;
 	VkSurfaceKHR surface;
 	VkPhysicalDevice physical_device;
-	VkQueue graphics_queue ;
+	VkQueue graphics_queue;
 	VkDevice device;
 	VkCommandPool command_pool;
 	VkSwapchainKHR swap_chain;
@@ -47,17 +49,16 @@ private:
 	std::vector<VkCommandBuffer> cmd_buffers;
 	std::vector<VkFence> wait_fences;
 	std::optional<uint32_t> graphics_family_queue_index;
-	GLFWwindow* window;
+	GLFWwindow *window;
 	unsigned int win_width = 800;
 	unsigned int win_height = 600;
 
-	const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
-	const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+	const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
 	const bool enableValidationLayers = true;
 #endif
-
 };

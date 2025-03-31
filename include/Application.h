@@ -10,18 +10,22 @@ struct Engine_State;
 class Application
 {
 public:
-	Application(const std::string& model_path);
+	Application(const std::string &model_path);
 	~Application();
 
 	void run();
-	void bind_state(Engine_State* engine_state) { if (engine_state) state = engine_state; }
-private:
+	void bind_state(Engine_State *engine_state)
+	{
+		if (engine_state)
+			state = engine_state;
+	}
 
-	void parse_model_cpu(const std::string& path);
-	void parse_model_gpu(const std::string& path);
-	Texture load_texture(const std::string& path, bool flip_vertically = false);
-	Env_map load_env_texture_cube(const std::string& path);
-	void* m_mesh; // single model mesh for now
+private:
+	void parse_model_cpu(const std::string &path);
+	void parse_model_gpu(const std::string &path);
+	Texture load_texture(const std::string &path, bool flip_vertically = false);
+	Env_map load_env_texture_cube(const std::string &path);
+	void *m_mesh; // single model mesh for now
 	std::string m_model_path;
-	Engine_State* state;
+	Engine_State *state;
 };

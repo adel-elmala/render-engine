@@ -19,20 +19,24 @@ public:
 	void initD3D11();
 	void render_frame(std::vector<Render_Pass> &passes);
 	void cleanup();
-	void bind_state(Engine_State *engine_state) { if (engine_state) state = engine_state; }
+	void bind_state(Engine_State *engine_state)
+	{
+		if (engine_state)
+			state = engine_state;
+	}
 
 	void _d3d11_create_device();
 	void _d3d11_set_debug_layer();
 	void _d3d11_create_swapchain();
 	void _d3d11_create_render_target();
 
-	ID3D11VertexShader *_d3d11_create_vertex_shader(std::wstring path , std::string entry);
+	ID3D11VertexShader *_d3d11_create_vertex_shader(std::wstring path, std::string entry);
 	ID3D11PixelShader *_d3d11_create_pixel_shader(std::wstring path, std::string entry);
 
-	ID3D11InputLayout* _d3d11_create_input_layout(Shader vs, Input_Layout layout);
-	ID3D11Buffer* _d3d11_create_vertex_buffer(void *data, size_t n_bytes);
+	ID3D11InputLayout *_d3d11_create_input_layout(Shader vs, Input_Layout layout);
+	ID3D11Buffer *_d3d11_create_vertex_buffer(void *data, size_t n_bytes);
 
-	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(Texture& t);
+	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(Texture &t);
 	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FLAGS flags, char *data, size_t bytes_per_pixel = 4);
 	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture_cube(size_t width, size_t height, size_t bytes_per_pixel, char *data[6]);
 	std::pair<ID3D11Texture2D *, ID3D11DepthStencilView *> _d3d11_create_depth_texture(size_t width, size_t height, size_t bytes_per_pixel);
@@ -65,10 +69,10 @@ private:
 	std::vector<ID3D11Resource *> textures;
 	std::vector<ID3D11View *> texture_views;
 	std::vector<ID3D11Buffer *> buffers;
-	std::vector<ID3D11DeviceChild*> shaders;
-	std::vector<ID3D11InputLayout*> input_layouts;
-	std::unordered_map<ID3D11VertexShader*, ID3DBlob *> compiled_vs_shaders;
-	std::unordered_map<ID3D11PixelShader*, ID3DBlob*> compiled_ps_shaders;
+	std::vector<ID3D11DeviceChild *> shaders;
+	std::vector<ID3D11InputLayout *> input_layouts;
+	std::unordered_map<ID3D11VertexShader *, ID3DBlob *> compiled_vs_shaders;
+	std::unordered_map<ID3D11PixelShader *, ID3DBlob *> compiled_ps_shaders;
 
 #ifdef NDEBUG
 	const bool enableDebugLayer = false;

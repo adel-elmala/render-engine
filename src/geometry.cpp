@@ -12,7 +12,7 @@ Geometry::~Geometry()
 
 void Geometry::update_world_transform()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	static char count = 0;
 	static float dx = 0.0f;
 	static float dy = 0.0f;
@@ -40,7 +40,7 @@ void Geometry::update_world_transform()
 
 void Geometry::update_camera_transform()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 
 	// update the camera state according to Keyboard/Mouse input
 	// if (state->m_window.enable_mouse_movement)
@@ -57,7 +57,7 @@ void Geometry::update_camera_transform()
 	// 	state->m_camera.lookat.z = sin(glm::radians(state->m_window.mouse_yaw)) * cos(glm::radians(state->m_window.mouse_pitch));
 	// }
 
-	auto& eye = state->m_camera.position;
+	auto &eye = state->m_camera.position;
 	auto gaze = state->m_camera.lookat;
 	auto up = state->m_camera.up;
 
@@ -65,7 +65,7 @@ void Geometry::update_camera_transform()
 	auto w = (glm::normalize(gaze));
 	auto u = glm::normalize(glm::cross(w, up));
 	auto v = glm::cross(u, w);
-	if(state->backend == BACKEND_D3D11)
+	if (state->backend == BACKEND_D3D11)
 	{
 		w = glm::normalize(gaze);
 		u = -glm::normalize(glm::cross(w, up));
@@ -82,23 +82,23 @@ void Geometry::update_camera_transform()
 		state->m_camera.position += state->backend == BACKEND_D3D11 ? -w * state->m_camera.sensitivity : w * state->m_camera.sensitivity;
 
 	glm::mat4 translate_eye_to_origin(
-		{ 1.0f, 0.0f, 0.0f, -eye.x },
-		{ 0.0f, 1.0f, 0.0f, -eye.y },
-		{ 0.0f, 0.0f, 1.0f, -eye.z },
-		{ 0.0f, 0.0f, 0.0f, 1.0f });
+		{1.0f, 0.0f, 0.0f, -eye.x},
+		{0.0f, 1.0f, 0.0f, -eye.y},
+		{0.0f, 0.0f, 1.0f, -eye.z},
+		{0.0f, 0.0f, 0.0f, 1.0f});
 
 	glm::mat4 align_basis(
-		{ u,0.0f },
-		{ v,0.0f },
-		{ w,0.0f },
-		{ 0.0f, 0.0f, 0.0f, 1.0f });
+		{u, 0.0f},
+		{v, 0.0f},
+		{w, 0.0f},
+		{0.0f, 0.0f, 0.0f, 1.0f});
 
 	world_camera_transform = glm::transpose(align_basis) * glm::transpose(translate_eye_to_origin);
 }
 
 void Geometry::update_perspective_transform()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 
 	auto n = state->m_view_volume.near_plane;
 	auto f = state->m_view_volume.far_plane;
@@ -107,13 +107,12 @@ void Geometry::update_perspective_transform()
 	auto l = state->m_view_volume.left_plane;
 	auto r = state->m_view_volume.right_plane;
 
-
 	glm::vec4 r0(2.0f / (r - l), 0.0f, 0.0f, -(r + l) / (r - l));
 	glm::vec4 r1(0.0f, 2.0f / (t - b), 0.0, -(t + b) / (t - b));
 	glm::vec4 r2(0.0f, 0.0f, 2.0f / (n - f), -(n + f) / (n - f));
 	glm::vec4 r3(0.0f, 0.0f, 0.0f, 1.0f);
 
-	if(state->backend == BACKEND_D3D11)
+	if (state->backend == BACKEND_D3D11)
 	{
 		r2 = glm::vec4(0.0f, 0.0f, 1.0f / (f - n), (-n) / (f - n));
 	}
@@ -125,7 +124,6 @@ void Geometry::update_perspective_transform()
 	glm::vec4 rp2(0.0f, 0.0f, n + f, -(f * n));
 	glm::vec4 rp3(0.0f, 0.0f, 1.0f, 0.0f);
 
-
 	glm::mat4 persp(rp0, rp1, rp2, rp3);
 
 	camera_ndc_transform = glm::transpose(orth) * glm::transpose(persp);
@@ -133,46 +131,46 @@ void Geometry::update_perspective_transform()
 
 void Geometry::update_viewport_transform()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 
 	auto nx = state->m_swapchain.frame_width;
 	auto ny = state->m_swapchain.frame_height;
 	auto nx_div_2 = nx / 2.0;
 	auto ny_div_2 = ny / 2.0;
 
-	glm::vec4 r1{ nx_div_2,0.0,0.0,nx_div_2 - 0.5 };
-	glm::vec4 r2{ 0.0,ny_div_2,0.0,ny_div_2 - 0.5 };
-	glm::vec4 r3{ 0.0,0.0,1.0,0.0 };
-	glm::vec4 r4{ 0.0,0.0,0.0,1.0 };
+	glm::vec4 r1{nx_div_2, 0.0, 0.0, nx_div_2 - 0.5};
+	glm::vec4 r2{0.0, ny_div_2, 0.0, ny_div_2 - 0.5};
+	glm::vec4 r3{0.0, 0.0, 1.0, 0.0};
+	glm::vec4 r4{0.0, 0.0, 0.0, 1.0};
 
-	ndc_pixel_transform = glm::transpose(glm::mat4{ r1,r2,r3,r4 });
+	ndc_pixel_transform = glm::transpose(glm::mat4{r1, r2, r3, r4});
 }
 
 void Geometry::send_to_camera_space()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 
 	update_world_transform();
 	update_camera_transform();
 	auto m = world_camera_transform * model_world_transform;
 
-	auto& postions = state->m_model.m_cpu.positions;
+	auto &postions = state->m_model.m_cpu.positions;
 	size_t n_pos = postions.size();
 	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
 	auto pos_thunk = [thread_share, &m, &postions](size_t id)
+	{
+		size_t end = thread_share * (id + 1);
+		for (size_t start = thread_share * id; start < end; start += 4)
 		{
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; start += 4)
-			{
-				postions[start] = m * postions[start];
-				postions[start + 1] = m * postions[start + 1];
-				postions[start + 2] = m * postions[start + 2];
-				postions[start + 3] = m * postions[start + 3];
-			}
-		};
+			postions[start] = m * postions[start];
+			postions[start + 1] = m * postions[start + 1];
+			postions[start + 2] = m * postions[start + 2];
+			postions[start + 3] = m * postions[start + 3];
+		}
+	};
 	// launch threads
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(pos_thunk, i);
@@ -189,27 +187,27 @@ void Geometry::send_to_camera_space()
 
 	// NOTE: no need to multiply by (M)^1T as the matrix is a combination of rigid-body-transforms + unifrom scale -- check later when needed
 	auto mn = glm::transpose(glm::inverse(m));
-//	for (auto& face_normal : state->m_model.face_normals)
-//	{
-//		face_normal = m * face_normal;
-//	}
+	//	for (auto& face_normal : state->m_model.face_normals)
+	//	{
+	//		face_normal = m * face_normal;
+	//	}
 
-	auto& normals = state->m_model.m_cpu.face_normals;
+	auto &normals = state->m_model.m_cpu.face_normals;
 	size_t n_normals = normals.size();
 	thread_share = n_normals / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	auto normal_thunk = [thread_share, &mn, &normals](size_t id)
+	{
+		size_t end = thread_share * (id + 1);
+		for (size_t start = thread_share * id; start < end; start += 4)
 		{
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; start += 4)
-			{
-				normals[start] = mn * normals[start];
-				normals[start + 1] = mn * normals[start + 1];
-				normals[start + 2] = mn * normals[start + 2];
-				normals[start + 3] = mn * normals[start + 3];
-			}
-		};
+			normals[start] = mn * normals[start];
+			normals[start + 1] = mn * normals[start + 1];
+			normals[start + 2] = mn * normals[start + 2];
+			normals[start + 3] = mn * normals[start + 3];
+		}
+	};
 	// launch threads
 	threads.clear();
 	for (size_t i = 0; i < state->n_threads; ++i)
@@ -224,45 +222,43 @@ void Geometry::send_to_camera_space()
 	// wait for the threads to finish
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
-
 }
 
 void Geometry::send_to_ndc_space()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	update_perspective_transform();
 	auto m = camera_ndc_transform;
 
-	auto& postions = state->m_model.m_cpu.positions;
-	auto& save_w_coords = state->m_model.m_cpu.verts_w_coords;
+	auto &postions = state->m_model.m_cpu.positions;
+	auto &save_w_coords = state->m_model.m_cpu.verts_w_coords;
 	size_t n_pos = postions.size();
 	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
 	auto thunk = [thread_share, &m, &save_w_coords, &postions](size_t id)
+	{
+		size_t end = thread_share * (id + 1);
+		for (size_t start = thread_share * id; start < end; start += 4)
 		{
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; start += 4)
-			{
-				postions[start] = m * postions[start];
-				save_w_coords[start] = postions[start].w;
-				postions[start] /= postions[start].w;
+			postions[start] = m * postions[start];
+			save_w_coords[start] = postions[start].w;
+			postions[start] /= postions[start].w;
 
-				postions[start + 1] = m * postions[start + 1];
-				save_w_coords[start + 1] = postions[start + 1].w;
-				postions[start + 1] /= postions[start + 1].w;
+			postions[start + 1] = m * postions[start + 1];
+			save_w_coords[start + 1] = postions[start + 1].w;
+			postions[start + 1] /= postions[start + 1].w;
 
-				postions[start + 2] = m * postions[start + 2];
-				save_w_coords[start + 2] = postions[start + 2].w;
-				postions[start + 2] /= postions[start + 2].w;
+			postions[start + 2] = m * postions[start + 2];
+			save_w_coords[start + 2] = postions[start + 2].w;
+			postions[start + 2] /= postions[start + 2].w;
 
-				postions[start + 3] = m * postions[start + 3];
-				save_w_coords[start + 3] = postions[start + 3].w;
-				postions[start + 3] /= postions[start + 3].w;
-
-			}
-		};
+			postions[start + 3] = m * postions[start + 3];
+			save_w_coords[start + 3] = postions[start + 3].w;
+			postions[start + 3] /= postions[start + 3].w;
+		}
+	};
 	// launch threads
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
@@ -279,29 +275,29 @@ void Geometry::send_to_ndc_space()
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
-	// NOTE(adel): do we need the normals ? 
+	// NOTE(adel): do we need the normals ?
 	auto mn = glm::transpose(glm::inverse(m));
-//	for (auto& face_normal : state->m_model.face_normals)
+	//	for (auto& face_normal : state->m_model.face_normals)
 	//{
-		//face_normal = m * face_normal;
+	// face_normal = m * face_normal;
 	//}
 
-	auto& normals = state->m_model.m_cpu.face_normals;
+	auto &normals = state->m_model.m_cpu.face_normals;
 	size_t n_normals = normals.size();
 	thread_share = n_normals / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	auto normal_thunk = [thread_share, &mn, &normals](size_t id)
+	{
+		size_t end = thread_share * (id + 1);
+		for (size_t start = thread_share * id; start < end; start += 4)
 		{
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; start += 4)
-			{
-				normals[start] = mn * normals[start];
-				normals[start + 1] = mn * normals[start + 1];
-				normals[start + 2] = mn * normals[start + 2];
-				normals[start + 3] = mn * normals[start + 3];
-			}
-		};
+			normals[start] = mn * normals[start];
+			normals[start + 1] = mn * normals[start + 1];
+			normals[start + 2] = mn * normals[start + 2];
+			normals[start + 3] = mn * normals[start + 3];
+		}
+	};
 	// launch threads
 	threads.clear();
 	for (size_t i = 0; i < state->n_threads; ++i)
@@ -320,27 +316,27 @@ void Geometry::send_to_ndc_space()
 
 void Geometry::send_to_pixel_space()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	update_viewport_transform();
 	auto m = ndc_pixel_transform;
 
-	auto& postions = state->m_model.m_cpu.positions;
+	auto &postions = state->m_model.m_cpu.positions;
 	size_t n_pos = postions.size();
 	size_t thread_share = n_pos / state->n_threads;
 	thread_share = (thread_share / 4) * 4;
 
 	std::vector<std::thread> threads;
 	auto thunk = [thread_share, &m, &postions](size_t id)
+	{
+		size_t end = thread_share * (id + 1);
+		for (size_t start = thread_share * id; start < end; start += 4)
 		{
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; start += 4)
-			{
-				postions[start] = m * postions[start];
-				postions[start + 1] = m * postions[start + 1];
-				postions[start + 2] = m * postions[start + 2];
-				postions[start + 3] = m * postions[start + 3];
-			}
-		};
+			postions[start] = m * postions[start];
+			postions[start + 1] = m * postions[start + 1];
+			postions[start + 2] = m * postions[start + 2];
+			postions[start + 3] = m * postions[start + 3];
+		}
+	};
 	// launch threads
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads.emplace_back(thunk, i);
@@ -355,9 +351,9 @@ void Geometry::send_to_pixel_space()
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
 
-	// NOTE(adel): do we need the normals ? 
-	//auto mn = glm::transpose(glm::inverse(m));
-	//for (auto& face_normal : state->m_model.face_normals)
+	// NOTE(adel): do we need the normals ?
+	// auto mn = glm::transpose(glm::inverse(m));
+	// for (auto& face_normal : state->m_model.face_normals)
 	//{
 	//	face_normal = mn * face_normal;
 	//}
@@ -365,14 +361,14 @@ void Geometry::send_to_pixel_space()
 
 void Geometry::lighting_calc()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	send_to_camera_space();
 	// do lighting stuff here
 }
 
 void Geometry::clipping()
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	send_to_ndc_space();
 	// clipping base on drawing mode (points / lines / triangles)
 	switch (state->m_mode)
@@ -393,30 +389,30 @@ void Geometry::clipping()
 
 void Geometry::backface_cull()
 {
-	//ZoneScoped;
-	auto& normals = state->m_model.m_cpu.face_normals;
-	auto& faces = state->m_model.m_cpu.faces;
+	// ZoneScoped;
+	auto &normals = state->m_model.m_cpu.face_normals;
+	auto &faces = state->m_model.m_cpu.faces;
 	size_t n_faces = faces.size();
 	size_t thread_share = n_faces / state->n_threads;
 
 	std::vector<std::thread> threads;
 	auto thunk = [this, thread_share, &faces, &normals](size_t id)
+	{
+		auto view_dir = state->m_camera.lookat;
+		size_t end = thread_share * (id + 1);
+		for (size_t start = thread_share * id; start < end; ++start)
 		{
-			auto view_dir = state->m_camera.lookat;
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; ++start)
-			{
-				auto& triangle = faces[start];
-				if (triangle.erase)
-					continue;
-				auto n_index = triangle.n_indices[0];
-				auto& n = normals[n_index];
-				auto n_v3 = glm::normalize(glm::vec3(n.x, n.y, n.z));
-				auto cos_theta = glm::dot(glm::normalize(view_dir), n_v3);
-				if (cos_theta <= 1 && cos_theta > 0)
-					triangle.erase = true;
-			}
-		};
+			auto &triangle = faces[start];
+			if (triangle.erase)
+				continue;
+			auto n_index = triangle.n_indices[0];
+			auto &n = normals[n_index];
+			auto n_v3 = glm::normalize(glm::vec3(n.x, n.y, n.z));
+			auto cos_theta = glm::dot(glm::normalize(view_dir), n_v3);
+			if (cos_theta <= 1 && cos_theta > 0)
+				triangle.erase = true;
+		}
+	};
 
 	// launch threads
 	for (size_t i = 0; i < state->n_threads; ++i)
@@ -426,11 +422,11 @@ void Geometry::backface_cull()
 	// main thread handle the remaingings left
 	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
 	{
-		auto& triangle = faces[start];
+		auto &triangle = faces[start];
 		if (triangle.erase)
 			continue;
 		auto n_index = triangle.n_indices[0];
-		auto& n = normals[n_index];
+		auto &n = normals[n_index];
 		auto n_v3 = glm::normalize(glm::vec3(n.x, n.y, n.z));
 		auto cos_theta = glm::dot(glm::normalize(view_dir), n_v3);
 		if (cos_theta <= 1 && cos_theta > 0)
@@ -444,20 +440,20 @@ void Geometry::backface_cull()
 
 void Geometry::run()
 {
-	//ZoneScoped;
-	// run lighting stage
+	// ZoneScoped;
+	//  run lighting stage
 	lighting_calc();
 	// run clipping stage
 	clipping();
 	// culling
-//	backface_cull();
+	//	backface_cull();
 	// send the remaining vertecies to pixel space
 	send_to_pixel_space();
 }
 
-__forceinline bool Geometry::in_view_volume(glm::vec4& point)
+__forceinline bool Geometry::in_view_volume(glm::vec4 &point)
 {
-	//ZoneScoped;
+	// ZoneScoped;
 	bool bx = (point.x <= 1.0f) && (point.x >= -1.0f);
 	bool by = (point.y <= 1.0f) && (point.y >= -1.0f);
 	bool bz = (point.z <= 1.0f) && (point.z >= -1.0f);
@@ -466,50 +462,50 @@ __forceinline bool Geometry::in_view_volume(glm::vec4& point)
 
 void Geometry::clip_triangles()
 {
-	//ZoneScoped;
-	auto& verticies = state->m_model.m_cpu.positions;
-	auto& faces = state->m_model.m_cpu.faces;
+	// ZoneScoped;
+	auto &verticies = state->m_model.m_cpu.positions;
+	auto &faces = state->m_model.m_cpu.faces;
 	size_t n_faces = faces.size();
 	size_t thread_share = n_faces / state->n_threads;
 
 	std::vector<std::thread> threads;
 	auto thunk = [this, thread_share, &faces, &verticies](size_t id)
+	{
+		size_t end = thread_share * (id + 1);
+		for (size_t start = thread_share * id; start < end; ++start)
 		{
-			size_t end = thread_share * (id + 1);
-			for (size_t start = thread_share * id; start < end; ++start)
+			auto &triangle = faces[start];
+			// face verts indices
+			auto v0_index = triangle.p_indices[0];
+			auto v1_index = triangle.p_indices[1];
+			auto v2_index = triangle.p_indices[2];
+			// face verts
+			auto &v0 = verticies[v0_index];
+			auto &v1 = verticies[v1_index];
+			auto &v2 = verticies[v2_index];
+
+			auto v0_in = in_view_volume(v0);
+			auto v1_in = in_view_volume(v1);
+			auto v2_in = in_view_volume(v2);
+
+			auto n_vert_out = 3 - (v0_in + v1_in + v2_in);
+
+			switch (n_vert_out)
 			{
-				auto& triangle = faces[start];
-				// face verts indices
-				auto v0_index = triangle.p_indices[0];
-				auto v1_index = triangle.p_indices[1];
-				auto v2_index = triangle.p_indices[2];
-				// face verts
-				auto& v0 = verticies[v0_index];
-				auto& v1 = verticies[v1_index];
-				auto& v2 = verticies[v2_index];
-
-				auto v0_in = in_view_volume(v0);
-				auto v1_in = in_view_volume(v1);
-				auto v2_in = in_view_volume(v2);
-
-				auto n_vert_out = 3 - (v0_in + v1_in + v2_in);
-
-				switch (n_vert_out)
-				{
-					// TODO(adel): handle partially clipped triangles
-				case 3:
-				case 2:
-				case 1:
-					triangle.erase = true;
-					break;
-				case 0:
-					triangle.erase = false;
-					break;
-				default:
-					break;
-				}
+				// TODO(adel): handle partially clipped triangles
+			case 3:
+			case 2:
+			case 1:
+				triangle.erase = true;
+				break;
+			case 0:
+				triangle.erase = false;
+				break;
+			default:
+				break;
 			}
-		};
+		}
+	};
 
 	// launch threads
 	for (size_t i = 0; i < state->n_threads; ++i)
@@ -518,15 +514,15 @@ void Geometry::clip_triangles()
 	// main thread handle the remaingings left
 	for (size_t start = state->n_threads * thread_share; start < n_faces; ++start)
 	{
-		auto& triangle = faces[start];
+		auto &triangle = faces[start];
 		// face verts indices
 		auto v0_index = triangle.p_indices[0];
 		auto v1_index = triangle.p_indices[1];
 		auto v2_index = triangle.p_indices[2];
 		// face verts
-		auto& v0 = verticies[v0_index];
-		auto& v1 = verticies[v1_index];
-		auto& v2 = verticies[v2_index];
+		auto &v0 = verticies[v0_index];
+		auto &v1 = verticies[v1_index];
+		auto &v2 = verticies[v2_index];
 
 		auto v0_in = in_view_volume(v0);
 		auto v1_in = in_view_volume(v1);
@@ -553,5 +549,4 @@ void Geometry::clip_triangles()
 	// wait for the threads to finish
 	for (size_t i = 0; i < state->n_threads; ++i)
 		threads[i].join();
-
 }

@@ -13,8 +13,8 @@
 #include <mutex>
 #include <atomic>
 
-//#include <tracy/Tracy.hpp>
-//#define TRACY_ENABLE
+// #include <tracy/Tracy.hpp>
+// #define TRACY_ENABLE
 using Handle_t = void *;
 
 enum DRAWING_MODE
@@ -34,7 +34,7 @@ struct Face
 
 struct Texture
 {
-	enum DIM 
+	enum DIM
 	{
 		DIM_2D,
 		DIM_CUBE
@@ -44,8 +44,8 @@ struct Texture
 	Handle_t texture_handle;
 	Handle_t view_handle;
 	size_t binding_point;
-	const char* name;
-	char* data[6];
+	const char *name;
+	char *data[6];
 	int width;
 	int height;
 	int bytes_per_pixel;
@@ -54,7 +54,7 @@ struct Texture
 struct Render_Target
 {
 	Handle_t view_handle;
-	const char* name;
+	const char *name;
 	Texture color;
 	Texture depth;
 };
@@ -100,7 +100,7 @@ struct Material
 	glm::vec3 ka;
 	glm::vec3 kd;
 	glm::vec3 ks;
-	uint32_t ns; 
+	uint32_t ns;
 };
 
 struct Model
@@ -141,9 +141,9 @@ struct PointLight
 struct SwapChain
 {
 	std::mutex m;
-	char* back_buffer;
-	char* front_buffer;
-	float* z_buffer;
+	char *back_buffer;
+	char *front_buffer;
+	float *z_buffer;
 	unsigned int frame_width;
 	unsigned int frame_height;
 	unsigned int frame_bytes_per_pixel;
@@ -162,7 +162,7 @@ struct ViewVolume
 struct Window
 {
 	std::mutex m;
-	void* surface;
+	void *surface;
 	HWND win32_win;
 	int width;
 	int height;
@@ -209,8 +209,8 @@ struct Engine_State
 struct Uniform
 {
 	Handle_t handle;
-	void* data;
-	const char* name;
+	void *data;
+	const char *name;
 	size_t size;
 	size_t binding_point;
 };

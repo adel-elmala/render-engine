@@ -3,7 +3,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-
 enum STATUS
 {
 	STATUS_INFO,
@@ -24,4 +23,3 @@ private:
 	void log(std::string message, STATUS log_state);
 	HANDLE hConsole;
 };
-

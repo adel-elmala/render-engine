@@ -11,7 +11,9 @@ std::string errorString(VkResult errorCode)
 {
 	switch (errorCode)
 	{
-#define STR(r) case VK_ ##r: return #r
+#define STR(r)   \
+	case VK_##r: \
+		return #r
 		STR(NOT_READY);
 		STR(TIMEOUT);
 		STR(EVENT_SET);
@@ -42,16 +44,15 @@ std::string errorString(VkResult errorCode)
 	}
 }
 
-#define VK_CHECK_RESULT(f)																				\
-{																										\
-	VkResult res = (f);																					\
-	if (res != VK_SUCCESS)																				\
-	{																									\
-		std::cout << "Fatal : VkResult is \"" << errorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << "\n"; \
-		assert(res == VK_SUCCESS);																		\
-	}																									\
-}
-
+#define VK_CHECK_RESULT(f)                                                                                                        \
+	{                                                                                                                             \
+		VkResult res = (f);                                                                                                       \
+		if (res != VK_SUCCESS)                                                                                                    \
+		{                                                                                                                         \
+			std::cout << "Fatal : VkResult is \"" << errorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << "\n"; \
+			assert(res == VK_SUCCESS);                                                                                            \
+		}                                                                                                                         \
+	}
 
 VulkanWrapper::VulkanWrapper()
 {
@@ -68,7 +69,7 @@ VulkanWrapper::~VulkanWrapper()
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL
-debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 {
 	switch (messageSeverity)
 	{
@@ -106,11 +107,11 @@ debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUti
 		break;
 	}
 
-	std::cout <<  pCallbackData->pMessage << std::endl;
+	std::cout << pCallbackData->pMessage << std::endl;
 	return VK_FALSE;
 }
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
 {
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
@@ -120,15 +121,14 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks *pAllocator)
 {
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
 	if (func != nullptr)
 		func(instance, debugMessenger, pAllocator);
-
 }
 
-void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
+void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
 {
 	createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -137,13 +137,16 @@ void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create
 	createInfo.pfnUserCallback = debugCallback;
 }
 
-void VulkanWrapper::setupDebugMessenger() {
-	if (!enableValidationLayers) return;
+void VulkanWrapper::setupDebugMessenger()
+{
+	if (!enableValidationLayers)
+		return;
 
 	VkDebugUtilsMessengerCreateInfoEXT createInfo;
 	populateDebugMessengerCreateInfo(createInfo);
 
-	if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debug_messenger) != VK_SUCCESS) {
+	if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debug_messenger) != VK_SUCCESS)
+	{
 		throw std::runtime_error("failed to set up debug messenger!");
 	}
 }
@@ -156,11 +159,11 @@ bool VulkanWrapper::checkValidationLayerSupport()
 	std::vector<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-	for (const char* layerName : validationLayers)
+	for (const char *layerName : validationLayers)
 	{
 		bool layerFound = false;
 
-		for (const auto& layerProperties : availableLayers)
+		for (const auto &layerProperties : availableLayers)
 		{
 			if (strcmp(layerName, layerProperties.layerName) == 0)
 			{
@@ -199,7 +202,8 @@ bool VulkanWrapper::isDeviceSuitable(VkPhysicalDevice device)
 	return graphics_family_queue_index.has_value() && extensionsSupported;
 }
 
-bool VulkanWrapper::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool VulkanWrapper::checkDeviceExtensionSupport(VkPhysicalDevice device)
+{
 	uint32_t extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -208,7 +212,8 @@ bool VulkanWrapper::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
 	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
-	for (const auto& extension : availableExtensions) {
+	for (const auto &extension : availableExtensions)
+	{
 		requiredExtensions.erase(extension.extensionName);
 	}
 
@@ -269,7 +274,6 @@ bool VulkanWrapper::createLogicalDevice()
 	vkGetDeviceQueue(device, graphics_family_queue_index.value(), 0, &graphics_queue);
 
 	return true;
-
 }
 
 void VulkanWrapper::run()
@@ -305,7 +309,8 @@ void VulkanWrapper::initVulkan()
 
 void VulkanWrapper::mainLoop()
 {
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(window))
+	{
 		glfwPollEvents();
 	}
 }
@@ -316,9 +321,9 @@ void VulkanWrapper::cleanup()
 	{
 		DestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
 	}
-	for (auto& iv : image_views)
+	for (auto &iv : image_views)
 		vkDestroyImageView(device, iv, nullptr);
-	for (auto& f : wait_fences)
+	for (auto &f : wait_fences)
 		vkDestroyFence(device, f, nullptr);
 
 	vkDestroySwapchainKHR(device, swap_chain, nullptr);
@@ -373,7 +378,7 @@ bool VulkanWrapper::createInstance()
 		info.ppEnabledLayerNames = validationLayers.data();
 
 		populateDebugMessengerCreateInfo(debugCreateInfo);
-		info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+		info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
 	}
 	else
 	{
@@ -389,13 +394,15 @@ bool VulkanWrapper::createInstance()
 	return true;
 }
 
-std::vector<const char*> VulkanWrapper::getRequiredExtensions() {
+std::vector<const char *> VulkanWrapper::getRequiredExtensions()
+{
 	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+	const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+	std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-	if (enableValidationLayers) {
+	if (enableValidationLayers)
+	{
 		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
 
@@ -414,9 +421,9 @@ void VulkanWrapper::createCommandPool()
 
 void VulkanWrapper::createSwapChain()
 {
-	//assert(physical_device);
-	//assert(device);
-	//assert(instance);
+	// assert(physical_device);
+	// assert(device);
+	// assert(instance);
 
 	// Get list of supported surface formats
 	uint32_t formatCount;
@@ -432,11 +439,12 @@ void VulkanWrapper::createSwapChain()
 	std::vector<VkFormat> preferredImageFormats = {
 		VK_FORMAT_B8G8R8A8_UNORM,
 		VK_FORMAT_R8G8B8A8_UNORM,
-		VK_FORMAT_A8B8G8R8_UNORM_PACK32
-	};
+		VK_FORMAT_A8B8G8R8_UNORM_PACK32};
 
-	for (auto& availableFormat : surfaceFormats) {
-		if (std::find(preferredImageFormats.begin(), preferredImageFormats.end(), availableFormat.format) != preferredImageFormats.end()) {
+	for (auto &availableFormat : surfaceFormats)
+	{
+		if (std::find(preferredImageFormats.begin(), preferredImageFormats.end(), availableFormat.format) != preferredImageFormats.end())
+		{
 			selectedFormat = availableFormat;
 			break;
 		}
@@ -456,7 +464,6 @@ void VulkanWrapper::createSwapChain()
 	// If the surface size is undefined, the size is set to the size of the images requested
 	swapchainExtent.width = win_width;
 	swapchainExtent.height = win_height;
-
 
 	// Select a present mode for the swapchain
 	uint32_t presentModeCount;
@@ -498,8 +505,10 @@ void VulkanWrapper::createSwapChain()
 		VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
 		VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
 	};
-	for (auto& compositeAlphaFlag : compositeAlphaFlags) {
-		if (surfCaps.supportedCompositeAlpha & compositeAlphaFlag) {
+	for (auto &compositeAlphaFlag : compositeAlphaFlags)
+	{
+		if (surfCaps.supportedCompositeAlpha & compositeAlphaFlag)
+		{
 			compositeAlpha = compositeAlphaFlag;
 			break;
 		};
@@ -511,7 +520,7 @@ void VulkanWrapper::createSwapChain()
 	swapchainCI.minImageCount = desiredNumberOfSwapchainImages;
 	swapchainCI.imageFormat = colorFormat;
 	swapchainCI.imageColorSpace = colorSpace;
-	swapchainCI.imageExtent = { swapchainExtent.width, swapchainExtent.height };
+	swapchainCI.imageExtent = {swapchainExtent.width, swapchainExtent.height};
 	swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	swapchainCI.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
 	swapchainCI.imageArrayLayers = 1;
@@ -525,25 +534,29 @@ void VulkanWrapper::createSwapChain()
 	swapchainCI.compositeAlpha = compositeAlpha;
 
 	// Enable transfer source on swap chain images if supported
-	if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
+	if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+	{
 		swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	}
 
 	// Enable transfer destination on swap chain images if supported
-	if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+	if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+	{
 		swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 
 	VK_CHECK_RESULT(vkCreateSwapchainKHR(device, &swapchainCI, nullptr, &swap_chain));
 
 	// If an existing swap chain is re-created, destroy the old swap chain and the ressources owned by the application (image views, images are owned by the swap chain)
-	if (oldSwapchain != VK_NULL_HANDLE) {
-		for (auto i = 0; i < images.size(); i++) {
+	if (oldSwapchain != VK_NULL_HANDLE)
+	{
+		for (auto i = 0; i < images.size(); i++)
+		{
 			vkDestroyImageView(device, image_views[i], nullptr);
 		}
 		vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
 	}
-	uint32_t imageCount{ 0 };
+	uint32_t imageCount{0};
 	VK_CHECK_RESULT(vkGetSwapchainImagesKHR(device, swap_chain, &imageCount, nullptr));
 
 	// Get the swap chain images
@@ -562,8 +575,7 @@ void VulkanWrapper::createSwapChain()
 			VK_COMPONENT_SWIZZLE_R,
 			VK_COMPONENT_SWIZZLE_G,
 			VK_COMPONENT_SWIZZLE_B,
-			VK_COMPONENT_SWIZZLE_A
-		};
+			VK_COMPONENT_SWIZZLE_A};
 		colorAttachmentView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		colorAttachmentView.subresourceRange.baseMipLevel = 0;
 		colorAttachmentView.subresourceRange.levelCount = 1;
@@ -593,14 +605,13 @@ void VulkanWrapper::destroyCommandBuffers()
 	vkFreeCommandBuffers(device, command_pool, cmd_buffers.size(), cmd_buffers.data());
 }
 
-
 void VulkanWrapper::createSyncPrimitives()
 {
 	wait_fences.resize(cmd_buffers.size());
 	VkFenceCreateInfo fci{};
 	fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	for (auto& fence : wait_fences)
+	for (auto &fence : wait_fences)
 	{
 		VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &fence));
 	}
