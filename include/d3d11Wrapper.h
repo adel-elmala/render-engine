@@ -17,7 +17,7 @@ class D3D11Wrapper
 {
 public:
 	void initD3D11();
-	void render_frame();
+	void render_frame(std::vector<Render_Pass> &passes);
 	void cleanup();
 	void bind_state(Engine_State *engine_state) { if (engine_state) state = engine_state; }
 
@@ -41,7 +41,7 @@ public:
 	std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *> _d3d11_create_texture_cube(size_t width, size_t height, size_t bytes_per_pixel, void *data[6]);
 	std::pair<ID3D11Texture2D *, ID3D11DepthStencilView *> _d3d11_create_depth_texture(size_t width, size_t height, size_t bytes_per_pixel);
 	std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *>
-	_d3d11_create_render_texture();
+	_d3d11_create_render_texture(size_t width, size_t height, size_t bytes_per_pixel = 4);
 
 	ID3D11Buffer *_d3d11_create_cbuffer(uint32_t size);
 	void _d3d11_update_cbuffer(ID3D11Buffer *cbuffer, void *data, uint32_t size);

@@ -24,12 +24,12 @@ public:
 	void render_frame();
 	void flush_frame();
 	bool should_exit();
-	Render_Pass create_render_pass(Program& p, Texture& render_target);
-	Program create_program(Shader& vs, Shader& ps, Input_Layout& layout, void* vertex_buffer_data, size_t buffer_size);
+	Render_Pass create_render_pass(Program& p, Render_Target& render_target);
+	Program create_program(Shader& vs, Shader& ps, Input_Layout& layout, void* vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes);
 	Shader create_shader(std::wstring path, std::string entry,SHADER_STAGE stage, std::vector<Uniform>& uniforms, std::vector<Texture>& textures);
 	Uniform create_uniform(const char* name,void* data, size_t size, size_t binding_point);
 	Texture create_texture(const char *name, void *data, int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
-	Texture create_render_target(const char *name, int width, int height, int bytes_per_pixel);
+	Render_Target create_render_target(const char *name, int width, int height, int bytes_per_pixel);
 
 
 	std::unique_ptr<Application> m_application;
@@ -40,8 +40,8 @@ public:
 private:
 	void RenderEngine_init_software(const std::string &model_path);
 	void RenderEngine_init_d3d11(const std::string &model_path);
-	void render_frame_software();
-	void render_frame_d3d11();
+	void render_frame_software(std::vector<Render_Pass> passes);
+	void render_frame_d3d11(std::vector<Render_Pass> passes);
 
 	void init_camera();
 	void init_view_volume();

@@ -90,7 +90,7 @@ RenderEngine::RenderEngine(BACKEND backend, const std::string &model_path)
 	}
 }
 
-void RenderEngine::render_frame_software()
+void RenderEngine::render_frame_software(std::vector<Render_Pass> passes)
 {
 	// ZoneScoped;
 	auto start = std::chrono::system_clock::now();
@@ -108,14 +108,14 @@ void RenderEngine::render_frame_software()
 	// FrameMark;
 }
 
-void RenderEngine::render_frame_d3d11()
+void RenderEngine::render_frame_d3d11(std::vector<Render_Pass> passes)
 {
 	// ZoneScoped;
 	auto start = std::chrono::system_clock::now();
 	state.m_model.m_gpu = state.m_model_original.m_gpu;
 	
 	// if (state.m_window.resized) ;
-	m_d3d11_wrapper->render_frame();
+	m_d3d11_wrapper->render_frame(passes);
 
 	auto end = std::chrono::system_clock::now();
 	auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -128,10 +128,10 @@ void RenderEngine::render_frame()
 	switch (state.backend)
 	{
 	case BACKEND_SOFTWARE:
-		engine_loop = std::thread(&RenderEngine::render_frame_software, this);
+		engine_loop = std::thread(&RenderEngine::render_frame_software, this, passes);
 		break;
 	case BACKEND_D3D11:
-		engine_loop = std::thread(&RenderEngine::render_frame_d3d11, this);
+		engine_loop = std::thread(&RenderEngine::render_frame_d3d11, this, passes);
 		break;
 	case BACKEND_VULKAN:
 		break;
@@ -285,7 +285,7 @@ void RenderEngine::present_swapchain()
 	m_win_manager->update_surface();
 }
 
-Render_Pass RenderEngine::create_render_pass(Program& p, Texture& render_target)
+Render_Pass RenderEngine::create_render_pass(Program& p, Render_Target& render_target)
 {
 	Render_Pass pass{};
 	pass.used_prog = p;
@@ -295,7 +295,7 @@ Render_Pass RenderEngine::create_render_pass(Program& p, Texture& render_target)
 	return  pass;
 }
 
-Program RenderEngine::create_program(Shader& vs, Shader& ps, Input_Layout& layout, void* vertex_buffer_data, size_t buffer_size)
+Program RenderEngine::create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes)
 {
 	Program p{};
 	p.vs = vs;
@@ -304,6 +304,9 @@ Program RenderEngine::create_program(Shader& vs, Shader& ps, Input_Layout& layou
 	{
 		p.vertex_buffer_layout = (void *)m_d3d11_wrapper->_d3d11_create_input_layout(vs, layout);
 		p.vertex_buffer = (void *)m_d3d11_wrapper->_d3d11_create_vertex_buffer(vertex_buffer_data, buffer_size);
+		p.vertex_buffer_stride = vb_stride;
+		p.vertex_buffer_offset = vb_offset;
+		p.n_vert_attributes = n_vert_attributes;
 	}
 	return p;
 }
@@ -356,16 +359,28 @@ Texture RenderEngine::create_texture(const char *name, void *data, int width, in
 	return t;
 }
 
-Texture RenderEngine::create_render_target(const char *name, int width, int height, int bytes_per_pixel)
+Render_Target RenderEngine::create_render_target(const char *name, int width, int height, int bytes_per_pixel)
 {
-	Texture t{};
-	t.name = name;
-	t.width = width;
-	t.height = height;
-	t.bytes_per_pixel = bytes_per_pixel;
+	Render_Target rt{};
+	rt.name = name;
+
+	Texture color{};
+	color.name = "color";
+	color.width = width;
+	color.height = height;
+	color.bytes_per_pixel = bytes_per_pixel;
+
+	Texture depth{};
+	depth.name = "color";
+	depth.width = width;
+	depth.height = height;
+	depth.bytes_per_pixel = bytes_per_pixel;
 	if (state.backend == BACKEND_D3D11)
 	{
-		std::tie(t.texture_handle, t.view_handle) = m_d3d11_wrapper->_d3d11_create_texture(width, height, TEXTURE_BIND_FLAGS_RENDER_TARGET, nullptr);
+		std::tie(color.texture_handle, color.view_handle, rt.view_handle, depth.texture_handle, depth.view_handle) = m_d3d11_wrapper->_d3d11_create_render_texture(width, height, bytes_per_pixel);
 	}
-	return t;
+	rt.color = color;
+	rt.depth = depth;
+
+	return rt;
 }

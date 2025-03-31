@@ -118,16 +118,16 @@ void D3D11Wrapper::_d3d11_create_swapchain()
 
 // Create Framebuffer Render Target
 std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *> 
-D3D11Wrapper::_d3d11_create_render_texture()
+D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
 	// Create Texture
-	auto [texture, srv] = _d3d11_create_texture(state->m_window.width, state->m_window.height, TEXTURE_BIND_FLAGS_RENDER_TARGET, nullptr);
+	auto [texture, srv] = _d3d11_create_texture(width, height, TEXTURE_BIND_FLAGS_RENDER_TARGET, nullptr);
 
 	ID3D11RenderTargetView* rtv{};
 	auto hResult = d3d11Device->CreateRenderTargetView(texture, 0, &rtv);
 	assert(SUCCEEDED(hResult));
 
-	auto [depth, dsv] = _d3d11_create_depth_texture(state->m_window.width, state->m_window.height, 4);
+	auto [depth, dsv] = _d3d11_create_depth_texture(width, height, bytes_per_pixel);
 	return {texture, srv, rtv, depth, dsv};
 }
 
@@ -602,7 +602,7 @@ void D3D11Wrapper::initD3D11()
 	if (enableDebugLayer)
 		_d3d11_set_debug_layer();
 	_d3d11_create_swapchain();
-	std::tie(renderTexture, renderTextureView, renderTargetTextureView, std::ignore, renderTargetDepthStencilView) = _d3d11_create_render_texture();
+	// std::tie(renderTexture, renderTextureView, renderTargetTextureView, std::ignore, renderTargetDepthStencilView) = _d3d11_create_render_texture();
 	_d3d11_create_render_target();
 	std::tie(envMapVertexShader, envMapPixelShader) = _d3d11_create_env_map_shader(L"../../assets/shaders/envMap.hlsl", "vs_main", "ps_main");
 	std::tie(overlayVertexShader, overlayPixelShader) = _d3d11_create_overlay_shader(L"../../assets/shaders/overlay.hlsl", "vs_main", "ps_main");
@@ -632,21 +632,10 @@ void D3D11Wrapper::initD3D11()
 	cbuffer_3 = _d3d11_create_cbuffer(sizeof(glm::mat4));
 }
 
-void D3D11Wrapper::render_frame()
+void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 {
 	FLOAT backgroundColor[4] = {0.1f, 0.2f, 0.6f, 1.0f};
 	backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
-
-	Geometry gm;
-	gm.bind_state(state);
-	gm.update_world_transform();
-	gm.update_camera_transform();
-	gm.update_perspective_transform();
-
-	Uniform_ u{};
-	u.model_world = gm.model_world_transform;
-	u.world_camera = gm.world_camera_transform;
-	u.camera_ndc = gm.camera_ndc_transform;
 
 	// common to all passes
 	{
@@ -658,60 +647,47 @@ void D3D11Wrapper::render_frame()
 		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
 		d3d11DeviceContext->RSSetViewports(1, &viewport);
 		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		d3d11DeviceContext->ClearRenderTargetView(renderTargetTextureView, backgroundColor);
-		d3d11DeviceContext->ClearDepthStencilView(renderTargetDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0].render_target.view_handle), backgroundColor);
+		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0].render_target.depth.view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
-	// render geometery to texture pass
+	for (auto &pass : passes)
 	{
-		d3d11DeviceContext->OMSetRenderTargets(1, &renderTargetTextureView, renderTargetDepthStencilView);
-		d3d11DeviceContext->IASetInputLayout(inputLayout);
+		auto rtv = (ID3D11RenderTargetView*)pass.render_target.view_handle;
+		auto dsv = (ID3D11DepthStencilView*)pass.render_target.depth.view_handle;
+		d3d11DeviceContext->OMSetRenderTargets(1, &rtv, dsv);
+		d3d11DeviceContext->IASetInputLayout((ID3D11InputLayout *)pass.used_prog.vertex_buffer_layout);
 
-		d3d11DeviceContext->VSSetShader(vertexShader, nullptr, 0);
-		d3d11DeviceContext->PSSetShader(pixelShader, nullptr, 0);
+		d3d11DeviceContext->VSSetShader((ID3D11VertexShader *)pass.used_prog.vs.handle, nullptr, 0);
+		for (auto &t: pass.used_prog.vs.textures)
+		{
+			d3d11DeviceContext->VSSetShaderResources(t.binding_point, 1, (ID3D11ShaderResourceView**) &t.view_handle);
+			d3d11DeviceContext->VSSetSamplers(t.binding_point, 1, &samplerState);
+		}
+		for (auto &u: pass.used_prog.vs.uniforms)
+		{
+			_d3d11_update_cbuffer((ID3D11Buffer*)u.handle, u.data, u.size);
+			d3d11DeviceContext->VSSetConstantBuffers(u.binding_point, 1, (ID3D11Buffer **)&u.handle);
+		}
 
-		d3d11DeviceContext->PSSetShaderResources(0, 1, &textureView);
-		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
+		d3d11DeviceContext->PSSetShader((ID3D11PixelShader *)pass.used_prog.ps.handle, nullptr, 0);
+		for (auto &t: pass.used_prog.ps.textures)
+		{
+			d3d11DeviceContext->PSSetShaderResources(t.binding_point, 1, (ID3D11ShaderResourceView**) &t.view_handle);
+			d3d11DeviceContext->PSSetSamplers(t.binding_point, 1, &samplerState);
+		}
+		for (auto &u: pass.used_prog.ps.uniforms)
+		{
+			_d3d11_update_cbuffer((ID3D11Buffer*)u.handle, u.data, u.size);
+			d3d11DeviceContext->PSSetConstantBuffers(u.binding_point, 1, (ID3D11Buffer **)&u.handle);
+		}
+		d3d11DeviceContext->IASetVertexBuffers(
+			0,
+			1,
+			(ID3D11Buffer **)&pass.used_prog.vertex_buffer,
+			(const UINT *)&(pass.used_prog.vertex_buffer_stride),
+			(const UINT *)&(pass.used_prog.vertex_buffer_offset));
 
-		Material mtl{};
-		mtl.ka = state->m_model.mtl.ka;
-		mtl.kd = state->m_model.mtl.kd;
-		mtl.ks = state->m_model.mtl.ks;
-		mtl.ns = state->m_model.mtl.ns;
-
-		PointLight light{};
-		light.position = glm::vec3(100.0f, 100.0f, 100.0f);						// in world space
-		light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
-		light.intensity = 4.0f;
-
-		_d3d11_update_cbuffer(cbuffer_0, &u, sizeof(Uniform));
-		_d3d11_update_cbuffer(cbuffer_1, &light, sizeof(PointLight));
-		_d3d11_update_cbuffer(cbuffer_2, &mtl, sizeof(Material));
-		d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_0);
-		d3d11DeviceContext->VSSetConstantBuffers(1, 1, &cbuffer_1);
-		d3d11DeviceContext->VSSetConstantBuffers(2, 1, &cbuffer_2);
-
-		UINT stride = sizeof(Vertex_attribute);
-		UINT offset = 0;
-		d3d11DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-
-		d3d11DeviceContext->Draw(state->m_model.m_gpu.verts.size(), 0);
-	}
-
-	// render skybox pass
-	{
-		d3d11DeviceContext->VSSetShader(envMapVertexShader, nullptr, 0);
-		d3d11DeviceContext->PSSetShader(envMapPixelShader, nullptr, 0);
-
-		d3d11DeviceContext->PSSetShaderResources(0, 1, &envMapView);
-		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
-
-		glm::mat4 ndc_to_world = glm::inverse(u.world_camera) * glm::inverse(u.camera_ndc);
-		_d3d11_update_cbuffer(cbuffer_3, glm::value_ptr(ndc_to_world), sizeof(glm::mat4));
-		d3d11DeviceContext->VSSetConstantBuffers(0, 1, &cbuffer_3);
-
-		d3d11DeviceContext->Draw(6, 0);
-		d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+		d3d11DeviceContext->Draw(pass.used_prog.n_vert_attributes, 0);
 	}
 
 	// overlay rendered texture onto swapchain pass
@@ -725,7 +701,7 @@ void D3D11Wrapper::render_frame()
 		
 		// ID3D11ShaderResourceView* srvNULL = {nullptr};
 		// d3d11DeviceContext->PSSetShaderResources(0, 1, &srvNULL);
-		d3d11DeviceContext->PSSetShaderResources(0, 1, &renderTextureView);
+		d3d11DeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView **)&passes.back().render_target.color.view_handle);
 		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 		d3d11DeviceContext->Draw(6, 0);
 		d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);

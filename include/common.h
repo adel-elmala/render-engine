@@ -44,6 +44,14 @@ struct Texture
 	int bytes_per_pixel;
 };
 
+struct Render_Target
+{
+	Handle_t view_handle;
+	const char* name;
+	Texture color;
+	Texture depth;
+};
+
 struct Env_map
 {
 	Texture front;
@@ -253,10 +261,13 @@ struct Program
 	// Input_Layout attributes_layout;
 	Handle_t vertex_buffer;
 	Handle_t vertex_buffer_layout;
+	size_t vertex_buffer_stride;
+	size_t vertex_buffer_offset;
+	size_t n_vert_attributes;
 };
 
 struct Render_Pass
 {
 	Program used_prog;
-	Texture render_target;
+	Render_Target render_target;
 };
