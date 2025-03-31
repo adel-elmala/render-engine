@@ -50,7 +50,6 @@ int main(int argc, char** argv)
 			pass_0_vs_uniforms,
 			pass_0_vs_textures);
 
-		std::vector<Uniform> pass_0_ps_uniforms = {};
 		auto model_texture = engine.state.m_model.m_gpu.textures[0];
 		auto pass_0_ps_t = engine.create_texture(
 			"t",
@@ -60,6 +59,8 @@ int main(int argc, char** argv)
 			model_texture.bytes_per_pixel,
 			model_texture.height * model_texture.width * model_texture.bytes_per_pixel,
 			0);
+
+		std::vector<Uniform> pass_0_ps_uniforms = {};
 		std::vector<Texture> pass_0_ps_textures = {pass_0_ps_t};
 		auto pass_0_ps = engine.create_shader(
 			L"../../assets/shaders/shaders.hlsl",
@@ -108,7 +109,6 @@ int main(int argc, char** argv)
 			pass_1_vs_uniforms,
 			pass_1_vs_textures);
 
-		std::vector<Uniform> pass_1_ps_uniforms = {};
 		// TODO(adel): handle cube texture - engine side
 		auto env_map = engine.state.m_model.env_map;
 		char *cube_data[6] = {
@@ -127,6 +127,8 @@ int main(int argc, char** argv)
 			env_map.back.bytes_per_pixel,
 			env_map.back.height * env_map.back.width * env_map.back.bytes_per_pixel,
 			0);
+
+		std::vector<Uniform> pass_1_ps_uniforms = {};
 		std::vector<Texture> pass_1_ps_textures = {pass_1_ps_t};
 		auto pass_1_ps = engine.create_shader(
 			L"../../assets/shaders/envMap.hlsl",

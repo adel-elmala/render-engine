@@ -24,14 +24,10 @@ public:
 	void _d3d11_create_device();
 	void _d3d11_set_debug_layer();
 	void _d3d11_create_swapchain();
-
 	void _d3d11_create_render_target();
 
 	ID3D11VertexShader *_d3d11_create_vertex_shader(std::wstring path , std::string entry);
 	ID3D11PixelShader *_d3d11_create_pixel_shader(std::wstring path, std::string entry);
-	std::pair<ID3D11VertexShader*, ID3D11PixelShader*> _d3d11_create_overlay_shader(std::wstring path, std::string vs_entry, std::string ps_entry);
-	std::pair<ID3D11VertexShader*, ID3D11PixelShader*> _d3d11_create_env_map_shader(std::wstring path, std::string vs_entry, std::string ps_entry);
-	void _d3d11_create_shaders(std::wstring vs_path, std::wstring ps_path);
 
 	ID3D11InputLayout* _d3d11_create_input_layout(Shader vs, Input_Layout layout);
 	ID3D11Buffer* _d3d11_create_vertex_buffer(void *data, size_t n_bytes);
@@ -58,7 +54,7 @@ private:
 	ID3D11DeviceContext1 *d3d11DeviceContext;
 	IDXGISwapChain1 *d3d11SwapChain;
 	ID3D11RenderTargetView *d3d11FrameBufferView;
-	ID3D11DepthStencilView *d3d11DepthStencilView;
+	// ID3D11DepthStencilView *d3d11DepthStencilView;
 	ID3D11VertexShader *overlayVertexShader;
 	ID3D11PixelShader *overlayPixelShader;
 	ID3D11SamplerState *samplerState;
