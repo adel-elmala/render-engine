@@ -9,7 +9,6 @@
 #include "glm/ext.hpp"
 #include <glm/gtc/matrix_access.hpp>
 
-// Create Device and Context
 void D3D11Wrapper::_d3d11_create_device()
 {
 	ID3D11Device *baseDevice;
@@ -42,7 +41,6 @@ void D3D11Wrapper::_d3d11_create_device()
 	baseDeviceContext->Release();
 }
 
-// Set up debug layer to break on D3D11 errors
 void D3D11Wrapper::_d3d11_set_debug_layer()
 {
 	ID3D11Debug *d3dDebug = nullptr;
@@ -61,7 +59,6 @@ void D3D11Wrapper::_d3d11_set_debug_layer()
 	}
 }
 
-// Create Swap Chain
 void D3D11Wrapper::_d3d11_create_swapchain()
 {
 	// Get DXGI Factory (needed to create Swap Chain)
@@ -108,7 +105,6 @@ void D3D11Wrapper::_d3d11_create_swapchain()
 	dxgiFactory->Release();
 }
 
-// Create Framebuffer Render Target
 std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *>
 D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
@@ -124,7 +120,6 @@ D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t b
 	return {texture, srv, rtv, depth, dsv};
 }
 
-// Create Framebuffer Render Target
 void D3D11Wrapper::_d3d11_create_render_target()
 {
 	ID3D11Texture2D *texture;
@@ -221,7 +216,6 @@ DXGI_FORMAT _d3d11_engine_format_to_dxgi_format(FORMAT f)
 	}
 }
 
-// Create Input Layout
 ID3D11InputLayout *D3D11Wrapper::_d3d11_create_input_layout(Shader vs, Input_Layout layout)
 {
 	ID3D11InputLayout *d3d11_layout;
@@ -274,7 +268,6 @@ ID3D11Buffer *D3D11Wrapper::_d3d11_create_vertex_buffer(void *data, size_t n_byt
 
 void D3D11Wrapper::_d3d11_create_sampler_state()
 {
-	// Create Sampler State
 	D3D11_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -304,7 +297,6 @@ D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FL
 	ID3D11Texture2D *texture;
 	ID3D11ShaderResourceView *srv;
 
-	// Create Texture
 	D3D11_TEXTURE2D_DESC textureDesc = {};
 	textureDesc.Width = width;
 	textureDesc.Height = height;
@@ -346,7 +338,6 @@ D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t by
 	ID3D11Texture2D *texture;
 	ID3D11DepthStencilView *dsv;
 
-	// Create Texture
 	D3D11_TEXTURE2D_DESC textureDesc = {};
 	textureDesc.Width = width;
 	textureDesc.Height = height;
@@ -371,7 +362,7 @@ D3D11Wrapper::_d3d11_create_texture_cube(size_t width, size_t height, size_t byt
 {
 	ID3D11Texture2D *texture{};
 	ID3D11ShaderResourceView *view{};
-	// Create Texture
+
 	D3D11_TEXTURE2D_DESC textureDesc = {};
 	textureDesc.Width = width;
 	textureDesc.Height = height;
@@ -589,7 +580,6 @@ void D3D11Wrapper::cleanup()
 	for (auto &s : shaders)
 		s->Release();
 
-	// d3d11FrameBufferView->Release();
 	// d3d11DepthStencilView->Release();
 	rasterizerState->Release();
 	depthStencilState->Release();
