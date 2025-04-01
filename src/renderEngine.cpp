@@ -396,3 +396,75 @@ Render_Target RenderEngine::create_render_target(const char *name, int width, in
 
 	return rt;
 }
+
+
+Model RenderEngine::create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center , size_t width, size_t height)
+{
+	auto n = glm::normalize(normal);
+	auto n_dot_xy = glm::dot(glm::vec3(0, 0, 1), n);
+	auto n_dot_xz = glm::dot(glm::vec3(0, 1, 0), n);
+	auto n_dot_yz = glm::dot(glm::vec3(1, 0, 0), n);
+
+	glm::vec3 lower_left, lower_right, top_left, top_right;
+	if (n_dot_xy == 1 || n_dot_xy == -1)
+	{
+		lower_left = glm::vec3(center.x - width / 2, center.y - height / 2, center.z);
+		lower_right = glm::vec3(center.x + width / 2, center.y - height / 2, center.z);
+		top_left = glm::vec3(center.x - width / 2, center.y + height / 2, center.z);
+		top_right = glm::vec3(center.x + width / 2, center.y + height / 2, center.z);
+	}
+	else if (n_dot_xz == 1 || n_dot_xz == -1)
+	{
+		lower_left = glm::vec3(center.x - width / 2, center.y, center.z - height / 2);
+		lower_right = glm::vec3(center.x + width / 2, center.y, center.z - height / 2);
+		top_left = glm::vec3(center.x - width / 2, center.y, center.z + height / 2);
+		top_right = glm::vec3(center.x + width / 2, center.y, center.z + height / 2);
+	}
+	else if (n_dot_yz == 1 || n_dot_yz == -1)
+	{
+		lower_left = glm::vec3(center.x, center.y - height / 2, center.z - width / 2);
+		lower_right = glm::vec3(center.x, center.y - height / 2, center.z + width / 2);
+		top_left = glm::vec3(center.x, center.y + height / 2, center.z - width / 2);
+		top_right = glm::vec3(center.x, center.y + height / 2, center.z + width / 2);
+	}
+
+	Model m{};
+
+	Vertex_attribute v0{};
+	v0.pos = glm::vec4(lower_left, 1.0);
+	v0.normal = glm::vec4(n, 0);
+	v0.uv = glm::vec2(0, 0);
+
+	Vertex_attribute v1{};
+	v1.pos = glm::vec4(lower_right, 1.0);
+	v1.normal = glm::vec4(n, 0);
+	v1.uv = glm::vec2(1, 0);
+
+	Vertex_attribute v2{};
+	v2.pos = glm::vec4(top_right, 1.0);
+	v2.normal = glm::vec4(n, 0);
+	v2.uv = glm::vec2(1, 1);
+
+	Vertex_attribute v3{};
+	v3.pos = glm::vec4(lower_left, 1.0);
+	v3.normal = glm::vec4(n, 0);
+	v3.uv = glm::vec2(0, 0);
+
+	Vertex_attribute v4{};
+	v4.pos = glm::vec4(top_right, 1.0);
+	v4.normal = glm::vec4(n, 0);
+	v4.uv = glm::vec2(1, 1);
+
+	Vertex_attribute v5{};
+	v5.pos = glm::vec4(top_left, 1.0);
+	v5.normal = glm::vec4(n, 0);
+	v5.uv = glm::vec2(0, 1);
+
+	m.m_gpu.verts.push_back(v0);
+	m.m_gpu.verts.push_back(v1);
+	m.m_gpu.verts.push_back(v2);
+	m.m_gpu.verts.push_back(v3);
+	m.m_gpu.verts.push_back(v4);
+	m.m_gpu.verts.push_back(v5);
+	return m;
+}

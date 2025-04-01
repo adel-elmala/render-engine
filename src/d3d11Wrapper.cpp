@@ -52,7 +52,7 @@ void D3D11Wrapper::_d3d11_set_debug_layer()
 		{
 			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
 			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
-			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, true);
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, false);
 			d3dInfoQueue->Release();
 		}
 		d3dDebug->Release();
@@ -516,6 +516,8 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0].render_target.view_handle), backgroundColor);
 		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0].render_target.depth.view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[1].render_target.view_handle), backgroundColor);
+		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[1].render_target.depth.view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 	for (auto &pass : passes)
 	{
@@ -558,6 +560,28 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		d3d11DeviceContext->Draw(pass.used_prog.n_vert_attributes, 0);
 		ID3D11RenderTargetView *null_rtv = nullptr;
 		d3d11DeviceContext->OMSetRenderTargets(1, &null_rtv, nullptr);
+
+		ID3D11ShaderResourceView* null_srv = nullptr;
+		ID3D11SamplerState* null_sampler = nullptr;
+		ID3D11Buffer* null_buffer = nullptr;
+		for (auto &t : pass.used_prog.vs.textures)
+		{
+			d3d11DeviceContext->VSSetShaderResources(t.binding_point, 1, &null_srv);
+			d3d11DeviceContext->VSSetSamplers(t.binding_point, 1, &null_sampler);
+		}
+		for (auto &u : pass.used_prog.vs.uniforms)
+		{
+			d3d11DeviceContext->VSSetConstantBuffers(u.binding_point, 1, &null_buffer);
+		}
+		for (auto &t : pass.used_prog.ps.textures)
+		{
+			d3d11DeviceContext->PSSetShaderResources(t.binding_point, 1, &null_srv);
+			d3d11DeviceContext->PSSetSamplers(t.binding_point, 1, &null_sampler);
+		}
+		for (auto &u : pass.used_prog.ps.uniforms)
+		{
+			d3d11DeviceContext->PSSetConstantBuffers(u.binding_point, 1, &null_buffer);
+		}
 		_d3d11_end_pass();
 	}
 

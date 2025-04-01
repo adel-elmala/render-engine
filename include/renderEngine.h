@@ -27,6 +27,8 @@ public:
 	Texture create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
 	Render_Target create_render_target(const char *name, int width, int height, int bytes_per_pixel);
 
+	Model create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center , size_t width, size_t height);
+
 	std::unique_ptr<Application> m_application;
 	std::unique_ptr<WindowManager> m_win_manager;
 	std::unique_ptr<Geometry> m_geometry;
