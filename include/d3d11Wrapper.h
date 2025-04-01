@@ -29,6 +29,10 @@ public:
 	void _d3d11_set_debug_layer();
 	void _d3d11_create_swapchain();
 	void _d3d11_create_render_target();
+	void _d3d11_init_user_annotations();
+	void _d3d11_begin_pass(std::wstring pass_name);
+	void _d3d11_end_pass();
+	void _d3d11_resource_debug_name(ID3D11Resource* resource, std::string name);
 
 	ID3D11VertexShader *_d3d11_create_vertex_shader(std::wstring path, std::string entry);
 	ID3D11PixelShader *_d3d11_create_pixel_shader(std::wstring path, std::string entry);
@@ -57,6 +61,7 @@ private:
 	ID3D11Device1 *d3d11Device;
 	ID3D11DeviceContext1 *d3d11DeviceContext;
 	IDXGISwapChain1 *d3d11SwapChain;
+	ID3DUserDefinedAnnotation* d3d11UserAnnotaion;
 	ID3D11RenderTargetView *d3d11FrameBufferView;
 	// ID3D11DepthStencilView *d3d11DepthStencilView;
 	ID3D11VertexShader *overlayVertexShader;

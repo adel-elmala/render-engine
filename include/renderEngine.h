@@ -20,7 +20,7 @@ public:
 	void render_frame();
 	void flush_frame();
 	bool should_exit();
-	Render_Pass create_render_pass(Program &p, Render_Target &render_target);
+	Render_Pass create_render_pass(Program &p, Render_Target &render_target, std::wstring name);
 	Program create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes);
 	Shader create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures);
 	Uniform create_uniform(const char *name, void *data, size_t size, size_t binding_point);

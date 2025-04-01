@@ -105,6 +105,27 @@ void D3D11Wrapper::_d3d11_create_swapchain()
 	dxgiFactory->Release();
 }
 
+void D3D11Wrapper::_d3d11_init_user_annotations()
+{
+	HRESULT hr = d3d11DeviceContext->QueryInterface(__uuidof(d3d11UserAnnotaion), (void **)(&d3d11UserAnnotaion));
+	assert(SUCCEEDED(hr));
+}
+
+void D3D11Wrapper::_d3d11_begin_pass(std::wstring pass_name)
+{
+	d3d11UserAnnotaion->BeginEvent(pass_name.c_str());
+}
+
+void D3D11Wrapper::_d3d11_end_pass()
+{
+	d3d11UserAnnotaion->EndEvent();
+}
+
+void D3D11Wrapper::_d3d11_resource_debug_name(ID3D11Resource* resource, std::string name)
+{
+	resource->SetPrivateData(WKPDID_D3DDebugObjectName, name.size(), name.c_str());
+}
+
 std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *>
 D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
@@ -288,6 +309,7 @@ D3D11Wrapper::_d3d11_create_texture(Texture &t)
 	auto [tex, view] = _d3d11_create_texture(t.width, t.height, TEXTURE_BIND_FLAGS_COLOR_TEXTURE, t.data[0], t.bytes_per_pixel);
 	t.texture_handle = (void *)tex;
 	t.view_handle = (void *)view;
+	_d3d11_resource_debug_name(tex, t.name);
 	return {tex, view};
 }
 
@@ -468,6 +490,7 @@ void D3D11Wrapper::initD3D11()
 	if (enableDebugLayer)
 		_d3d11_set_debug_layer();
 	_d3d11_create_swapchain();
+	_d3d11_init_user_annotations();
 	_d3d11_create_render_target();
 	overlayVertexShader = _d3d11_create_vertex_shader(L"../../assets/shaders/overlay.hlsl", "vs_main");
 	overlayPixelShader = _d3d11_create_pixel_shader(L"../../assets/shaders/overlay.hlsl", "ps_main");
@@ -496,6 +519,7 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 	}
 	for (auto &pass : passes)
 	{
+		_d3d11_begin_pass(pass.name);
 		auto rtv = (ID3D11RenderTargetView *)pass.render_target.view_handle;
 		auto dsv = (ID3D11DepthStencilView *)pass.render_target.depth.view_handle;
 		d3d11DeviceContext->OMSetRenderTargets(1, &rtv, dsv);
@@ -534,10 +558,12 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		d3d11DeviceContext->Draw(pass.used_prog.n_vert_attributes, 0);
 		ID3D11RenderTargetView *null_rtv = nullptr;
 		d3d11DeviceContext->OMSetRenderTargets(1, &null_rtv, nullptr);
+		_d3d11_end_pass();
 	}
 
 	// overlay rendered texture onto swapchain pass
 	{
+		_d3d11_begin_pass(L"final pass - overlay");
 		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
 		d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
 
@@ -553,6 +579,7 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		ID3D11ShaderResourceView *null_srv = nullptr;
 		d3d11DeviceContext->OMSetRenderTargets(1, &null_rtv, nullptr);
 		d3d11DeviceContext->PSSetShaderResources(0, 1, &null_srv);
+		_d3d11_end_pass();
 	}
 	d3d11SwapChain->Present(1, 0);
 }

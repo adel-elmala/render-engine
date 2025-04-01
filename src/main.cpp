@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 
 		auto model_texture = engine.state.m_model.m_gpu.textures[0];
 		auto pass_0_ps_t = engine.create_texture(
-			"t",
+			"pass_0_t",
 			Texture::DIM_2D,
 			model_texture.data,
 			model_texture.width, model_texture.height,
@@ -91,13 +91,13 @@ int main(int argc, char **argv)
 			engine.state.m_window.height,
 			engine.state.m_window.bytes_per_pixel);
 
-		auto pass_0 = engine.create_render_pass(pass_0_prog, pass_0_render_target);
+		auto pass_0 = engine.create_render_pass(pass_0_prog, pass_0_render_target, L"pass 0 - render bunny");
 	}
 
 	// pass 1 - render refelcted bunny to texture
 	{
 		auto prev_pass = engine.passes.back();
-		auto pass_1 = engine.create_render_pass(prev_pass.used_prog, engine.passes.back().render_target);
+		auto pass_1 = engine.create_render_pass(prev_pass.used_prog, engine.passes.back().render_target, L"pass 1 - render reflected bunny");
 	}
 
 	// pass 2 - render skybox
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 			env_map.back.data[0],
 		};
 		auto pass_1_ps_t = engine.create_texture(
-			"t",
+			"pass_1_t",
 			Texture::DIM_CUBE,
 			cube_data,
 			env_map.back.width, env_map.back.height,
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
 			0, 0, 6);
 
 		auto pass_1_render_target = engine.passes.back().render_target;
-		auto pass_1 = engine.create_render_pass(pass_1_prog, pass_1_render_target);
+		auto pass_1 = engine.create_render_pass(pass_1_prog, pass_1_render_target, L"pass 2 - render skybox");
 	}
 
 	while (engine.should_exit() == false)

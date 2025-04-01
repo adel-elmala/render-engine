@@ -275,6 +275,7 @@ struct Program
 
 struct Render_Pass
 {
+	std::wstring name;
 	Program used_prog;
 	Render_Target render_target;
 };

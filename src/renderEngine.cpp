@@ -285,11 +285,12 @@ void RenderEngine::present_swapchain()
 	m_win_manager->update_surface();
 }
 
-Render_Pass RenderEngine::create_render_pass(Program &p, Render_Target &render_target)
+Render_Pass RenderEngine::create_render_pass(Program &p, Render_Target &render_target, std::wstring name)
 {
 	Render_Pass pass{};
 	pass.used_prog = p;
 	pass.render_target = render_target;
+	pass.name = name;
 	passes.push_back(pass);
 
 	return pass;
