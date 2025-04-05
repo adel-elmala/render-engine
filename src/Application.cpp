@@ -53,7 +53,7 @@ void Application::run()
 		state->m_model.m_cpu.textures.push_back(t);
 	else
 		state->m_model.m_gpu.textures.push_back(t);
-	auto env = load_env_texture_cube("../../assets/skybox/");
+	auto env = load_env_texture_cube("../../assets/models/skybox/");
 	state->m_model.env_map = env;
 	// load_texture("../../assets/cube3/cube.png");
 }

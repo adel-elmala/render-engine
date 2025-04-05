@@ -18,7 +18,7 @@ struct _pass_1_mat
 
 int main(int argc, char **argv)
 {
-	RenderEngine engine(BACKEND_D3D11, "../../assets/bunny/bunny.obj");
+	RenderEngine engine(BACKEND_D3D11, "../../assets/models/bunny/bunny.obj");
 
 	// pass 0 - render bunny to texture
 	{
