@@ -18,13 +18,14 @@ struct _pass_1_mat
 
 int main(int argc, char **argv)
 {
-	RenderEngine engine(BACKEND_D3D11, "../../assets/models/bunny/vbunny.obj");
-	PointLight light{};
+	RenderEngine engine(BACKEND_D3D11);
+	auto bunny = engine.m_scene_manager->parse_model("../../assets/models/bunny/vbunny.obj");
 
+	PointLight light{}; // TODO(adel): make lights part of the scene description that the engine has control over
 	light.position = glm::vec3(0.0f, 300.0f, 1300.0f);						// in world space
-	// light.position = glm::vec3(0.0f, 0.0f, 0.0f);						// in world space
 	light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
 	light.intensity = 4.0f;
+
 	// pass 0 - render bunny to texture
 	{
 		_pass_0_mats mats{};
@@ -44,16 +45,6 @@ int main(int argc, char **argv)
 			pass_0_vs_uniforms,
 			pass_0_vs_textures);
 
-		auto model_texture = engine.state.m_model.m_gpu.textures[0];
-		// auto pass_0_ps_t = engine.create_texture(
-		// 	"pass_0_t",
-		// 	Texture::DIM_2D,
-		// 	model_texture.data,
-		// 	model_texture.width, model_texture.height,
-		// 	model_texture.bytes_per_pixel,
-		// 	model_texture.height * model_texture.width * model_texture.bytes_per_pixel,
-		// 	0);
-
 		std::vector<Uniform> pass_0_ps_uniforms = {};
 		std::vector<Texture> pass_0_ps_textures = {};
 		auto pass_0_ps = engine.create_shader(
@@ -72,11 +63,11 @@ int main(int argc, char **argv)
 			pass_0_vs,
 			pass_0_ps,
 			layout,
-			engine.state.m_model.m_gpu.verts.data(),
-			engine.state.m_model.m_gpu.verts.size() * sizeof(Vertex_attribute),
+			bunny.verts.data(),
+			bunny.verts.size() * sizeof(Vertex_attribute),
 			sizeof(Vertex_attribute),
 			0,
-			engine.state.m_model.m_gpu.verts.size());
+			bunny.verts.size());
 
 		auto pass_0_render_target = engine.create_render_target(
 			"pass_0",
@@ -137,11 +128,11 @@ int main(int argc, char **argv)
 			depth_pass_vs,
 			depth_pass_ps,
 			layout,
-			engine.state.m_model.m_gpu.verts.data(),
-			engine.state.m_model.m_gpu.verts.size() * sizeof(Vertex_attribute),
+			bunny.verts.data(),
+			bunny.verts.size() * sizeof(Vertex_attribute),
 			sizeof(Vertex_attribute),
 			0,
-			engine.state.m_model.m_gpu.verts.size());
+			bunny.verts.size());
 
 		auto depth_pass_render_target = engine.create_render_target(
 			"depth_pass",
@@ -202,11 +193,11 @@ int main(int argc, char **argv)
 			pass_2_vs,
 			pass_2_ps,
 			layout,
-			plane.m_gpu.verts.data(),
-			plane.m_gpu.verts.size() * sizeof(Vertex_attribute),
+			plane.verts.data(),
+			plane.verts.size() * sizeof(Vertex_attribute),
 			sizeof(Vertex_attribute),
 			0,
-			plane.m_gpu.verts.size());
+			plane.verts.size());
 
 		auto pass_2_render_target = engine.passes[0].render_target; 
 		auto pass_2 = engine.create_render_pass(pass_2_prog, pass_2_render_target, L"pass - render ground plane");
@@ -228,7 +219,7 @@ int main(int argc, char **argv)
 			skybox_pass_vs_uniforms,
 			skybox_pass_vs_textures);
 
-		auto env_map = engine.state.m_model.env_map;
+		auto env_map = engine.m_scene_manager->load_env_texture_cube("../../assets/models/skybox/");
 		char *cube_data[6] = {
 			env_map.right.data[0],
 			env_map.left.data[0],

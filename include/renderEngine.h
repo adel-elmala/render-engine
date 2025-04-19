@@ -4,17 +4,16 @@
 #include <string>
 #include "common.h"
 #include "geometry.h"
-#include "Application.h"
+#include "SceneManager.h"
 #include "windowManager.h"
 
-class Rasterizer;
 class D3D11Wrapper;
 
 // TODO[adel] : use strategy design pattern to switch between rasterizer/ray tracer/vulkan
 class RenderEngine
 {
 public:
-	RenderEngine(BACKEND backend, const std::string &model_path);
+	RenderEngine(BACKEND backend);
 	~RenderEngine();
 	void set_drawing_mode(DRAWING_MODE mode);
 	void render_frame();
@@ -27,27 +26,21 @@ public:
 	Texture create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
 	Render_Target create_render_target(const char *name, int width, int height, int bytes_per_pixel);
 
-	Model create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center , size_t width, size_t height);
+	Model create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center, size_t width, size_t height);
 
-	std::unique_ptr<Application> m_application;
+	std::unique_ptr<SceneManager> m_scene_manager;
 	std::unique_ptr<WindowManager> m_win_manager;
 	std::unique_ptr<Geometry> m_geometry;
 	Engine_State state;
 	std::vector<Render_Pass> passes;
 
 private:
-	void RenderEngine_init_software(const std::string &model_path);
-	void RenderEngine_init_d3d11(const std::string &model_path);
-	void render_frame_software(std::vector<Render_Pass> passes);
+	void RenderEngine_init_d3d11();
 	void render_frame_d3d11(std::vector<Render_Pass> passes);
 
 	void init_camera();
 	void init_view_volume();
-	void init_swapchain();
-	void resize_swapchain();
-	void present_swapchain();
 
-	std::unique_ptr<Rasterizer> m_rasterizer;
 	std::unique_ptr<D3D11Wrapper> m_d3d11_wrapper;
 	std::thread engine_loop;
 };

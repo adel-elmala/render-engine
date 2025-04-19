@@ -24,14 +24,6 @@ enum DRAWING_MODE
 	DRAWING_MODE_TRIANGLES
 };
 
-struct Face
-{
-	glm::vec3 p_indices;
-	glm::vec3 n_indices;
-	glm::vec3 t_indices;
-	bool erase;
-};
-
 struct Texture
 {
 	enum DIM
@@ -70,17 +62,6 @@ struct Env_map
 	Texture bottom;
 };
 
-struct Model_CPU
-{
-	std::vector<glm::vec4> positions;
-	std::vector<float> verts_w_coords;
-	std::vector<glm::vec4> face_normals;
-	std::vector<glm::u8vec4> colors;
-	std::vector<glm::vec2> tex_coords;
-	std::vector<Face> faces;
-	std::vector<Texture> textures;
-};
-
 // #pragma pack(push,1)
 struct Vertex_attribute
 {
@@ -89,12 +70,6 @@ struct Vertex_attribute
 	glm::vec2 uv;
 };
 // #pragma pack(pop)
-
-struct Model_GPU
-{
-	std::vector<Vertex_attribute> verts;
-	std::vector<Texture> textures;
-};
 
 struct Material
 {
@@ -106,9 +81,8 @@ struct Material
 
 struct Model
 {
-	Model_CPU m_cpu;
-	Model_GPU m_gpu;
-	Env_map env_map;
+	std::vector<Vertex_attribute> verts;
+	std::vector<Texture> textures;
 	Material mtl;
 	std::string map_kd;
 };
@@ -121,6 +95,7 @@ struct Camera
 	float sensitivity;
 };
 
+// TODO(adel): spot light
 struct DirLight
 {
 	glm::vec3 direction;
@@ -131,23 +106,8 @@ struct DirLight
 struct PointLight
 {
 	glm::vec3 position;
-	// float padding_0 = 0.0f;
 	glm::vec3 color;
-	// float padding_1 = 0.0f;
 	float intensity;
-	// glm::vec3 padding_2{};
-};
-// TODO(adel): spot light
-
-struct SwapChain
-{
-	std::mutex m;
-	char *back_buffer;
-	char *front_buffer;
-	float *z_buffer;
-	unsigned int frame_width;
-	unsigned int frame_height;
-	unsigned int frame_bytes_per_pixel;
 };
 
 struct ViewVolume
@@ -188,17 +148,13 @@ struct Window
 
 enum BACKEND
 {
-	BACKEND_SOFTWARE,
 	BACKEND_D3D11,
 	BACKEND_VULKAN
 };
 
 struct Engine_State
 {
-	Model m_model_original;
-	Model m_model;
 	Window m_window;
-	SwapChain m_swapchain;
 	Camera m_camera;
 	ViewVolume m_view_volume;
 	size_t n_threads;

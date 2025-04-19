@@ -13,7 +13,6 @@ public:
 		if (engine_state)
 			state = engine_state;
 	}
-	void run();
 
 	void update_viewport_transform();
 	void update_camera_transform();
@@ -26,15 +25,5 @@ public:
 	glm::mat4 ndc_pixel_transform;
 
 private:
-	void lighting_calc();
-	void clipping();
-	void backface_cull();
-	void clip_triangles();
-	bool in_view_volume(glm::vec4 &point);
-
-	void send_to_camera_space();
-	void send_to_ndc_space();
-	void send_to_pixel_space();
-
 	Engine_State *state;
 };

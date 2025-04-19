@@ -45,3 +45,15 @@ Design is still in progress.
 
 ### Note To myself
 try to use as most of cpu caps as possible , SIMD , multi-threading.
+
+## TODO
+1. Refactor the engine, handle  only d3d11 and remove any software-backend related stuff
+2. Refactor Application stuff, and make it more flexable to use
+3. make the engine API more verbose with options to render the scene and models, (i.e enable shadows, wireframe, transparentcy,...), passes should not be implemented into the main by the user.
+4. add imgui support
+5. render light (toggle rendering the light as sprites from the engine)
+6. render bounding-boxes for scence models
+7. add logging
+8. make a branch that uses only software backend for showcasing
+9. make new engine after all this to be the main branch state
+10. edit readme
