@@ -377,19 +377,19 @@ Render_Target RenderEngine::create_render_target(const char *name, int width, in
 	rt.name = name;
 
 	Texture color{};
-	color.name = "color";
+	color.name = "color_target";
 	color.width = width;
 	color.height = height;
 	color.bytes_per_pixel = bytes_per_pixel;
 
 	Texture depth{};
-	depth.name = "color";
+	depth.name = "depth_target";
 	depth.width = width;
 	depth.height = height;
 	depth.bytes_per_pixel = bytes_per_pixel;
 	if (state.backend == BACKEND_D3D11)
 	{
-		std::tie(color.texture_handle, color.view_handle, rt.view_handle, depth.texture_handle, depth.view_handle) = m_d3d11_wrapper->_d3d11_create_render_texture(width, height, bytes_per_pixel);
+		std::tie(color.texture_handle, color.view_handle, rt.color_view_handle, depth.texture_handle, depth.view_handle, rt.depth_view_handle) = m_d3d11_wrapper->_d3d11_create_render_texture(width, height, bytes_per_pixel);
 	}
 	rt.color = color;
 	rt.depth = depth;

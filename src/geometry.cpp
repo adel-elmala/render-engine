@@ -19,8 +19,8 @@ void Geometry::update_world_transform()
 	if (state->backend == BACKEND_D3D11)
 	{
 		model_world_transform = glm::identity<glm::mat4>();
-		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, 0, (state->m_view_volume.near_plane + ((state->m_view_volume.far_plane - state->m_view_volume.near_plane) / 2))});
-		model_world_transform = glm::scale(model_world_transform, glm::vec3{0.5f, 0.5f, 0.5f});
+		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, -400, (state->m_view_volume.near_plane + ((state->m_view_volume.far_plane - state->m_view_volume.near_plane) / 2))});
+		model_world_transform = glm::scale(model_world_transform, glm::vec3{2.5f, 2.5f, 2.5f});
 	}
 	else
 	{

@@ -18,8 +18,13 @@ struct _pass_1_mat
 
 int main(int argc, char **argv)
 {
-	RenderEngine engine(BACKEND_D3D11, "../../assets/models/bunny/bunny.obj");
+	RenderEngine engine(BACKEND_D3D11, "../../assets/models/bunny/vbunny.obj");
+	PointLight light{};
 
+	light.position = glm::vec3(0.0f, 300.0f, 1300.0f);						// in world space
+	// light.position = glm::vec3(0.0f, 0.0f, 0.0f);						// in world space
+	light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
+	light.intensity = 4.0f;
 	// pass 0 - render bunny to texture
 	{
 		_pass_0_mats mats{};
@@ -27,21 +32,9 @@ int main(int argc, char **argv)
 		mats.world_camera = engine.m_geometry->world_camera_transform;
 		mats.camera_ndc = engine.m_geometry->camera_ndc_transform;
 
-		Material mtl{};
-		mtl.ka = engine.state.m_model.mtl.ka;
-		mtl.kd = engine.state.m_model.mtl.kd;
-		mtl.ks = engine.state.m_model.mtl.ks;
-		mtl.ns = engine.state.m_model.mtl.ns;
-
-		PointLight light{};
-		light.position = glm::vec3(100.0f, 100.0f, 100.0f);						// in world space
-		light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
-		light.intensity = 4.0f;
-
 		auto pass_0_vs_uniform_mat = engine.create_uniform("mats", &mats, sizeof(mats), 0);
 		auto pass_0_vs_uniform_light = engine.create_uniform("light", &light, sizeof(light), 1);
-		auto pass_0_vs_uniform_mtl = engine.create_uniform("mtl", &mtl, sizeof(mtl), 2);
-		std::vector<Uniform> pass_0_vs_uniforms = {pass_0_vs_uniform_mat, pass_0_vs_uniform_light, pass_0_vs_uniform_mtl};
+		std::vector<Uniform> pass_0_vs_uniforms = {pass_0_vs_uniform_mat, pass_0_vs_uniform_light};
 		std::vector<Texture> pass_0_vs_textures = {};
 
 		auto pass_0_vs = engine.create_shader(
@@ -52,17 +45,17 @@ int main(int argc, char **argv)
 			pass_0_vs_textures);
 
 		auto model_texture = engine.state.m_model.m_gpu.textures[0];
-		auto pass_0_ps_t = engine.create_texture(
-			"pass_0_t",
-			Texture::DIM_2D,
-			model_texture.data,
-			model_texture.width, model_texture.height,
-			model_texture.bytes_per_pixel,
-			model_texture.height * model_texture.width * model_texture.bytes_per_pixel,
-			0);
+		// auto pass_0_ps_t = engine.create_texture(
+		// 	"pass_0_t",
+		// 	Texture::DIM_2D,
+		// 	model_texture.data,
+		// 	model_texture.width, model_texture.height,
+		// 	model_texture.bytes_per_pixel,
+		// 	model_texture.height * model_texture.width * model_texture.bytes_per_pixel,
+		// 	0);
 
 		std::vector<Uniform> pass_0_ps_uniforms = {};
-		std::vector<Texture> pass_0_ps_textures = {pass_0_ps_t};
+		std::vector<Texture> pass_0_ps_textures = {};
 		auto pass_0_ps = engine.create_shader(
 			L"../../assets/shaders/shaders.hlsl",
 			"ps_main",
@@ -105,17 +98,79 @@ int main(int argc, char **argv)
 		auto pass_1 = engine.create_render_pass(prev_pass.used_prog, pass_1_render_target, L"pass 1 - render reflected bunny");
 	}
 
-	// pass 2 - render ground plane
+	// depth pass - render light camera's depth map
 	{
-		auto plane = engine.create_axis_aligned_plane(glm::vec3(0, 1, 0), glm::vec3(0, -300, 80), 2000, 2000);
+		_pass_0_mats mats{};
+		mats.model_world = engine.m_geometry->model_world_transform;
+		auto light_dir = glm::vec3{0, 0, (engine.state.m_view_volume.near_plane + ((engine.state.m_view_volume.far_plane - engine.state.m_view_volume.near_plane) / 2))} - light.position;
+		mats.world_camera = glm::lookAtLH(light.position, light_dir, glm::vec3(0, 1, 0));
+		float fovy = atan2f(engine.state.m_view_volume.top_plane, engine.state.m_view_volume.near_plane) * 2;
+		mats.camera_ndc = glm::perspectiveLH(fovy, (float)engine.state.m_window.width / engine.state.m_window.height, engine.state.m_view_volume.near_plane, engine.state.m_view_volume.far_plane);
+
+		auto depth_pass_vs_uniform_mat = engine.create_uniform("mats", &mats, sizeof(mats), 0);
+		auto depth_pass_vs_uniform_light = engine.create_uniform("light", &light, sizeof(light), 1);
+		std::vector<Uniform> depth_pass_vs_uniforms = {depth_pass_vs_uniform_mat, depth_pass_vs_uniform_light};
+		std::vector<Texture> depth_pass_vs_textures = {};
+
+		auto depth_pass_vs = engine.create_shader(
+			L"../../assets/shaders/depth.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			depth_pass_vs_uniforms,
+			depth_pass_vs_textures);
+
+		std::vector<Uniform> depth_pass_ps_uniforms = {};
+		std::vector<Texture> depth_pass_ps_textures = {};
+		auto depth_pass_ps = engine.create_shader(
+			L"../../assets/shaders/depth.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			depth_pass_ps_uniforms,
+			depth_pass_ps_textures);
+
+		Input_Layout layout{};
+		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+		Element_Desc e1 = {V_ATTRIBUTE_TYPE_NORMAL, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+		Element_Desc e2 = {V_ATTRIBUTE_TYPE_TEXTURE_COORD, FORMAT_R32G32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+		layout.elements = {e0, e1, e2};
+		auto depth_pass_prog = engine.create_program(
+			depth_pass_vs,
+			depth_pass_ps,
+			layout,
+			engine.state.m_model.m_gpu.verts.data(),
+			engine.state.m_model.m_gpu.verts.size() * sizeof(Vertex_attribute),
+			sizeof(Vertex_attribute),
+			0,
+			engine.state.m_model.m_gpu.verts.size());
+
+		auto depth_pass_render_target = engine.create_render_target(
+			"depth_pass",
+			engine.state.m_window.width,
+			engine.state.m_window.height,
+			engine.state.m_window.bytes_per_pixel);
+
+		auto depth_pass = engine.create_render_pass(depth_pass_prog, depth_pass_render_target, L"pass - render light camera depth");
+	}
+
+	// pass 3 - render ground plane
+	{
+		auto plane = engine.create_axis_aligned_plane(glm::vec3(0, 1, 0), glm::vec3(0, -1, 80), 400, 400);
 
 		_pass_0_mats mats{};
 		mats.model_world = engine.m_geometry->model_world_transform;
 		mats.world_camera = engine.m_geometry->world_camera_transform;
 		mats.camera_ndc = engine.m_geometry->camera_ndc_transform;
-
 		auto pass_2_vs_uniform_mat = engine.create_uniform("mats", &mats, sizeof(mats), 0);
-		std::vector<Uniform> pass_2_vs_uniforms = {pass_2_vs_uniform_mat};
+
+		_pass_0_mats light_mats{};
+		light_mats.model_world = engine.m_geometry->model_world_transform;
+		auto light_dir = glm::vec3{0, 0, (engine.state.m_view_volume.near_plane + ((engine.state.m_view_volume.far_plane - engine.state.m_view_volume.near_plane) / 2))} - light.position;
+		light_mats.world_camera = glm::lookAtLH(light.position, light_dir, glm::vec3(0, 1, 0));
+		float fovy = atan2f(engine.state.m_view_volume.top_plane, engine.state.m_view_volume.near_plane) * 2;
+		light_mats.camera_ndc = glm::perspectiveLH(fovy, (float)engine.state.m_window.width / engine.state.m_window.height, engine.state.m_view_volume.near_plane, engine.state.m_view_volume.far_plane);
+		auto pass_2_vs_uniform_mat_2 = engine.create_uniform("light_mats", &mats, sizeof(mats), 1);
+
+		std::vector<Uniform> pass_2_vs_uniforms = {pass_2_vs_uniform_mat, pass_2_vs_uniform_mat_2};
 		std::vector<Texture> pass_2_vs_textures = {};
 
 		auto pass_2_vs = engine.create_shader(
@@ -127,7 +182,10 @@ int main(int argc, char **argv)
 
 		std::vector<Uniform> pass_2_ps_uniforms = {};
 		auto t = engine.passes[1].render_target.color;
-		std::vector<Texture> pass_2_ps_textures = {t};
+		auto t2 = engine.passes[2].render_target.depth;
+		t.binding_point = 0;
+		t2.binding_point = 1;
+		std::vector<Texture> pass_2_ps_textures = {t, t2};
 		auto pass_2_ps = engine.create_shader(
 			L"../../assets/shaders/mirror_reflection.hlsl",
 			"ps_main",
@@ -154,7 +212,7 @@ int main(int argc, char **argv)
 		auto pass_2 = engine.create_render_pass(pass_2_prog, pass_2_render_target, L"pass - render ground plane");
 	}
 
-	// pass 3 - render skybox
+	// pass 4 - render skybox
 	{
 		_pass_1_mat mat{};
 		mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
@@ -224,16 +282,26 @@ int main(int argc, char **argv)
 		engine.passes[0].used_prog.vs.uniforms[0].data = &mats;
 		
 		_pass_0_mats mats_2{};
-		mats_2.model_world =glm::translate(glm::scale(engine.m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0,500 ,0));;
+		mats_2.model_world =glm::translate(glm::scale(engine.m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0, 3, 0));;
 		mats_2.world_camera = engine.m_geometry->world_camera_transform;
 		mats_2.camera_ndc = engine.m_geometry->camera_ndc_transform;
 		engine.passes[1].used_prog.vs.uniforms[0].data = &mats_2;
 
-		engine.passes[2].used_prog.vs.uniforms[0].data = &mats;
-		_pass_1_mat mat{};
+		_pass_0_mats depth_mats{};
+		depth_mats.model_world = engine.m_geometry->model_world_transform;
+		auto light_dir = glm::vec3{0, 0, (engine.state.m_view_volume.near_plane + ((engine.state.m_view_volume.far_plane - engine.state.m_view_volume.near_plane) / 2))} - light.position;
+		depth_mats.world_camera = glm::lookAtLH(light.position, light_dir, glm::vec3(0, 1, 0));
+		float fovy = atan2f(engine.state.m_view_volume.top_plane, engine.state.m_view_volume.near_plane) * 2;
+		depth_mats.camera_ndc = glm::perspectiveLH(fovy, (float)engine.state.m_window.width / engine.state.m_window.height, engine.state.m_view_volume.near_plane, engine.state.m_view_volume.far_plane);
+		engine.passes[2].used_prog.vs.uniforms[0].data = &depth_mats;
 
+		engine.passes[3].used_prog.vs.uniforms[0].data = &mats;
+		engine.passes[3].used_prog.vs.uniforms[1].data = &depth_mats;
+
+
+		_pass_1_mat mat{};
 		mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
-		engine.passes[3].used_prog.vs.uniforms[0].data = &mat;
+		engine.passes[4].used_prog.vs.uniforms[0].data = &mat;
 
 		engine.render_frame();
 		engine.m_win_manager->start_event_loop();

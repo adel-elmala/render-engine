@@ -53,7 +53,8 @@ struct Texture
 
 struct Render_Target
 {
-	Handle_t view_handle;
+	Handle_t color_view_handle;
+	Handle_t depth_view_handle;
 	const char *name;
 	Texture color;
 	Texture depth;

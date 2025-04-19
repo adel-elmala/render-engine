@@ -126,7 +126,7 @@ void D3D11Wrapper::_d3d11_resource_debug_name(ID3D11Resource* resource, std::str
 	resource->SetPrivateData(WKPDID_D3DDebugObjectName, name.size(), name.c_str());
 }
 
-std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11DepthStencilView *>
+std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11RenderTargetView *, ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11DepthStencilView *>
 D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
 	// Create Texture
@@ -135,10 +135,10 @@ D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t b
 	ID3D11RenderTargetView *rtv{};
 	auto hResult = d3d11Device->CreateRenderTargetView(texture, 0, &rtv);
 	assert(SUCCEEDED(hResult));
-
-	auto [depth, dsv] = _d3d11_create_depth_texture(width, height, bytes_per_pixel);
 	this->texture_views.push_back(rtv);
-	return {texture, srv, rtv, depth, dsv};
+
+	auto [depth, depth_srv, dsv] = _d3d11_create_depth_texture(width, height, bytes_per_pixel);
+	return {texture, srv, rtv, depth, depth_srv, dsv};
 }
 
 void D3D11Wrapper::_d3d11_create_render_target()
@@ -354,11 +354,12 @@ D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FL
 	return {texture, srv};
 }
 
-std::pair<ID3D11Texture2D *, ID3D11DepthStencilView *>
+std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11DepthStencilView *>
 D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
 	ID3D11Texture2D *texture;
 	ID3D11DepthStencilView *dsv;
+	ID3D11ShaderResourceView *srv;
 
 	D3D11_TEXTURE2D_DESC textureDesc = {};
 	textureDesc.Width = width;
@@ -367,16 +368,31 @@ D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t by
 	textureDesc.ArraySize = 1;
 	textureDesc.SampleDesc.Count = 1;
 	textureDesc.Usage = D3D11_USAGE_DEFAULT;
-	textureDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	textureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	textureDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	textureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
 	d3d11Device->CreateTexture2D(&textureDesc, nullptr, &texture);
 	this->textures.push_back(texture);
 
-	d3d11Device->CreateDepthStencilView(texture, nullptr, &dsv);
+	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
+	ZeroMemory(&depthStencilViewDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
+	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+	d3d11Device->CreateDepthStencilView(texture, &depthStencilViewDesc, &dsv);
 	this->texture_views.push_back(dsv);
 
-	return {texture, dsv};
+	D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+	ZeroMemory(&shaderResourceViewDesc, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
+	shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	shaderResourceViewDesc.Texture2D.MipLevels = 1;
+
+	d3d11Device->CreateShaderResourceView(texture, &shaderResourceViewDesc, &srv);
+	this->texture_views.push_back(srv);
+
+	return {texture, srv, dsv};
 }
 
 std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *>
@@ -514,16 +530,17 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
 		d3d11DeviceContext->RSSetViewports(1, &viewport);
 		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0].render_target.view_handle), backgroundColor);
-		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0].render_target.depth.view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
-		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[1].render_target.view_handle), backgroundColor);
-		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[1].render_target.depth.view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0].render_target.color_view_handle), backgroundColor);
+		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[1].render_target.color_view_handle), backgroundColor);
+		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[1].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[2].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 	for (auto &pass : passes)
 	{
 		_d3d11_begin_pass(pass.name);
-		auto rtv = (ID3D11RenderTargetView *)pass.render_target.view_handle;
-		auto dsv = (ID3D11DepthStencilView *)pass.render_target.depth.view_handle;
+		auto rtv = (ID3D11RenderTargetView *)pass.render_target.color_view_handle;
+		auto dsv = (ID3D11DepthStencilView *)pass.render_target.depth_view_handle;
 		d3d11DeviceContext->OMSetRenderTargets(1, &rtv, dsv);
 		d3d11DeviceContext->IASetInputLayout((ID3D11InputLayout *)pass.used_prog.vertex_buffer_layout);
 
