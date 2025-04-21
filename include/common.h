@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <atomic>
+#include <functional>
 
 // #include <tracy/Tracy.hpp>
 // #define TRACY_ENABLE
@@ -79,13 +80,7 @@ struct Material
 	uint32_t ns;
 };
 
-struct Model
-{
-	std::vector<Vertex_attribute> verts;
-	std::vector<Texture> textures;
-	Material mtl;
-	std::string map_kd;
-};
+
 
 struct Camera
 {
@@ -152,16 +147,7 @@ enum BACKEND
 	BACKEND_VULKAN
 };
 
-struct Engine_State
-{
-	Window m_window;
-	Camera m_camera;
-	ViewVolume m_view_volume;
-	size_t n_threads;
-	DRAWING_MODE m_mode;
-	std::atomic_bool running;
-	BACKEND backend;
-};
+
 
 struct Uniform
 {
@@ -203,6 +189,36 @@ struct Input_Layout
 	std::vector<Element_Desc> elements;
 };
 
+struct Model
+{
+	std::vector<Vertex_attribute> verts;
+	std::vector<Texture> textures;
+	Input_Layout layout;
+	Material mtl;
+	std::string map_kd;
+	bool cast_shadow;
+	glm::mat4 model_world_transfrom;
+};
+
+struct Scene
+{
+	std::vector<Model> models;
+	std::vector<PointLight> pLights;
+	std::vector<DirLight> dLights;
+	Camera cam;
+};
+
+struct Engine_State
+{
+	Window window;
+	Scene scene;
+	ViewVolume view_volume;
+	size_t n_threads;
+	DRAWING_MODE mode;
+	std::atomic_bool running;
+	BACKEND backend;
+};
+
 enum SHADER_STAGE
 {
 	SHADER_STAGE_VERTEX,
@@ -216,6 +232,7 @@ struct Shader
 	std::string entry;
 	std::vector<Uniform> uniforms;
 	std::vector<Texture> textures;
+	std::function<void(void)> update_uniforms; 
 };
 
 struct Program

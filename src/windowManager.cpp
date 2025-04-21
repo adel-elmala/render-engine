@@ -45,10 +45,10 @@ bool WindowManager::init()
 	}
 	SDL_DisplayMode md{};
 	SDL_GetCurrentDisplayMode(0, &md);
-	state->m_window.screen_width = md.w;
-	state->m_window.screen_height = md.h;
-	state->m_window.window_origin_x = md.w / 2 - m_width / 2;
-	state->m_window.window_origin_y = md.h / 2 - m_height / 2;
+	state->window.screen_width = md.w;
+	state->window.screen_height = md.h;
+	state->window.window_origin_x = md.w / 2 - m_width / 2;
+	state->window.window_origin_y = md.h / 2 - m_height / 2;
 	m_window_surface = SDL_GetWindowSurface(m_window_handle);
 	if (NULL == m_window_surface)
 	{
@@ -58,26 +58,26 @@ bool WindowManager::init()
 
 	// update engine state
 	{
-		std::unique_lock lock(state->m_window.m);
+		std::unique_lock lock(state->window.m);
 		state->running = true;
-		state->m_window.resized = false;
-		state->m_window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
-		state->m_window.surface = m_window_surface->pixels;
-		state->m_window.width = m_width;
-		state->m_window.height = m_height;
-		state->m_window.win32_win = native_win32_handle();
+		state->window.resized = false;
+		state->window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
+		state->window.surface = m_window_surface->pixels;
+		state->window.width = m_width;
+		state->window.height = m_height;
+		state->window.win32_win = native_win32_handle();
 	}
 
 	// init ui state
-	state->m_window.mouse_yaw = state->backend == BACKEND_D3D11 ? 90.0f : -90.0f;
-	state->m_window.mouse_pitch = 0.0f;
-	state->m_window.cursor_dx = 0.0f;
-	state->m_window.cursor_dy = 0.0f;
-	state->m_window.move_cam_back = false;
-	state->m_window.move_cam_forward = false;
-	state->m_window.move_cam_left = false;
-	state->m_window.move_cam_right = false;
-	state->m_window.enable_mouse_movement = false;
+	state->window.mouse_yaw = state->backend == BACKEND_D3D11 ? 90.0f : -90.0f;
+	state->window.mouse_pitch = 0.0f;
+	state->window.cursor_dx = 0.0f;
+	state->window.cursor_dy = 0.0f;
+	state->window.move_cam_back = false;
+	state->window.move_cam_forward = false;
+	state->window.move_cam_left = false;
+	state->window.move_cam_right = false;
+	state->window.enable_mouse_movement = false;
 
 	return true;
 }
@@ -85,14 +85,14 @@ bool WindowManager::init()
 bool WindowManager::resize()
 {
 	// ZoneScoped;
-	std::unique_lock lock(state->m_window.m);
+	std::unique_lock lock(state->window.m);
 	SDL_GetWindowSize(m_window_handle, (int *)&m_width, (int *)&m_height);
 	m_window_surface = SDL_GetWindowSurface(m_window_handle);
-	state->m_window.width = m_width;
-	state->m_window.height = m_height;
-	state->m_window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
-	state->m_window.surface = m_window_surface->pixels;
-	state->m_window.resized = true;
+	state->window.width = m_width;
+	state->window.height = m_height;
+	state->window.bytes_per_pixel = m_window_surface->format->BytesPerPixel;
+	state->window.surface = m_window_surface->pixels;
+	state->window.resized = true;
 
 	return true;
 }
@@ -110,7 +110,7 @@ void WindowManager::start_event_loop()
 {
 	// ZoneScoped;
 	SDL_Event event;
-	// std::scoped_lock lock(state->m_window.m);
+	// std::scoped_lock lock(state->window.m);
 	while (SDL_PollEvent(&event) != 0)
 	{
 		switch (event.type)
@@ -120,33 +120,33 @@ void WindowManager::start_event_loop()
 			state->running = false;
 			break;
 		case SDL_MOUSEMOTION:
-			state->m_window.cursor_dx = event.motion.xrel;
-			state->m_window.cursor_dy = event.motion.yrel;
-			state->m_window.cursor_x = event.motion.x;
-			state->m_window.cursor_y = event.motion.y;
+			state->window.cursor_dx = event.motion.xrel;
+			state->window.cursor_dy = event.motion.yrel;
+			state->window.cursor_x = event.motion.x;
+			state->window.cursor_y = event.motion.y;
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 			if (event.button.button == 1)
-				state->m_window.enable_mouse_movement = true;
+				state->window.enable_mouse_movement = true;
 			break;
 		case SDL_MOUSEBUTTONUP:
 			if (event.button.button == 1)
-				state->m_window.enable_mouse_movement = false;
+				state->window.enable_mouse_movement = false;
 			break;
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym)
 			{
 			case SDLK_w:
-				state->m_window.move_cam_forward = true;
+				state->window.move_cam_forward = true;
 				break;
 			case SDLK_s:
-				state->m_window.move_cam_back = true;
+				state->window.move_cam_back = true;
 				break;
 			case SDLK_d:
-				state->m_window.move_cam_right = true;
+				state->window.move_cam_right = true;
 				break;
 			case SDLK_a:
-				state->m_window.move_cam_left = true;
+				state->window.move_cam_left = true;
 				break;
 			case SDLK_ESCAPE:
 				state->running = false;
@@ -159,16 +159,16 @@ void WindowManager::start_event_loop()
 			switch (event.key.keysym.sym)
 			{
 			case SDLK_w:
-				state->m_window.move_cam_forward = false;
+				state->window.move_cam_forward = false;
 				break;
 			case SDLK_s:
-				state->m_window.move_cam_back = false;
+				state->window.move_cam_back = false;
 				break;
 			case SDLK_d:
-				state->m_window.move_cam_right = false;
+				state->window.move_cam_right = false;
 				break;
 			case SDLK_a:
-				state->m_window.move_cam_left = false;
+				state->window.move_cam_left = false;
 				break;
 			default:
 				break;

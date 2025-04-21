@@ -16,12 +16,19 @@ public:
 	RenderEngine(BACKEND backend);
 	~RenderEngine();
 	void set_drawing_mode(DRAWING_MODE mode);
+	void scene_add_model(Model m);
+	void scene_add_point_light(PointLight l);
+	void scene_add_dir_light(DirLight l);
+	void scene_update_camera(Camera cam);
+	void scene_finish();
+	void update_resources();
+	void render_opaques();
 	void render_frame();
 	void flush_frame();
 	bool should_exit();
 	Render_Pass create_render_pass(Program &p, Render_Target &render_target, std::wstring name);
 	Program create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes);
-	Shader create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures);
+	Shader create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures, std::function<void()> update);
 	Uniform create_uniform(const char *name, void *data, size_t size, size_t binding_point);
 	Texture create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
 	Render_Target create_render_target(const char *name, int width, int height, int bytes_per_pixel);
@@ -30,17 +37,18 @@ public:
 
 	std::unique_ptr<SceneManager> m_scene_manager;
 	std::unique_ptr<WindowManager> m_win_manager;
-	std::unique_ptr<Geometry> m_geometry;
-	Engine_State state;
-	std::vector<Render_Pass> passes;
-
-private:
+	
+	private:
 	void RenderEngine_init_d3d11();
 	void render_frame_d3d11(std::vector<Render_Pass> passes);
-
+	
 	void init_camera();
 	void init_view_volume();
-
+	
+	std::unique_ptr<Geometry> m_geometry;
 	std::unique_ptr<D3D11Wrapper> m_d3d11_wrapper;
+	Engine_State state;
+	std::vector<Render_Pass> passes;
+	Render_Target main_rt;
 	std::thread engine_loop;
 };

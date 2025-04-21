@@ -97,7 +97,7 @@ void D3D11Wrapper::_d3d11_create_swapchain()
 	d3d11SwapChainDesc.Flags = 0;
 
 	HRESULT hResult = dxgiFactory->CreateSwapChainForHwnd(d3d11Device,
-														  state->m_window.win32_win,
+														  state->window.win32_win,
 														  &d3d11SwapChainDesc,
 														  0, 0, &d3d11SwapChain);
 	assert(SUCCEEDED(hResult));
@@ -526,15 +526,15 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		d3d11DeviceContext->OMSetDepthStencilState(depthStencilState, 0);
 
 		RECT winRect;
-		GetClientRect(state->m_window.win32_win, &winRect);
+		GetClientRect(state->window.win32_win, &winRect);
 		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
 		d3d11DeviceContext->RSSetViewports(1, &viewport);
 		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0].render_target.color_view_handle), backgroundColor);
 		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
-		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[1].render_target.color_view_handle), backgroundColor);
-		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[1].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
-		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[2].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		// d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[1].render_target.color_view_handle), backgroundColor);
+		// d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[1].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		// d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[2].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 	for (auto &pass : passes)
 	{

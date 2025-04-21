@@ -1,5 +1,6 @@
 #include "../include/common.h"
 #include "../include/SceneManager.h"
+#include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
 
 #define FAST_OBJ_IMPLEMENTATION
 #include "../include/fast_obj.h"
@@ -33,6 +34,7 @@ SceneManager::~SceneManager()
 Model SceneManager::parse_model(const std::string &path)
 {
 	Model model;
+	model.model_world_transfrom = glm::identity<glm::mat4>();
 	auto mesh = (fastObjMesh *)fast_obj_read(path.c_str());
 
 	for (size_t i = 0; i < mesh->index_count;)

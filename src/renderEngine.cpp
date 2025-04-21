@@ -12,9 +12,9 @@ using namespace std::chrono_literals;
 void RenderEngine::RenderEngine_init_d3d11()
 {
 	// ZoneScoped;
-	state.m_window.height = 600;
-	state.m_window.width = 800;
-	state.m_window.bytes_per_pixel = 4;
+	state.window.height = 600;
+	state.window.width = 800;
+	state.window.bytes_per_pixel = 4;
 	state.running = true;
 	init_camera();
 	init_view_volume();
@@ -54,7 +54,7 @@ void RenderEngine::render_frame_d3d11(std::vector<Render_Pass> passes)
 	// ZoneScoped;
 	auto start = std::chrono::system_clock::now();
 
-	// if (state.m_window.resized) ;
+	// if (state.window.resized) ;
 	m_d3d11_wrapper->render_frame(passes);
 
 	auto end = std::chrono::system_clock::now();
@@ -63,8 +63,21 @@ void RenderEngine::render_frame_d3d11(std::vector<Render_Pass> passes)
 	// FrameMark;
 }
 
+void RenderEngine::update_resources()
+{
+	m_geometry->update_world_transform();
+	m_geometry->update_camera_transform();
+	m_geometry->update_perspective_transform();
+	for(auto& pass: passes)
+	{
+		pass.used_prog.vs.update_uniforms();
+		pass.used_prog.ps.update_uniforms();
+	}
+}
+
 void RenderEngine::render_frame()
 {
+	update_resources();
 	switch (state.backend)
 	{
 	case BACKEND_D3D11:
@@ -97,15 +110,35 @@ RenderEngine::~RenderEngine()
 	}
 }
 
+void RenderEngine::scene_add_point_light(PointLight l)
+{
+	state.scene.pLights.push_back(l);
+}
+
+void RenderEngine::scene_add_dir_light(DirLight l)
+{
+	state.scene.dLights.push_back(l);
+}
+
+void RenderEngine::scene_add_model(Model m)
+{
+	state.scene.models.push_back(m);
+}
+
+void RenderEngine::scene_update_camera(Camera cam)
+{
+	state.scene.cam = cam;
+}
+
 void RenderEngine::init_camera()
 {
 	// ZoneScoped;
 	if (state.backend == BACKEND_D3D11)
 	{
-		state.m_camera.position = glm::vec3{0.0f, 0.0f, 0.0f};
-		state.m_camera.lookat = glm::vec3{0.0f, 0.0f, 1.0f};
-		state.m_camera.up = glm::vec3{0.0f, 1.0f, 0.0f};
-		state.m_camera.sensitivity = 3.5f;
+		state.scene.cam.position = glm::vec3{0.0f, 0.0f, 0.0f};
+		state.scene.cam.lookat = glm::vec3{0.0f, 0.0f, 1.0f};
+		state.scene.cam.up = glm::vec3{0.0f, 1.0f, 0.0f};
+		state.scene.cam.sensitivity = 3.5f;
 	}
 }
 
@@ -114,19 +147,19 @@ void RenderEngine::init_view_volume()
 	// ZoneScoped;
 	if (state.backend == BACKEND_D3D11)
 	{
-		state.m_view_volume.near_plane = 50.0f;
-		state.m_view_volume.far_plane = 1500.0f;
-		state.m_view_volume.left_plane = -50.0f;
-		state.m_view_volume.right_plane = 50.0f;
-		state.m_view_volume.top_plane = 50.0f;
-		state.m_view_volume.bottom_plane = -50.0f;
+		state.view_volume.near_plane = 50.0f;
+		state.view_volume.far_plane = 1500.0f;
+		state.view_volume.left_plane = -50.0f;
+		state.view_volume.right_plane = 50.0f;
+		state.view_volume.top_plane = 50.0f;
+		state.view_volume.bottom_plane = -50.0f;
 	}
 }
 
 void RenderEngine::set_drawing_mode(DRAWING_MODE mode)
 {
 	// ZoneScoped;
-	state.m_mode = mode;
+	state.mode = mode;
 }
 
 Render_Pass RenderEngine::create_render_pass(Program &p, Render_Target &render_target, std::wstring name)
@@ -156,13 +189,14 @@ Program RenderEngine::create_program(Shader &vs, Shader &ps, Input_Layout &layou
 	return p;
 }
 
-Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures)
+Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures, std::function<void()> update)
 {
 	Shader s{};
 	s.path = path;
 	s.entry = entry;
 	s.uniforms = uniforms;
 	s.textures = textures;
+	s.update_uniforms = update;
 	if (state.backend == BACKEND_D3D11)
 	{
 		if (stage == SHADER_STAGE_VERTEX)
@@ -311,4 +345,82 @@ Model RenderEngine::create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center
 	m.verts.push_back(v4);
 	m.verts.push_back(v5);
 	return m;
+}
+
+struct opaque_pass_mats_unifrom
+{
+	glm::mat4 model_world;
+	glm::mat4 world_camera;
+	glm::mat4 camera_ndc;
+};
+
+void RenderEngine::render_opaques()
+{
+	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
+	main_rt = create_render_target(
+		"",
+		state.window.width,
+		state.window.height,
+		state.window.bytes_per_pixel);
+
+	size_t model_id = 0;
+	for (auto& model: state.scene.models)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		mats->model_world = m_geometry->model_world_transform;
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		auto vs_uniform_light = create_uniform("light", &plight, sizeof(PointLight), 1);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
+		std::vector<Texture> vs_textures = {};
+
+		auto vs_update = [this, model_id, &model, &plight, mats]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		auto _prog = create_program(
+			vs,
+			ps,
+			model.layout,
+			model.verts.data(),
+			model.verts.size() * sizeof(Vertex_attribute),
+			sizeof(Vertex_attribute),
+			0,
+			model.verts.size());
+
+		create_render_pass(_prog, main_rt, L"pass - render opaques");
+	}
+}
+
+void RenderEngine::scene_finish()
+{
+	// opqaue pass
+	render_opaques();
 }
