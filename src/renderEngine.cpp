@@ -112,6 +112,10 @@ RenderEngine::~RenderEngine()
 	{
 		delete pass;
 	}
+	for (auto bb: bounding_boxes)
+	{
+		delete bb;
+	}
 }
 
 void RenderEngine::scene_add_point_light(PointLight l)
@@ -279,6 +283,38 @@ Render_Target RenderEngine::create_render_target(const char *name, int width, in
 	return rt;
 }
 
+std::vector<glm::vec4>* RenderEngine::_bounding_box_lines(Bounding_Box bb)
+{
+	glm::vec4 p0(bb.min_x, bb.min_y, bb.min_z, 1.0f);
+	glm::vec4 p1(bb.max_x, bb.min_y, bb.min_z, 1.0f);
+	glm::vec4 p2(bb.max_x, bb.max_y, bb.min_z, 1.0f);
+	glm::vec4 p3(bb.min_x, bb.max_y, bb.min_z, 1.0f);
+
+	glm::vec4 p4(bb.min_x, bb.min_y, bb.max_z, 1.0f);
+	glm::vec4 p5(bb.max_x, bb.min_y, bb.max_z, 1.0f);
+	glm::vec4 p6(bb.max_x, bb.max_y, bb.max_z, 1.0f);
+	glm::vec4 p7(bb.min_x, bb.max_y, bb.max_z, 1.0f);
+
+	// NOTE(adel): each triangle has 4 points, as the end point is to enclose the tringle when rendering using line strips primitives
+	// NOTE(adel): many points can be removed, otherwise lines will be redrawn, but kept this way for simplicity
+	auto bb_verts = new std::vector<glm::vec4>{
+		p0, p1, p2, p0, // front face - t1
+		p0, p2, p3, p0, // front face - t2
+		p1, p5, p6, p1, // right face - t1
+		p1, p6, p2, p1, // right face - t2
+		p4, p5, p6, p4, // back face - t1
+		p4, p6, p7, p4, // back face - t2
+		p0, p4, p7, p0, // left face - t1
+		p0, p7, p3, p0, // left face - t2
+		p3, p2, p6, p3, // top face - t1
+		p3, p6, p7, p3, // top face - t2
+		p0, p1, p5, p0, // bottom face - t1
+		p0, p5, p4, p0	// bottom face - t2
+	};
+
+	bounding_boxes.push_back(bb_verts);
+	return bb_verts;
+}
 
 Model RenderEngine::create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center , size_t width, size_t height)
 {
@@ -360,7 +396,6 @@ struct opaque_pass_mats_unifrom
 
 void RenderEngine::_render_bounding_boxes()
 {
-	size_t model_id = 0;
 	for (auto& model: state.scene.models)
 	{
 		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
@@ -405,33 +440,7 @@ void RenderEngine::_render_bounding_boxes()
 		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
 		layout.elements = {e0};
 
-		glm::vec4 p0(model.bb.min_x, model.bb.min_y, model.bb.min_z, 1.0f);
-		glm::vec4 p1(model.bb.max_x, model.bb.min_y, model.bb.min_z, 1.0f);
-		glm::vec4 p2(model.bb.max_x, model.bb.max_y, model.bb.min_z, 1.0f);
-		glm::vec4 p3(model.bb.min_x, model.bb.max_y, model.bb.min_z, 1.0f);
-
-		glm::vec4 p4(model.bb.min_x, model.bb.min_y, model.bb.max_z, 1.0f);
-		glm::vec4 p5(model.bb.max_x, model.bb.min_y, model.bb.max_z, 1.0f);
-		glm::vec4 p6(model.bb.max_x, model.bb.max_y, model.bb.max_z, 1.0f);
-		glm::vec4 p7(model.bb.min_x, model.bb.max_y, model.bb.max_z, 1.0f);
-
-		// TODO(adel): fix leak
-		// NOTE(adel): each triangle has 4 points, as the end point is to enclose the tringle when rendering using line strips primitives
-		// NOTE(adel): many points can be removed, otherwise lines will be redrawn, but kept this way for simplicity
-		auto bb_verts = new std::vector<glm::vec4>{
-			p0, p1, p2, p0, // front face - t1
-			p0, p2, p3, p0, // front face - t2
-			p1, p5, p6, p1, // right face - t1
-			p1, p6, p2, p1, // right face - t2
-			p4, p5, p6, p4, // back face - t1
-			p4, p6, p7, p4, // back face - t2
-			p0, p4, p7, p0, // left face - t1
-			p0, p7, p3, p0, // left face - t2
-			p3, p2, p6, p3, // top face - t1
-			p3, p6, p7, p3, // top face - t2
-			p0, p1, p5, p0, // bottom face - t1
-			p0, p5, p4, p0	// bottom face - t2
-		};
+		auto bb_verts = _bounding_box_lines(model.bb);
 
 		auto _prog = create_program(
 			vs,
@@ -444,6 +453,77 @@ void RenderEngine::_render_bounding_boxes()
 			bb_verts->size());
 
 		auto pass = create_render_pass(_prog, main_rt, L"pass - render bounding boxes");
+		set_drawing_mode(pass, DRAWING_MODE_LINES);
+	}
+}
+
+void RenderEngine::_render_lights()
+{
+	for (auto& light: state.scene.pLights)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		mats->model_world = glm::identity<glm::mat4>();
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+		std::vector<Texture> vs_textures = {};
+
+		auto vs_update = [this, mats]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = glm::identity<glm::mat4>();
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		Input_Layout layout{};
+		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+		layout.elements = {e0};
+
+		Bounding_Box light_bb{
+			.min_x = -100 + light.position.x,
+			.min_y = -100 + light.position.y,
+			.min_z = -100 + light.position.z,
+			.max_x = 100 + light.position.x,
+			.max_y = 100 + light.position.y,
+			.max_z = 100 + light.position.z,
+		};
+		auto bb_verts = _bounding_box_lines(light_bb);
+
+		auto _prog = create_program(
+			vs,
+			ps,
+			layout,
+			bb_verts->data(),
+			bb_verts->size() * sizeof(glm::vec4),
+			sizeof(glm::vec4),
+			0,
+			bb_verts->size());
+
+		auto pass = create_render_pass(_prog, main_rt, L"pass - render lights");
 		set_drawing_mode(pass, DRAWING_MODE_LINES);
 	}
 }
@@ -522,9 +602,18 @@ void RenderEngine::scene_finish()
 	{
 		_render_bounding_boxes(); // TODO(adel): support togglling bounding boxes rendering 
 	}
+	if (options.render_lights)
+	{
+		_render_lights();
+	}
 }
 
 void RenderEngine::render_bounding_boxes(bool on)
 {
 	options.render_bounding_boxes = on;
+}
+
+void RenderEngine::render_lights(bool on)
+{
+	options.render_lights = on;
 }

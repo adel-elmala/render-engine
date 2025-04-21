@@ -1,6 +1,5 @@
 #include "../include/common.h"
 #include "../include/SceneManager.h"
-#include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
 
 #define FAST_OBJ_IMPLEMENTATION
 #include "../include/fast_obj.h"

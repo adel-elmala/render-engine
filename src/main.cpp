@@ -30,11 +30,11 @@ int main(int argc, char **argv)
 
 	engine.scene_add_model(bunny);
 
-	PointLight light{}; // TODO(adel): make lights part of the scene description that the engine has control over
-	light.position = glm::vec3(0.0f, 300.0f, 1300.0f);						// in world space
-	light.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
-	light.intensity = 4.0f;
-	engine.scene_add_point_light(light);
+	PointLight l0{}; // TODO(adel): make lights part of the scene description that the engine has control over
+	l0.position = glm::vec3(0.0f, 300.0f, 1300.0f);						// in world space
+	l0.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
+	l0.intensity = 4.0f;
+	engine.scene_add_point_light(l0);
 
 	Camera cam{};
 	cam.position = glm::vec3{0.0f, 0.0f, 0.0f};
@@ -44,6 +44,7 @@ int main(int argc, char **argv)
 	engine.scene_update_camera(cam);
 
 	engine.render_bounding_boxes(true);
+	engine.render_lights(true);
 	engine.scene_finish();
 	// TODO(adel): tell the engine where is the view-volume (optionally)
 

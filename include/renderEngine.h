@@ -13,6 +13,7 @@ class D3D11Wrapper;
 struct Engine_Options
 {
 	bool render_bounding_boxes;
+	bool render_lights;
 };
 
 // TODO[adel] : use strategy design pattern to switch between rasterizer/ray tracer/vulkan
@@ -30,6 +31,7 @@ public:
 	void update_resources();
 	void render_frame();
 	void render_bounding_boxes(bool on);
+	void render_lights(bool on);
 	void flush_frame();
 	bool should_exit();
 	Render_Pass* create_render_pass(Program &p, Render_Target &render_target, std::wstring name);
@@ -51,6 +53,8 @@ public:
 	void init_view_volume();
 	void _render_opaques();
 	void _render_bounding_boxes();
+	void _render_lights();
+	std::vector<glm::vec4>* _bounding_box_lines(Bounding_Box bb);
 	
 	std::unique_ptr<Geometry> m_geometry;
 	std::unique_ptr<D3D11Wrapper> m_d3d11_wrapper;
@@ -59,4 +63,5 @@ public:
 	Render_Target main_rt;
 	std::thread engine_loop;
 	Engine_Options options;
+	std::vector<std::vector<glm::vec4>*> bounding_boxes;
 };

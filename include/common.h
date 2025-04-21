@@ -8,6 +8,8 @@
 #define GLM_FORCE_ALIGNED
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
+
 #include <vector>
 #include <memory>
 #include <mutex>
