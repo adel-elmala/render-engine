@@ -45,6 +45,7 @@ int main(int argc, char **argv)
 
 	engine.render_bounding_boxes(true);
 	engine.render_lights(true);
+	engine.render_ground(true);
 	engine.scene_finish();
 	// TODO(adel): tell the engine where is the view-volume (optionally)
 
@@ -116,65 +117,7 @@ int main(int argc, char **argv)
 	// }
 
 	// // TODO(adel): use the scene bounding box, and infer where to render this plane, and also do this pass internally
-	// // pass 3 - render ground plane
-	// {
-	// 	auto plane = engine.create_axis_aligned_plane(glm::vec3(0, 1, 0), glm::vec3(0, -1, 80), 400, 400);
-
-	// 	_pass_0_mats mats{};
-	// 	mats.model_world = engine.m_geometry->model_world_transform;
-	// 	mats.world_camera = engine.m_geometry->world_camera_transform;
-	// 	mats.camera_ndc = engine.m_geometry->camera_ndc_transform;
-	// 	auto pass_2_vs_uniform_mat = engine.create_uniform("mats", &mats, sizeof(mats), 0);
-
-	// 	_pass_0_mats light_mats{};
-	// 	light_mats.model_world = engine.m_geometry->model_world_transform;
-	// 	auto light_dir = glm::vec3{0, 0, (engine.state.view_volume.near_plane + ((engine.state.view_volume.far_plane - engine.state.view_volume.near_plane) / 2))} - light.position;
-	// 	light_mats.world_camera = glm::lookAtLH(light.position, light_dir, glm::vec3(0, 1, 0));
-	// 	float fovy = atan2f(engine.state.view_volume.top_plane, engine.state.view_volume.near_plane) * 2;
-	// 	light_mats.camera_ndc = glm::perspectiveLH(fovy, (float)engine.state.window.width / engine.state.window.height, engine.state.view_volume.near_plane, engine.state.view_volume.far_plane);
-	// 	auto pass_2_vs_uniform_mat_2 = engine.create_uniform("light_mats", &mats, sizeof(mats), 1);
-
-	// 	std::vector<Uniform> pass_2_vs_uniforms = {pass_2_vs_uniform_mat, pass_2_vs_uniform_mat_2};
-	// 	std::vector<Texture> pass_2_vs_textures = {};
-
-	// 	auto pass_2_vs = engine.create_shader(
-	// 		L"../../assets/shaders/mirror_reflection.hlsl",
-	// 		"vs_main",
-	// 		SHADER_STAGE_VERTEX,
-	// 		pass_2_vs_uniforms,
-	// 		pass_2_vs_textures);
-
-	// 	std::vector<Uniform> pass_2_ps_uniforms = {};
-	// 	auto t = engine.passes[1].render_target.color;
-	// 	auto t2 = engine.passes[2].render_target.depth;
-	// 	t.binding_point = 0;
-	// 	t2.binding_point = 1;
-	// 	std::vector<Texture> pass_2_ps_textures = {t, t2};
-	// 	auto pass_2_ps = engine.create_shader(
-	// 		L"../../assets/shaders/mirror_reflection.hlsl",
-	// 		"ps_main",
-	// 		SHADER_STAGE_PIXEL,
-	// 		pass_2_ps_uniforms,
-	// 		pass_2_ps_textures);
-
-	// 	Input_Layout layout{};
-	// 	Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-	// 	Element_Desc e1 = {V_ATTRIBUTE_TYPE_NORMAL, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-	// 	Element_Desc e2 = {V_ATTRIBUTE_TYPE_TEXTURE_COORD, FORMAT_R32G32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-	// 	layout.elements = {e0, e1, e2};
-	// 	auto pass_2_prog = engine.create_program(
-	// 		pass_2_vs,
-	// 		pass_2_ps,
-	// 		layout,
-	// 		plane.verts.data(),
-	// 		plane.verts.size() * sizeof(Vertex_attribute),
-	// 		sizeof(Vertex_attribute),
-	// 		0,
-	// 		plane.verts.size());
-
-	// 	auto pass_2_render_target = engine.passes[0].render_target; 
-	// 	auto pass_2 = engine.create_render_pass(pass_2_prog, pass_2_render_target, L"pass - render ground plane");
-	// }
+	
 
 	// // TODO(adel): optioanlly render the skybox throung an  option to the engine
 	// // pass 4 - render skybox

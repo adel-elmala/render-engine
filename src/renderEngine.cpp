@@ -457,6 +457,92 @@ void RenderEngine::_render_bounding_boxes()
 	}
 }
 
+void RenderEngine::_render_ground()
+{
+	auto scene_width = state.scene.bb.max_x - state.scene.bb.min_x;
+	auto scene_height = state.scene.bb.max_y - state.scene.bb.min_y;
+	auto scene_depth = state.scene.bb.max_z - state.scene.bb.min_z;
+
+	auto scene_center = glm::vec3(
+		state.scene.bb.min_x + scene_width / 2.0,
+		state.scene.bb.min_y,
+		state.scene.bb.min_z + scene_depth / 2.0);
+
+	auto plane = create_axis_aligned_plane(glm::vec3(0, 1, 0), scene_center, scene_width * 4, scene_depth * 4);
+
+	auto mats = new opaque_pass_mats_unifrom;
+	mats->model_world = m_geometry->model_world_transform;
+	mats->world_camera = m_geometry->world_camera_transform;
+	mats->camera_ndc = m_geometry->camera_ndc_transform;
+	auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+
+	auto used_plight = state.scene.pLights[0];
+	auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+	auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
+	float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
+
+	auto light_mats = new opaque_pass_mats_unifrom;
+	light_mats->model_world = m_geometry->model_world_transform;
+	light_mats->world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
+	light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+	auto vs_uniform_mat_2 = create_uniform("light_mats", light_mats, sizeof(opaque_pass_mats_unifrom), 1);
+
+	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
+	std::vector<Texture> vs_textures = {};
+
+	auto vs_update = [this, mats]()
+	{
+		opaque_pass_mats_unifrom new_mats{};
+		new_mats.model_world = m_geometry->model_world_transform;
+		new_mats.world_camera = m_geometry->world_camera_transform;
+		new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+		memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+	};
+
+	auto vs = create_shader(
+		L"../../assets/shaders/mirror_reflection.hlsl",
+		"vs_main",
+		SHADER_STAGE_VERTEX,
+		vs_uniforms,
+		vs_textures,
+		vs_update);
+
+	std::vector<Uniform> ps_uniforms = {};
+	// auto reflected_scene = passes[1]->render_target.color;
+	// reflected_scene.binding_point = 0;
+	// auto t2 = passes[2]->render_target.depth;
+	// t2.binding_point = 1;
+	std::vector<Texture> ps_textures = {};
+
+	auto ps_update = [](){};
+
+	auto ps = create_shader(
+		L"../../assets/shaders/mirror_reflection.hlsl",
+		"ps_main",
+		SHADER_STAGE_PIXEL,
+		ps_uniforms,
+		ps_textures,
+		ps_update);
+
+	Input_Layout layout{};
+	Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+	Element_Desc e1 = {V_ATTRIBUTE_TYPE_NORMAL, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+	Element_Desc e2 = {V_ATTRIBUTE_TYPE_TEXTURE_COORD, FORMAT_R32G32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+	layout.elements = {e0, e1, e2};
+	auto prog = create_program(
+		vs,
+		ps,
+		layout,
+		plane.verts.data(),
+		plane.verts.size() * sizeof(Vertex_attribute),
+		sizeof(Vertex_attribute),
+		0,
+		plane.verts.size());
+
+	auto pass = create_render_pass(prog, main_rt, L"pass - render ground plane");
+	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+}
+
 void RenderEngine::_render_lights()
 {
 	for (auto& light: state.scene.pLights)
@@ -598,6 +684,7 @@ void RenderEngine::scene_finish()
 {
 	// opqaue pass
 	_render_opaques();
+	_gen_scene_bounding_box();
 	if (options.render_bounding_boxes)
 	{
 		_render_bounding_boxes(); // TODO(adel): support togglling bounding boxes rendering 
@@ -605,6 +692,10 @@ void RenderEngine::scene_finish()
 	if (options.render_lights)
 	{
 		_render_lights();
+	}
+	if(options.render_ground)
+	{
+		_render_ground();
 	}
 }
 
@@ -616,4 +707,32 @@ void RenderEngine::render_bounding_boxes(bool on)
 void RenderEngine::render_lights(bool on)
 {
 	options.render_lights = on;
+}
+
+void RenderEngine::render_ground(bool on)
+{
+	options.render_ground = on;
+}
+
+void RenderEngine::_gen_scene_bounding_box()
+{
+	state.scene.bb = {
+		.min_x = std::numeric_limits<float>::infinity(),
+		.min_y = std::numeric_limits<float>::infinity(),
+		.min_z = std::numeric_limits<float>::infinity(),
+		.max_x = -std::numeric_limits<float>::infinity(),
+		.max_y = -std::numeric_limits<float>::infinity(),
+		.max_z = -std::numeric_limits<float>::infinity()
+	};
+
+	for (auto model: state.scene.models)
+	{
+		state.scene.bb.min_x = std::min(state.scene.bb.min_x, model.bb.min_x);
+		state.scene.bb.min_y = std::min(state.scene.bb.min_y, model.bb.min_y);
+		state.scene.bb.min_z = std::min(state.scene.bb.min_z, model.bb.min_z);
+
+		state.scene.bb.max_x = std::max(state.scene.bb.max_x, model.bb.max_x);
+		state.scene.bb.max_y = std::max(state.scene.bb.max_y, model.bb.max_y);
+		state.scene.bb.max_z = std::max(state.scene.bb.max_z, model.bb.max_z);
+	}
 }

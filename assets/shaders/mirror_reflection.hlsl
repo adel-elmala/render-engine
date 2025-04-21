@@ -12,7 +12,7 @@ cbuffer light_mats : register(b1)
 	float4x4 lightNDC;
 };
 
-Texture2D t: register(t0);
+Texture2D reflected_scene: register(t0);
 Texture2D<float> light_depth: register(t1);
 SamplerState s: register(s0);
 
@@ -46,16 +46,17 @@ VS_Output vs_main(VS_Input input)
 
 float4 ps_main(VS_Output input) : SV_Target
 {
-	uint rtv_width , rtv_height, levels;
-	t.GetDimensions(0, rtv_width, rtv_height, levels);
-	float2 uv = float2(input.pos.x / rtv_width,  input.pos.y / rtv_height); 
-	float4 reflection =  t.Sample(s, uv);
+	// uint rtv_width , rtv_height, levels;
+	// reflected_scene.GetDimensions(0, rtv_width, rtv_height, levels);
+	// float2 uv = float2(input.pos.x / rtv_width,  input.pos.y / rtv_height); 
+	// float4 reflection =  reflected_scene.Sample(s, uv);
 
-	float2 depth_uv = input.pos_in_light_view.xy * float2(0.5f,0.5f) + float2(0.5f,0.5f);
-	bool in_shadow = light_depth.Sample(s, depth_uv) <= input.pos_in_light_view.z;
+	// float2 depth_uv = input.pos_in_light_view.xy * float2(0.5f,0.5f) + float2(0.5f,0.5f);
+	// bool in_shadow = light_depth.Sample(s, depth_uv) <= input.pos_in_light_view.z;
 
-	if (in_shadow)
-		return float4(0,0,0,1);
-	else
-		return reflection;
+	// if (in_shadow)
+	// 	return float4(0,0,0,1);
+	// else
+	// 	return reflection;
+	return float4(0.6, 0.4, 0.3, 1.0);
 }

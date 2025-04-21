@@ -215,6 +215,7 @@ struct Scene
 	std::vector<PointLight> pLights;
 	std::vector<DirLight> dLights;
 	Camera cam;
+	Bounding_Box bb;
 };
 
 struct Engine_State

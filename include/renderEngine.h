@@ -14,6 +14,7 @@ struct Engine_Options
 {
 	bool render_bounding_boxes;
 	bool render_lights;
+	bool render_ground;
 };
 
 // TODO[adel] : use strategy design pattern to switch between rasterizer/ray tracer/vulkan
@@ -32,6 +33,7 @@ public:
 	void render_frame();
 	void render_bounding_boxes(bool on);
 	void render_lights(bool on);
+	void render_ground(bool on);
 	void flush_frame();
 	bool should_exit();
 	Render_Pass* create_render_pass(Program &p, Render_Target &render_target, std::wstring name);
@@ -54,6 +56,8 @@ public:
 	void _render_opaques();
 	void _render_bounding_boxes();
 	void _render_lights();
+	void _render_ground();
+	void _gen_scene_bounding_box();
 	std::vector<glm::vec4>* _bounding_box_lines(Bounding_Box bb);
 	
 	std::unique_ptr<Geometry> m_geometry;
