@@ -17,7 +17,7 @@ class D3D11Wrapper
 {
 public:
 	void initD3D11();
-	void render_frame(std::vector<Render_Pass> &passes);
+	void render_frame(std::vector<Render_Pass*> &passes);
 	void cleanup();
 	void bind_state(Engine_State *engine_state)
 	{
@@ -53,6 +53,8 @@ public:
 	void _d3d11_create_rasterizer_state();
 	void _d3d11_create_depth_stencil_state();
 	void _d3d11_create_sampler_state();
+	D3D11_PRIMITIVE_TOPOLOGY _drawing_mode(DRAWING_MODE mode);
+
 
 private:
 	Engine_State *state;

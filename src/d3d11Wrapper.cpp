@@ -515,7 +515,21 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_depth_stencil_state();
 }
 
-void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
+D3D11_PRIMITIVE_TOPOLOGY D3D11Wrapper::_drawing_mode(DRAWING_MODE mode)
+{
+	switch (mode)
+	{
+	case DRAWING_MODE_POINTS:
+		return D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+	case DRAWING_MODE_LINES:
+		return D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+	case DRAWING_MODE_TRIANGLES:
+		return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	default:
+		break;
+	}
+}
+void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 {
 	FLOAT backgroundColor[4] = {0.1f, 0.2f, 0.6f, 1.0f};
 	backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
@@ -529,15 +543,16 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		GetClientRect(state->window.win32_win, &winRect);
 		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
 		d3d11DeviceContext->RSSetViewports(1, &viewport);
-		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0].render_target.color_view_handle), backgroundColor);
-		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0]->render_target.color_view_handle), backgroundColor);
+		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0]->render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 		// d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[1].render_target.color_view_handle), backgroundColor);
 		// d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[1].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 		// d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[2].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
-	for (auto &pass : passes)
+	for (auto p : passes)
 	{
+		auto pass = *p;
+		d3d11DeviceContext->IASetPrimitiveTopology(_drawing_mode(pass.mode));
 		_d3d11_begin_pass(pass.name);
 		auto rtv = (ID3D11RenderTargetView *)pass.render_target.color_view_handle;
 		auto dsv = (ID3D11DepthStencilView *)pass.render_target.depth_view_handle;
@@ -607,11 +622,12 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass> &passes)
 		_d3d11_begin_pass(L"final pass - overlay");
 		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
 		d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
+		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		d3d11DeviceContext->VSSetShader(overlayVertexShader, nullptr, 0);
 		d3d11DeviceContext->PSSetShader(overlayPixelShader, nullptr, 0);
 
-		d3d11DeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView **)&passes.back().render_target.color.view_handle);
+		d3d11DeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView **)&passes.back()->render_target.color.view_handle);
 		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 
 		d3d11DeviceContext->Draw(6, 0);

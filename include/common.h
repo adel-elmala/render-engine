@@ -189,6 +189,12 @@ struct Input_Layout
 	std::vector<Element_Desc> elements;
 };
 
+struct Bounding_Box
+{
+	float min_x, min_y, min_z;
+	float max_x, max_y, max_z;
+};
+
 struct Model
 {
 	std::vector<Vertex_attribute> verts;
@@ -198,6 +204,7 @@ struct Model
 	std::string map_kd;
 	bool cast_shadow;
 	glm::mat4 model_world_transfrom;
+	Bounding_Box bb;
 };
 
 struct Scene
@@ -252,4 +259,5 @@ struct Render_Pass
 	std::wstring name;
 	Program used_prog;
 	Render_Target render_target;
+	DRAWING_MODE mode;
 };

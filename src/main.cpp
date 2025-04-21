@@ -43,6 +43,7 @@ int main(int argc, char **argv)
 	cam.sensitivity = 3.5f;
 	engine.scene_update_camera(cam);
 
+	engine.render_bounding_boxes(true);
 	engine.scene_finish();
 	// TODO(adel): tell the engine where is the view-volume (optionally)
 

@@ -35,6 +35,14 @@ Model SceneManager::parse_model(const std::string &path)
 {
 	Model model;
 	model.model_world_transfrom = glm::identity<glm::mat4>();
+	model.bb.min_x = std::numeric_limits<float>::infinity();
+	model.bb.min_y = std::numeric_limits<float>::infinity();
+	model.bb.min_z = std::numeric_limits<float>::infinity();
+
+	model.bb.max_x = - std::numeric_limits<float>::infinity();
+	model.bb.max_y = - std::numeric_limits<float>::infinity();
+	model.bb.max_z = - std::numeric_limits<float>::infinity();
+
 	auto mesh = (fastObjMesh *)fast_obj_read(path.c_str());
 
 	for (size_t i = 0; i < mesh->index_count;)
@@ -52,15 +60,39 @@ Model SceneManager::parse_model(const std::string &path)
 							 -mesh->positions[vert_0_index.p * 3 + 2],
 							 1.0f};
 
+		model.bb.min_x = std::min(model.bb.min_x, vt_0.pos.x);
+		model.bb.min_y = std::min(model.bb.min_y, vt_0.pos.y);
+		model.bb.min_z = std::min(model.bb.min_z, vt_0.pos.z);
+		
+		model.bb.max_x = std::max(model.bb.max_x, vt_0.pos.x);
+		model.bb.max_y = std::max(model.bb.max_y, vt_0.pos.y);
+		model.bb.max_z = std::max(model.bb.max_z, vt_0.pos.z);
+
 		vt_1.pos = glm::vec4{mesh->positions[vert_1_index.p * 3],
 							 mesh->positions[vert_1_index.p * 3 + 1],
 							 -mesh->positions[vert_1_index.p * 3 + 2],
 							 1.0f};
 
+		model.bb.min_x = std::min(model.bb.min_x, vt_1.pos.x);
+		model.bb.min_y = std::min(model.bb.min_y, vt_1.pos.y);
+		model.bb.min_z = std::min(model.bb.min_z, vt_1.pos.z);
+		
+		model.bb.max_x = std::max(model.bb.max_x, vt_1.pos.x);
+		model.bb.max_y = std::max(model.bb.max_y, vt_1.pos.y);
+		model.bb.max_z = std::max(model.bb.max_z, vt_1.pos.z);
+
 		vt_2.pos = glm::vec4{mesh->positions[vert_2_index.p * 3],
 							 mesh->positions[vert_2_index.p * 3 + 1],
 							 -mesh->positions[vert_2_index.p * 3 + 2],
 							 1.0f};
+
+		model.bb.min_x = std::min(model.bb.min_x, vt_2.pos.x);
+		model.bb.min_y = std::min(model.bb.min_y, vt_2.pos.y);
+		model.bb.min_z = std::min(model.bb.min_z, vt_2.pos.z);
+		
+		model.bb.max_x = std::max(model.bb.max_x, vt_2.pos.x);
+		model.bb.max_y = std::max(model.bb.max_y, vt_2.pos.y);
+		model.bb.max_z = std::max(model.bb.max_z, vt_2.pos.z);
 
 		vt_0.uv = glm::vec2{mesh->texcoords[vert_0_index.t * 2],
 							mesh->texcoords[vert_0_index.t * 2 + 1]};

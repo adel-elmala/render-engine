@@ -18,7 +18,6 @@ void RenderEngine::RenderEngine_init_d3d11()
 	state.running = true;
 	init_camera();
 	init_view_volume();
-	set_drawing_mode(DRAWING_MODE::DRAWING_MODE_TRIANGLES);
 
 	m_win_manager = std::make_unique<WindowManager>();
 	m_win_manager->bind_state(&state);
@@ -37,6 +36,7 @@ void RenderEngine::RenderEngine_init_d3d11()
 RenderEngine::RenderEngine(BACKEND backend)
 {
 	state.backend = backend;
+	options = {};
 	switch (backend)
 	{
 	case BACKEND_D3D11:
@@ -49,7 +49,7 @@ RenderEngine::RenderEngine(BACKEND backend)
 	}
 }
 
-void RenderEngine::render_frame_d3d11(std::vector<Render_Pass> passes)
+void RenderEngine::render_frame_d3d11(std::vector<Render_Pass*> passes)
 {
 	// ZoneScoped;
 	auto start = std::chrono::system_clock::now();
@@ -70,8 +70,8 @@ void RenderEngine::update_resources()
 	m_geometry->update_perspective_transform();
 	for(auto& pass: passes)
 	{
-		pass.used_prog.vs.update_uniforms();
-		pass.used_prog.ps.update_uniforms();
+		pass->used_prog.vs.update_uniforms();
+		pass->used_prog.ps.update_uniforms();
 	}
 }
 
@@ -107,6 +107,10 @@ RenderEngine::~RenderEngine()
 	{
 		// engine_loop.join();
 		m_d3d11_wrapper->cleanup();
+	}
+	for (auto pass : passes)
+	{
+		delete pass;
 	}
 }
 
@@ -156,18 +160,18 @@ void RenderEngine::init_view_volume()
 	}
 }
 
-void RenderEngine::set_drawing_mode(DRAWING_MODE mode)
+void RenderEngine::set_drawing_mode(Render_Pass* pass, DRAWING_MODE mode)
 {
 	// ZoneScoped;
-	state.mode = mode;
+	pass->mode = mode;
 }
 
-Render_Pass RenderEngine::create_render_pass(Program &p, Render_Target &render_target, std::wstring name)
+Render_Pass* RenderEngine::create_render_pass(Program &p, Render_Target &render_target, std::wstring name)
 {
-	Render_Pass pass{};
-	pass.used_prog = p;
-	pass.render_target = render_target;
-	pass.name = name;
+	auto pass = new Render_Pass{};
+	pass->used_prog = p;
+	pass->render_target = render_target;
+	pass->name = name;
 	passes.push_back(pass);
 
 	return pass;
@@ -354,7 +358,97 @@ struct opaque_pass_mats_unifrom
 	glm::mat4 camera_ndc;
 };
 
-void RenderEngine::render_opaques()
+void RenderEngine::_render_bounding_boxes()
+{
+	size_t model_id = 0;
+	for (auto& model: state.scene.models)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		mats->model_world = m_geometry->model_world_transform;
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+		std::vector<Texture> vs_textures = {};
+
+		auto vs_update = [this, &model, mats]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		Input_Layout layout{};
+		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+		layout.elements = {e0};
+
+		glm::vec4 p0(model.bb.min_x, model.bb.min_y, model.bb.min_z, 1.0f);
+		glm::vec4 p1(model.bb.max_x, model.bb.min_y, model.bb.min_z, 1.0f);
+		glm::vec4 p2(model.bb.max_x, model.bb.max_y, model.bb.min_z, 1.0f);
+		glm::vec4 p3(model.bb.min_x, model.bb.max_y, model.bb.min_z, 1.0f);
+
+		glm::vec4 p4(model.bb.min_x, model.bb.min_y, model.bb.max_z, 1.0f);
+		glm::vec4 p5(model.bb.max_x, model.bb.min_y, model.bb.max_z, 1.0f);
+		glm::vec4 p6(model.bb.max_x, model.bb.max_y, model.bb.max_z, 1.0f);
+		glm::vec4 p7(model.bb.min_x, model.bb.max_y, model.bb.max_z, 1.0f);
+
+		// TODO(adel): fix leak
+		// NOTE(adel): each triangle has 4 points, as the end point is to enclose the tringle when rendering using line strips primitives
+		// NOTE(adel): many points can be removed, otherwise lines will be redrawn, but kept this way for simplicity
+		auto bb_verts = new std::vector<glm::vec4>{
+			p0, p1, p2, p0, // front face - t1
+			p0, p2, p3, p0, // front face - t2
+			p1, p5, p6, p1, // right face - t1
+			p1, p6, p2, p1, // right face - t2
+			p4, p5, p6, p4, // back face - t1
+			p4, p6, p7, p4, // back face - t2
+			p0, p4, p7, p0, // left face - t1
+			p0, p7, p3, p0, // left face - t2
+			p3, p2, p6, p3, // top face - t1
+			p3, p6, p7, p3, // top face - t2
+			p0, p1, p5, p0, // bottom face - t1
+			p0, p5, p4, p0	// bottom face - t2
+		};
+
+		auto _prog = create_program(
+			vs,
+			ps,
+			layout,
+			bb_verts->data(),
+			bb_verts->size() * sizeof(glm::vec4),
+			sizeof(glm::vec4),
+			0,
+			bb_verts->size());
+
+		auto pass = create_render_pass(_prog, main_rt, L"pass - render bounding boxes");
+		set_drawing_mode(pass, DRAWING_MODE_LINES);
+	}
+}
+
+void RenderEngine::_render_opaques()
 {
 	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
 	main_rt = create_render_target(
@@ -376,7 +470,7 @@ void RenderEngine::render_opaques()
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
 		std::vector<Texture> vs_textures = {};
 
-		auto vs_update = [this, model_id, &model, &plight, mats]()
+		auto vs_update = [this, &model, mats]()
 		{
 			opaque_pass_mats_unifrom new_mats{};
 			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
@@ -415,12 +509,22 @@ void RenderEngine::render_opaques()
 			0,
 			model.verts.size());
 
-		create_render_pass(_prog, main_rt, L"pass - render opaques");
+		auto pass = create_render_pass(_prog, main_rt, L"pass - render opaques");
+		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 	}
 }
 
 void RenderEngine::scene_finish()
 {
 	// opqaue pass
-	render_opaques();
+	_render_opaques();
+	if (options.render_bounding_boxes)
+	{
+		_render_bounding_boxes(); // TODO(adel): support togglling bounding boxes rendering 
+	}
+}
+
+void RenderEngine::render_bounding_boxes(bool on)
+{
+	options.render_bounding_boxes = on;
 }
