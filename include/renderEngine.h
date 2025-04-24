@@ -16,6 +16,7 @@ struct Engine_Options
 	bool render_lights;
 	bool render_ground;
 	bool render_skybox;
+	bool render_shadows;
 	bool ground_is_mirror;
 };
 
@@ -38,6 +39,7 @@ public:
 	void render_lights(bool on);
 	void render_ground(bool on);
 	void render_skybox(bool on);
+	void render_shadows(bool on);
 	void mirror_ground(bool on);
 	void set_clear_color(glm::vec4 color);
 	void flush_frame();
@@ -65,6 +67,7 @@ public:
 	void _render_lights();
 	void _render_ground();
 	void _render_skybox();
+	void _render_shadows();
 	void _gen_scene_bounding_box();
 	std::vector<glm::vec4>* _bounding_box_lines(Bounding_Box bb);
 	
@@ -73,6 +76,7 @@ public:
 	Engine_State state;
 	std::vector<Render_Pass*> passes;
 	Render_Target main_rt;
+	Render_Target depth_rt;
 	Render_Target mirrored_scene_rt;
 	std::thread engine_loop;
 	Engine_Options options;

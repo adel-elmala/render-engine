@@ -81,6 +81,7 @@ void Geometry::update_camera_transform()
 	if (state->window.move_cam_back)
 		state->scene.cam.position += state->backend == BACKEND_D3D11 ? -w * state->scene.cam.sensitivity : w * state->scene.cam.sensitivity;
 
+	gaze = eye + gaze;
 	glm::mat4 translate_eye_to_origin(
 		{1.0f, 0.0f, 0.0f, -eye.x},
 		{0.0f, 1.0f, 0.0f, -eye.y},
@@ -93,7 +94,8 @@ void Geometry::update_camera_transform()
 		{w, 0.0f},
 		{0.0f, 0.0f, 0.0f, 1.0f});
 
-	world_camera_transform = glm::transpose(align_basis) * glm::transpose(translate_eye_to_origin);
+	// world_camera_transform = glm::transpose(align_basis) * glm::transpose(translate_eye_to_origin);
+	world_camera_transform = glm::lookAtLH(eye, gaze, up);
 }
 
 void Geometry::update_perspective_transform()
@@ -126,7 +128,11 @@ void Geometry::update_perspective_transform()
 
 	glm::mat4 persp(rp0, rp1, rp2, rp3);
 
-	camera_ndc_transform = glm::transpose(orth) * glm::transpose(persp);
+	// camera_ndc_transform = glm::transpose(orth) * glm::transpose(persp);
+	// new_mats_light.world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
+	float fovy = atan2f(t, n) * 2;
+	camera_ndc_transform = glm::perspectiveLH(fovy, (float)state->window.width / state->window.height, n, f);
+
 }
 
 void Geometry::update_viewport_transform()

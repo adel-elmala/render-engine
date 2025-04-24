@@ -497,13 +497,23 @@ void RenderEngine::_render_ground()
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
 	std::vector<Texture> vs_textures = {};
 
-	auto vs_update = [this, mats]()
+	auto vs_update = [this, mats, light_mats, scene_center, fovy, used_plight]()
 	{
 		opaque_pass_mats_unifrom new_mats{};
 		new_mats.model_world = m_geometry->model_world_transform;
 		new_mats.world_camera = m_geometry->world_camera_transform;
 		new_mats.camera_ndc = m_geometry->camera_ndc_transform;
 		memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+
+		auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+		auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
+
+		opaque_pass_mats_unifrom new_mats_light{};
+		new_mats_light.model_world = m_geometry->model_world_transform;
+		new_mats_light.world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
+		new_mats_light.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+
+		memcpy(light_mats, &new_mats_light, sizeof(opaque_pass_mats_unifrom));
 	};
 
 	auto vs = create_shader(
@@ -515,8 +525,9 @@ void RenderEngine::_render_ground()
 		vs_update);
 
 	auto ps_uniform_mirror_option = create_uniform("mirror", &options.ground_is_mirror, sizeof(bool), 0);
+	auto ps_uniform_shadow_option = create_uniform("shadow", &options.render_shadows, sizeof(bool), 1);
 
-	std::vector<Uniform> ps_uniforms = {ps_uniform_mirror_option};
+	std::vector<Uniform> ps_uniforms = {ps_uniform_mirror_option, ps_uniform_shadow_option};
 	std::vector<Texture> ps_textures = {};
 	if (options.ground_is_mirror)
 	{
@@ -524,8 +535,12 @@ void RenderEngine::_render_ground()
 		reflected_scene.binding_point = 0;
 		ps_textures.push_back(reflected_scene);
 	}
-	// auto t2 = passes[2]->render_target.depth;
-	// t2.binding_point = 1;
+	if (options.render_shadows)
+	{
+		auto depth_map = depth_rt.depth;
+		depth_map.binding_point = 1;
+		ps_textures.push_back(depth_map);
+	}
 
 	auto ps_update = [](){};
 
@@ -636,7 +651,6 @@ void RenderEngine::_render_opaques()
 		state.window.height,
 		state.window.bytes_per_pixel);
 
-	size_t model_id = 0;
 	for (auto& model: state.scene.models)
 	{
 		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
@@ -832,6 +846,90 @@ void RenderEngine::_render_skybox()
 	set_drawing_mode(skybox_pass, DRAWING_MODE_TRIANGLES);
 }
 
+void RenderEngine::_render_shadows()
+{
+	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
+	depth_rt = create_render_target(
+		"",
+		state.window.width,
+		state.window.height,
+		state.window.bytes_per_pixel);
+
+	auto scene_width = state.scene.bb.max_x - state.scene.bb.min_x;
+	auto scene_height = state.scene.bb.max_y - state.scene.bb.min_y;
+	auto scene_depth = state.scene.bb.max_z - state.scene.bb.min_z;
+
+	auto scene_center = glm::vec3(
+		state.scene.bb.min_x + scene_width / 2.0,
+		state.scene.bb.min_y,
+		state.scene.bb.min_z + scene_depth / 2.0);
+
+	for (auto &model : state.scene.models)
+	{
+		if (model.cast_shadow == false)
+			continue;
+
+		auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+		auto light_dir = glm::vec3(scene_center_ws) - plight.position;
+		float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
+
+		auto light_mats = new opaque_pass_mats_unifrom;
+		light_mats->model_world = m_geometry->model_world_transform;
+		light_mats->world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
+		light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+
+		auto vs_uniform_mat = create_uniform("mats", light_mats, sizeof(opaque_pass_mats_unifrom), 0);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+		std::vector<Texture> vs_textures = {};
+
+		auto vs_update = [this, light_mats, plight, fovy, scene_center]()
+		{
+			auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+			auto light_dir = glm::vec3(scene_center_ws) - plight.position;
+
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = m_geometry->model_world_transform;
+			new_mats.world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
+			new_mats.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+
+			memcpy(light_mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = create_shader(
+			L"../../assets/shaders/depth.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture> ps_textures = {};
+		auto ps_update = []() {};
+
+		auto ps = create_shader(
+			L"../../assets/shaders/depth.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		auto prog = create_program(
+			vs,
+			ps,
+			model.layout,
+			model.verts.data(),
+			model.verts.size() * sizeof(Vertex_attribute),
+			sizeof(Vertex_attribute),
+			0,
+			model.verts.size());
+
+		auto pass = create_render_pass(prog, depth_rt, L"pass - render light view depth", clear_color);
+		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+	}
+}
+
 void RenderEngine::scene_finish()
 {
 	// opqaue pass
@@ -839,13 +937,17 @@ void RenderEngine::scene_finish()
 	_gen_scene_bounding_box();
 	if (options.render_bounding_boxes)
 	{
-		_render_bounding_boxes(); // TODO(adel): support togglling bounding boxes rendering 
+		_render_bounding_boxes();
 	}
 	if (options.render_lights)
 	{
 		_render_lights();
 	}
-	if(options.render_ground)
+	if (options.render_shadows)
+	{
+		_render_shadows();
+	}
+	if (options.render_ground)
 	{
 		if (options.ground_is_mirror)
 		{
@@ -853,7 +955,7 @@ void RenderEngine::scene_finish()
 		}
 		_render_ground();
 	}
-	if(options.render_skybox)
+	if (options.render_skybox)
 	{
 		_render_skybox();
 	}
@@ -882,6 +984,11 @@ void RenderEngine::mirror_ground(bool on)
 void RenderEngine::render_skybox(bool on)
 {
 	options.render_skybox &= on;
+}
+
+void RenderEngine::render_shadows(bool on)
+{
+	options.render_shadows = on;
 }
 
 void RenderEngine::set_clear_color(glm::vec4 color)
