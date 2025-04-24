@@ -1,8 +1,13 @@
 #include "../include/windowManager.h"
 
-#include <iostream>
+#include "imgui.h"
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_dx11.h"
+
 #include <SDL.h>
 #include <SDL_syswm.h>
+
+#include <iostream>
 
 WindowManager::WindowManager() : m_width{800}, m_height{600}, state{}, draw_frame_callback{nullptr}
 {
@@ -22,6 +27,21 @@ void WindowManager::run()
 	init();
 }
 
+void WindowManager::init_imgui()
+{
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO &io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+
+	ImGui::StyleColorsDark();
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplSDL2_InitForD3D(m_window_handle);
+	ImGui_ImplDX11_Init((ID3D11Device *)state->gpu.device, (ID3D11DeviceContext *)state->gpu.context);
+}
+
 bool WindowManager::init()
 {
 	// ZoneScoped;
@@ -32,6 +52,10 @@ bool WindowManager::init()
 	}
 	else
 	{
+		// From 2.0.18: Enable native IME.
+	#ifdef SDL_HINT_IME_SHOW_UI
+		SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+	#endif
 		m_window_handle = SDL_CreateWindow(
 			"window title",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -110,9 +134,13 @@ void WindowManager::start_event_loop()
 {
 	// ZoneScoped;
 	SDL_Event event;
+	ImGuiIO &io = ImGui::GetIO();
 	// std::scoped_lock lock(state->window.m);
 	while (SDL_PollEvent(&event) != 0)
 	{
+		ImGui_ImplSDL2_ProcessEvent(&event);
+		if (io.WantCaptureMouse || io.WantCaptureKeyboard)
+			continue;
 		switch (event.type)
 		{
 		case SDL_QUIT:

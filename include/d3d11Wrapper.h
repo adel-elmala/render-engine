@@ -57,8 +57,10 @@ public:
 
 
 private:
-	Engine_State *state;
+	void _cleanup_imgui();
+	void _frame_imgui();
 
+	Engine_State *state;
 	// d3d11 handles
 	ID3D11Device1 *d3d11Device;
 	ID3D11DeviceContext1 *d3d11DeviceContext;

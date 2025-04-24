@@ -17,6 +17,16 @@ set(D3D11_SRC "src/d3d11Wrapper.cpp" "include/d3d11Wrapper.h")
 # logger module src
 set(LOGGER_SRC "src/logger.cpp" "include/logger.h")
 
+#imgui
+set(IMGUI_SRC 
+"thirdparty/imgui/imgui.cpp"
+"thirdparty/imgui/imgui_demo.cpp"
+"thirdparty/imgui/imgui_draw.cpp"
+"thirdparty/imgui/imgui_tables.cpp"
+"thirdparty/imgui/imgui_widgets.cpp"
+"thirdparty/imgui/backends/imgui_impl_dx11.cpp" "thirdparty/imgui/backends/imgui_impl_sdl2.cpp")
+
+
 # required external libs
 find_package(Vulkan REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
@@ -24,6 +34,14 @@ find_package(glm CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
 find_package(Stb REQUIRED)
+
+# imgui module library 
+add_library(imgui_module STATIC ${IMGUI_SRC})
+target_include_directories(imgui_module PUBLIC "thirdparty/imgui")
+target_link_libraries(imgui_module PUBLIC
+$<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> # SDL2
+$<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+)
 
 # logger module library 
 add_library(logger_module STATIC ${LOGGER_SRC})
@@ -35,7 +53,9 @@ target_link_libraries(Vulkan_module PUBLIC glfw glm::glm Vulkan::Vulkan logger_m
 
 # d3d11 module library 
 add_library(D3D11_module STATIC ${D3D11_SRC})
-target_link_libraries(D3D11_module PUBLIC glm::glm d3d11.lib d3dcompiler.lib dxguid.lib)
+target_link_libraries(D3D11_module PUBLIC glm::glm d3d11.lib d3dcompiler.lib dxguid.lib imgui_module)
+
+
 
 # render engine exe.
 add_executable(${PROJECT_NAME} ${SRC} ${HEADER})

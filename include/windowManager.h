@@ -24,6 +24,7 @@ public:
 	}
 	void run();
 	HWND native_win32_handle();
+	void init_imgui();
 
 	SDL_Surface *m_window_surface;
 

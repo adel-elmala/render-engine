@@ -149,8 +149,6 @@ enum BACKEND
 	BACKEND_VULKAN
 };
 
-
-
 struct Uniform
 {
 	Handle_t handle;
@@ -219,8 +217,15 @@ struct Scene
 	Bounding_Box bb;
 };
 
+struct GPU_Handle
+{
+	Handle_t device;
+	Handle_t context;
+};
+
 struct Engine_State
 {
+	GPU_Handle gpu; 
 	Window window;
 	Scene scene;
 	ViewVolume view_volume;

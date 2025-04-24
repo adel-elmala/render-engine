@@ -9,6 +9,11 @@
 #include "glm/ext.hpp"
 #include <glm/gtc/matrix_access.hpp>
 
+#include "imgui.h"
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_dx11.h"
+
+
 void D3D11Wrapper::_d3d11_create_device()
 {
 	ID3D11Device *baseDevice;
@@ -513,6 +518,8 @@ void D3D11Wrapper::initD3D11()
 	_d3d11_create_sampler_state();
 	_d3d11_create_rasterizer_state();
 	_d3d11_create_depth_stencil_state();
+	state->gpu.device = (Handle_t)d3d11Device;
+	state->gpu.context = (Handle_t)d3d11DeviceContext;
 }
 
 D3D11_PRIMITIVE_TOPOLOGY D3D11Wrapper::_drawing_mode(DRAWING_MODE mode)
@@ -633,13 +640,19 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 
 		d3d11DeviceContext->Draw(6, 0);
-
-		ID3D11RenderTargetView *null_rtv = nullptr;
-		ID3D11ShaderResourceView *null_srv = nullptr;
-		d3d11DeviceContext->OMSetRenderTargets(1, &null_rtv, nullptr);
-		d3d11DeviceContext->PSSetShaderResources(0, 1, &null_srv);
 		_d3d11_end_pass();
 	}
+
+	// imgui pass
+	{
+		_frame_imgui();
+	}
+
+	ID3D11RenderTargetView *null_rtv = nullptr;
+	ID3D11ShaderResourceView *null_srv = nullptr;
+	d3d11DeviceContext->OMSetRenderTargets(1, &null_rtv, nullptr);
+	d3d11DeviceContext->PSSetShaderResources(0, 1, &null_srv);
+
 	d3d11SwapChain->Present(1, 0);
 }
 
@@ -666,7 +679,7 @@ void D3D11Wrapper::cleanup()
 	for (auto &s : shaders)
 		s->Release();
 
-	// d3d11DepthStencilView->Release();
+	_cleanup_imgui();
 	rasterizerState->Release();
 	depthStencilState->Release();
 
@@ -674,4 +687,24 @@ void D3D11Wrapper::cleanup()
 	d3d11SwapChain->Release();
 	d3d11DeviceContext->Release();
 	d3d11Device->Release();
+
+}
+
+void D3D11Wrapper::_cleanup_imgui()
+{
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
+}
+
+void D3D11Wrapper::_frame_imgui()
+{
+	bool show_demo = true;
+	// Start the Dear ImGui frame
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplSDL2_NewFrame();
+	ImGui::NewFrame();
+	ImGui::ShowDemoWindow(&show_demo);
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }

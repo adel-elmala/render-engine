@@ -57,7 +57,7 @@ void RenderEngine::RenderEngine_init_d3d11()
 	m_win_manager->bind_state(&state);
 	m_win_manager->run();
 
-	m_scene_manager= std::make_unique<SceneManager>();
+	m_scene_manager = std::make_unique<SceneManager>();
 
 	m_geometry = std::make_unique<Geometry>();
 	m_geometry->bind_state(&state);
@@ -65,6 +65,8 @@ void RenderEngine::RenderEngine_init_d3d11()
 	m_d3d11_wrapper = std::make_unique<D3D11Wrapper>();
 	m_d3d11_wrapper->bind_state(&state);
 	m_d3d11_wrapper->initD3D11();
+
+	m_win_manager->init_imgui();
 }
 
 void RenderEngine::render_frame_d3d11(std::vector<Render_Pass*> passes)
