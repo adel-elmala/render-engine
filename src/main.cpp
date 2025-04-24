@@ -2,19 +2,6 @@
 
 #include "../include/renderEngine.h"
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
-
-struct _pass_0_mats
-{
-	glm::mat4 model_world;
-	glm::mat4 world_camera;
-	glm::mat4 camera_ndc;
-};
-
-struct _pass_1_mat
-{
-	glm::mat4 NDCWorld;
-};
 
 int main(int argc, char **argv)
 {
@@ -43,15 +30,17 @@ int main(int argc, char **argv)
 	cam.sensitivity = 3.5f;
 	engine.scene_update_camera(cam);
 
+	auto skybox = engine.m_scene_manager->load_env_texture_cube("../../assets/models/skybox/");
+	engine.scene_add_skybox(skybox);
+
 	engine.render_bounding_boxes(true);
 	engine.render_lights(true);
 	engine.render_ground(true);
+	engine.render_skybox(true);
 	engine.mirror_ground(true);
 	engine.set_clear_color(glm::vec4(0.1, 0.2, 0.6, 1.0));
 	engine.scene_finish();
 	// TODO(adel): tell the engine where is the view-volume (optionally)
-
-
 
 	// // TODO(adel): mark the models if it casts shadow or not, and do this pass internally
 	// // depth pass - render light camera's depth map
@@ -108,64 +97,6 @@ int main(int argc, char **argv)
 	// 	auto depth_pass = engine.create_render_pass(depth_pass_prog, depth_pass_render_target, L"pass - render light camera depth");
 	// }
 
-
-	// // TODO(adel): optioanlly render the skybox throung an  option to the engine
-	// // pass 4 - render skybox
-	// {
-	// 	_pass_1_mat mat{};
-	// 	mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
-
-	// 	auto skybox_pass_vs_uniform_mat = engine.create_uniform("mats", &mat, sizeof(mat), 0);
-	// 	std::vector<Uniform> skybox_pass_vs_uniforms = {skybox_pass_vs_uniform_mat};
-	// 	std::vector<Texture> skybox_pass_vs_textures = {};
-
-	// 	auto skybox_pass_vs = engine.create_shader(
-	// 		L"../../assets/shaders/envMap.hlsl",
-	// 		"vs_main",
-	// 		SHADER_STAGE_VERTEX,
-	// 		skybox_pass_vs_uniforms,
-	// 		skybox_pass_vs_textures);
-
-	// 	auto env_map = engine.m_scene_manager->load_env_texture_cube("../../assets/models/skybox/");
-	// 	char *cube_data[6] = {
-	// 		env_map.right.data[0],
-	// 		env_map.left.data[0],
-	// 		env_map.top.data[0],
-	// 		env_map.bottom.data[0],
-	// 		env_map.front.data[0],
-	// 		env_map.back.data[0],
-	// 	};
-	// 	auto skybox_pass_ps_t = engine.create_texture(
-	// 		"skybox_pass_t",
-	// 		Texture::DIM_CUBE,
-	// 		cube_data,
-	// 		env_map.back.width, env_map.back.height,
-	// 		env_map.back.bytes_per_pixel,
-	// 		env_map.back.height * env_map.back.width * env_map.back.bytes_per_pixel,
-	// 		0);
-
-	// 	std::vector<Uniform> skybox_pass_ps_uniforms = {};
-	// 	std::vector<Texture> skybox_pass_ps_textures = {skybox_pass_ps_t};
-	// 	auto skybox_pass_ps = engine.create_shader(
-	// 		L"../../assets/shaders/envMap.hlsl",
-	// 		"ps_main",
-	// 		SHADER_STAGE_PIXEL,
-	// 		skybox_pass_ps_uniforms,
-	// 		skybox_pass_ps_textures);
-
-	// 	Input_Layout layout{};
-	// 	auto skybox_pass_prog = engine.create_program(
-	// 		skybox_pass_vs,
-	// 		skybox_pass_ps,
-	// 		layout,
-	// 		nullptr,
-	// 		0,
-	// 		0, 0, 6);
-
-	// 	auto skybox_pass_render_target = engine.passes[0].render_target;
-	// 	auto skybox_pass = engine.create_render_pass(skybox_pass_prog, skybox_pass_render_target, L"pass - render skybox");
-	// }
-
 	while (engine.should_exit() == false)
 	{
 		// _pass_0_mats depth_mats{};
@@ -178,12 +109,6 @@ int main(int argc, char **argv)
 
 		// engine.passes[3].used_prog.vs.uniforms[0].data = &mats;
 		// engine.passes[3].used_prog.vs.uniforms[1].data = &depth_mats;
-
-
-		// _pass_1_mat mat{};
-		// mat.NDCWorld = glm::inverse(engine.m_geometry->model_world_transform) * glm::inverse(engine.m_geometry->camera_ndc_transform);
-		// engine.passes[4].used_prog.vs.uniforms[0].data = &mat;
-
 		engine.render_frame();
 		engine.m_win_manager->start_event_loop();
 		engine.flush_frame();

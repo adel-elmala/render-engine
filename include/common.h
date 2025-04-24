@@ -214,6 +214,7 @@ struct Scene
 	std::vector<Model> models;
 	std::vector<PointLight> pLights;
 	std::vector<DirLight> dLights;
+	Env_map skybox;
 	Camera cam;
 	Bounding_Box bb;
 };

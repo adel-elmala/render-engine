@@ -9,6 +9,40 @@
 
 using namespace std::chrono_literals;
 
+RenderEngine::RenderEngine(BACKEND backend)
+{
+	state.backend = backend;
+	options = {};
+	switch (backend)
+	{
+	case BACKEND_D3D11:
+		RenderEngine_init_d3d11();
+		break;
+	case BACKEND_VULKAN:
+		break;
+	default:
+		break;
+	}
+}
+
+RenderEngine::~RenderEngine()
+{
+	// ZoneScoped;
+	if (state.backend == BACKEND_D3D11)
+	{
+		// engine_loop.join();
+		m_d3d11_wrapper->cleanup();
+	}
+	for (auto pass : passes)
+	{
+		delete pass;
+	}
+	for (auto bb: bounding_boxes)
+	{
+		delete bb;
+	}
+}
+
 void RenderEngine::RenderEngine_init_d3d11()
 {
 	// ZoneScoped;
@@ -31,22 +65,6 @@ void RenderEngine::RenderEngine_init_d3d11()
 	m_d3d11_wrapper = std::make_unique<D3D11Wrapper>();
 	m_d3d11_wrapper->bind_state(&state);
 	m_d3d11_wrapper->initD3D11();
-}
-
-RenderEngine::RenderEngine(BACKEND backend)
-{
-	state.backend = backend;
-	options = {};
-	switch (backend)
-	{
-	case BACKEND_D3D11:
-		RenderEngine_init_d3d11();
-		break;
-	case BACKEND_VULKAN:
-		break;
-	default:
-		break;
-	}
 }
 
 void RenderEngine::render_frame_d3d11(std::vector<Render_Pass*> passes)
@@ -100,22 +118,10 @@ bool RenderEngine::should_exit()
 	return !(state.running);
 }
 
-RenderEngine::~RenderEngine()
+void RenderEngine::scene_add_skybox(Env_map skybox)
 {
-	// ZoneScoped;
-	if (state.backend == BACKEND_D3D11)
-	{
-		// engine_loop.join();
-		m_d3d11_wrapper->cleanup();
-	}
-	for (auto pass : passes)
-	{
-		delete pass;
-	}
-	for (auto bb: bounding_boxes)
-	{
-		delete bb;
-	}
+	options.render_skybox = true;
+	state.scene.skybox = skybox;
 }
 
 void RenderEngine::scene_add_point_light(PointLight l)
@@ -754,6 +760,78 @@ void RenderEngine::_render_opaques_reflected()
 	}
 }
 
+struct _skybox_pass_uniform
+{
+	glm::mat4 NDCWorld;
+};
+
+void RenderEngine::_render_skybox()
+{
+	auto mat = new _skybox_pass_uniform;
+	mat->NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
+
+	auto vs_uniform_mat = create_uniform("mats", mat, sizeof(_skybox_pass_uniform), 0);
+	std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+	std::vector<Texture> vs_textures = {};
+
+	auto vs_update = [this, mat]()
+	{
+		_skybox_pass_uniform new_mats{};
+		new_mats.NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
+		memcpy(mat, &new_mats, sizeof(_skybox_pass_uniform));
+	};
+
+	auto vs = create_shader(
+		L"../../assets/shaders/envMap.hlsl",
+		"vs_main",
+		SHADER_STAGE_VERTEX,
+		vs_uniforms,
+		vs_textures,
+		vs_update);
+
+	char *cube_data[6] = {
+		state.scene.skybox.right.data[0],
+		state.scene.skybox.left.data[0],
+		state.scene.skybox.top.data[0],
+		state.scene.skybox.bottom.data[0],
+		state.scene.skybox.front.data[0],
+		state.scene.skybox.back.data[0],
+	};
+	auto ps_t = create_texture(
+		"skybox_pass_t",
+		Texture::DIM_CUBE,
+		cube_data,
+		state.scene.skybox.back.width, state.scene.skybox.back.height,
+		state.scene.skybox.back.bytes_per_pixel,
+		state.scene.skybox.back.height * state.scene.skybox.back.width * state.scene.skybox.back.bytes_per_pixel,
+		0);
+
+	std::vector<Uniform> ps_uniforms = {};
+	std::vector<Texture> ps_textures = {ps_t};
+
+	auto ps_update = [](){};
+
+	auto ps = create_shader(
+		L"../../assets/shaders/envMap.hlsl",
+		"ps_main",
+		SHADER_STAGE_PIXEL,
+		ps_uniforms,
+		ps_textures,
+		ps_update);
+
+	Input_Layout layout{};
+	auto prog = create_program(
+		vs,
+		ps,
+		layout,
+		nullptr,
+		0,
+		0, 0, 6);
+
+	auto skybox_pass = create_render_pass(prog, main_rt, L"pass - render skybox", clear_color);
+	set_drawing_mode(skybox_pass, DRAWING_MODE_TRIANGLES);
+}
+
 void RenderEngine::scene_finish()
 {
 	// opqaue pass
@@ -775,6 +853,10 @@ void RenderEngine::scene_finish()
 		}
 		_render_ground();
 	}
+	if(options.render_skybox)
+	{
+		_render_skybox();
+	}
 }
 
 void RenderEngine::render_bounding_boxes(bool on)
@@ -795,6 +877,11 @@ void RenderEngine::render_ground(bool on)
 void RenderEngine::mirror_ground(bool on)
 {
 	options.ground_is_mirror = on;
+}
+
+void RenderEngine::render_skybox(bool on)
+{
+	options.render_skybox &= on;
 }
 
 void RenderEngine::set_clear_color(glm::vec4 color)

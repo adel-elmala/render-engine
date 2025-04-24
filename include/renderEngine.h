@@ -15,6 +15,7 @@ struct Engine_Options
 	bool render_bounding_boxes;
 	bool render_lights;
 	bool render_ground;
+	bool render_skybox;
 	bool ground_is_mirror;
 };
 
@@ -28,6 +29,7 @@ public:
 	void scene_add_model(Model m);
 	void scene_add_point_light(PointLight l);
 	void scene_add_dir_light(DirLight l);
+	void scene_add_skybox(Env_map skybox);
 	void scene_update_camera(Camera cam);
 	void scene_finish();
 	void update_resources();
@@ -35,6 +37,7 @@ public:
 	void render_bounding_boxes(bool on);
 	void render_lights(bool on);
 	void render_ground(bool on);
+	void render_skybox(bool on);
 	void mirror_ground(bool on);
 	void set_clear_color(glm::vec4 color);
 	void flush_frame();
@@ -61,6 +64,7 @@ public:
 	void _render_bounding_boxes();
 	void _render_lights();
 	void _render_ground();
+	void _render_skybox();
 	void _gen_scene_bounding_box();
 	std::vector<glm::vec4>* _bounding_box_lines(Bounding_Box bb);
 	
