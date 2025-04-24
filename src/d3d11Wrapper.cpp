@@ -543,12 +543,14 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 		GetClientRect(state->window.win32_win, &winRect);
 		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
 		d3d11DeviceContext->RSSetViewports(1, &viewport);
-		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[0]->render_target.color_view_handle), backgroundColor);
-		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[0]->render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
-		// d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(passes[1].render_target.color_view_handle), backgroundColor);
-		// d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[1].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
-		// d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(passes[2].render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
+
+	for (auto p: passes)
+	{
+		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(p->render_target.color_view_handle), (FLOAT*)&(p->clear_color));
+		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(p->render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);	
+	}
+
 	for (auto p : passes)
 	{
 		auto pass = *p;

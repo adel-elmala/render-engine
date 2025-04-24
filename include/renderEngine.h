@@ -15,6 +15,7 @@ struct Engine_Options
 	bool render_bounding_boxes;
 	bool render_lights;
 	bool render_ground;
+	bool ground_is_mirror;
 };
 
 // TODO[adel] : use strategy design pattern to switch between rasterizer/ray tracer/vulkan
@@ -34,9 +35,11 @@ public:
 	void render_bounding_boxes(bool on);
 	void render_lights(bool on);
 	void render_ground(bool on);
+	void mirror_ground(bool on);
+	void set_clear_color(glm::vec4 color);
 	void flush_frame();
 	bool should_exit();
-	Render_Pass* create_render_pass(Program &p, Render_Target &render_target, std::wstring name);
+	Render_Pass* create_render_pass(Program &p, Render_Target &render_target, std::wstring name, glm::vec4 clear_color);
 	Program create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes);
 	Shader create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures, std::function<void()> update);
 	Uniform create_uniform(const char *name, void *data, size_t size, size_t binding_point);
@@ -54,6 +57,7 @@ public:
 	void init_camera();
 	void init_view_volume();
 	void _render_opaques();
+	void _render_opaques_reflected();
 	void _render_bounding_boxes();
 	void _render_lights();
 	void _render_ground();
@@ -65,7 +69,9 @@ public:
 	Engine_State state;
 	std::vector<Render_Pass*> passes;
 	Render_Target main_rt;
+	Render_Target mirrored_scene_rt;
 	std::thread engine_loop;
 	Engine_Options options;
 	std::vector<std::vector<glm::vec4>*> bounding_boxes;
+	glm::vec4 clear_color;
 };

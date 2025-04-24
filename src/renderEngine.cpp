@@ -170,12 +170,13 @@ void RenderEngine::set_drawing_mode(Render_Pass* pass, DRAWING_MODE mode)
 	pass->mode = mode;
 }
 
-Render_Pass* RenderEngine::create_render_pass(Program &p, Render_Target &render_target, std::wstring name)
+Render_Pass* RenderEngine::create_render_pass(Program &p, Render_Target &render_target, std::wstring name, glm::vec4 clear_color)
 {
 	auto pass = new Render_Pass{};
 	pass->used_prog = p;
 	pass->render_target = render_target;
 	pass->name = name;
+	pass->clear_color = clear_color;
 	passes.push_back(pass);
 
 	return pass;
@@ -452,7 +453,7 @@ void RenderEngine::_render_bounding_boxes()
 			0,
 			bb_verts->size());
 
-		auto pass = create_render_pass(_prog, main_rt, L"pass - render bounding boxes");
+		auto pass = create_render_pass(_prog, main_rt, L"pass - render bounding boxes", clear_color);
 		set_drawing_mode(pass, DRAWING_MODE_LINES);
 	}
 }
@@ -507,12 +508,18 @@ void RenderEngine::_render_ground()
 		vs_textures,
 		vs_update);
 
-	std::vector<Uniform> ps_uniforms = {};
-	// auto reflected_scene = passes[1]->render_target.color;
-	// reflected_scene.binding_point = 0;
+	auto ps_uniform_mirror_option = create_uniform("mirror", &options.ground_is_mirror, sizeof(bool), 0);
+
+	std::vector<Uniform> ps_uniforms = {ps_uniform_mirror_option};
+	std::vector<Texture> ps_textures = {};
+	if (options.ground_is_mirror)
+	{
+		auto reflected_scene = mirrored_scene_rt.color;
+		reflected_scene.binding_point = 0;
+		ps_textures.push_back(reflected_scene);
+	}
 	// auto t2 = passes[2]->render_target.depth;
 	// t2.binding_point = 1;
-	std::vector<Texture> ps_textures = {};
 
 	auto ps_update = [](){};
 
@@ -539,7 +546,7 @@ void RenderEngine::_render_ground()
 		0,
 		plane.verts.size());
 
-	auto pass = create_render_pass(prog, main_rt, L"pass - render ground plane");
+	auto pass = create_render_pass(prog, main_rt, L"pass - render ground plane", clear_color);
 	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 }
 
@@ -609,7 +616,7 @@ void RenderEngine::_render_lights()
 			0,
 			bb_verts->size());
 
-		auto pass = create_render_pass(_prog, main_rt, L"pass - render lights");
+		auto pass = create_render_pass(_prog, main_rt, L"pass - render lights", clear_color);
 		set_drawing_mode(pass, DRAWING_MODE_LINES);
 	}
 }
@@ -675,7 +682,74 @@ void RenderEngine::_render_opaques()
 			0,
 			model.verts.size());
 
-		auto pass = create_render_pass(_prog, main_rt, L"pass - render opaques");
+		auto pass = create_render_pass(_prog, main_rt, L"pass - render opaques", clear_color);
+		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+	}
+}
+
+void RenderEngine::_render_opaques_reflected()
+{
+	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
+	mirrored_scene_rt = create_render_target(
+		"",
+		state.window.width,
+		state.window.height,
+		state.window.bytes_per_pixel);
+
+	size_t model_id = 0;
+	for (auto& model: state.scene.models)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		// mats->model_world =glm::translate(glm::scale(m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0, 3, 0));
+		mats->model_world = glm::scale(m_geometry->model_world_transform, glm::vec3(1, -1, 1));
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		auto vs_uniform_light = create_uniform("light", &plight, sizeof(PointLight), 1);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
+		std::vector<Texture> vs_textures = {};
+
+		auto vs_update = [this, &model, mats]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = glm::scale(m_geometry->model_world_transform * model.model_world_transfrom, glm::vec3(1, -1, 1));
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		auto _prog = create_program(
+			vs,
+			ps,
+			model.layout,
+			model.verts.data(),
+			model.verts.size() * sizeof(Vertex_attribute),
+			sizeof(Vertex_attribute),
+			0,
+			model.verts.size());
+
+		auto pass = create_render_pass(_prog, mirrored_scene_rt, L"pass - render opaques mirrored", glm::vec4(1,1,1,0));
 		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 	}
 }
@@ -695,6 +769,10 @@ void RenderEngine::scene_finish()
 	}
 	if(options.render_ground)
 	{
+		if (options.ground_is_mirror)
+		{
+			_render_opaques_reflected();
+		}
 		_render_ground();
 	}
 }
@@ -712,6 +790,16 @@ void RenderEngine::render_lights(bool on)
 void RenderEngine::render_ground(bool on)
 {
 	options.render_ground = on;
+}
+
+void RenderEngine::mirror_ground(bool on)
+{
+	options.ground_is_mirror = on;
+}
+
+void RenderEngine::set_clear_color(glm::vec4 color)
+{
+	this->clear_color = color;
 }
 
 void RenderEngine::_gen_scene_bounding_box()

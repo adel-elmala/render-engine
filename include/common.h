@@ -263,4 +263,5 @@ struct Render_Pass
 	Program used_prog;
 	Render_Target render_target;
 	DRAWING_MODE mode;
+	glm::vec4 clear_color;
 };

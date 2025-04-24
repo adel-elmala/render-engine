@@ -46,20 +46,12 @@ int main(int argc, char **argv)
 	engine.render_bounding_boxes(true);
 	engine.render_lights(true);
 	engine.render_ground(true);
+	engine.mirror_ground(true);
+	engine.set_clear_color(glm::vec4(0.1, 0.2, 0.6, 1.0));
 	engine.scene_finish();
 	// TODO(adel): tell the engine where is the view-volume (optionally)
 
-	// TODO(adel): mark the ground-plane as reflected, so do this reflection pass internally
-	// // pass 1 - render refelcted bunny to texture
-	// {
-	// 	auto prev_pass = engine.passes[0];
-	// 	auto pass_1_render_target = engine.create_render_target(
-	// 		"pass_1",
-	// 		engine.state.window.width,
-	// 		engine.state.window.height,
-	// 		engine.state.window.bytes_per_pixel);
-	// 	auto pass_1 = engine.create_render_pass(prev_pass.used_prog, pass_1_render_target, L"pass 1 - render reflected bunny");
-	// }
+
 
 	// // TODO(adel): mark the models if it casts shadow or not, and do this pass internally
 	// // depth pass - render light camera's depth map
@@ -116,8 +108,6 @@ int main(int argc, char **argv)
 	// 	auto depth_pass = engine.create_render_pass(depth_pass_prog, depth_pass_render_target, L"pass - render light camera depth");
 	// }
 
-	// // TODO(adel): use the scene bounding box, and infer where to render this plane, and also do this pass internally
-	
 
 	// // TODO(adel): optioanlly render the skybox throung an  option to the engine
 	// // pass 4 - render skybox
@@ -178,24 +168,6 @@ int main(int argc, char **argv)
 
 	while (engine.should_exit() == false)
 	{
-		// NOTE(adel): ALL of the uniforms updates should be internal to the engine ? 
-		// update uniforms
-		// engine.m_geometry->update_world_transform();
-		// engine.m_geometry->update_camera_transform();
-		// engine.m_geometry->update_perspective_transform();
-
-		// _pass_0_mats mats{};
-		// mats.model_world = engine.m_geometry->model_world_transform;
-		// mats.world_camera = engine.m_geometry->world_camera_transform;
-		// mats.camera_ndc = engine.m_geometry->camera_ndc_transform;
-		// engine.passes[0].used_prog.vs.uniforms[0].data = &mats;
-		
-		// _pass_0_mats mats_2{};
-		// mats_2.model_world =glm::translate(glm::scale(engine.m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0, 3, 0));
-		// mats_2.world_camera = engine.m_geometry->world_camera_transform;
-		// mats_2.camera_ndc = engine.m_geometry->camera_ndc_transform;
-		// engine.passes[1].used_prog.vs.uniforms[0].data = &mats_2;
-
 		// _pass_0_mats depth_mats{};
 		// depth_mats.model_world = engine.m_geometry->model_world_transform;
 		// auto light_dir = glm::vec3{0, 0, (engine.state.view_volume.near_plane + ((engine.state.view_volume.far_plane - engine.state.view_volume.near_plane) / 2))} - light.position;

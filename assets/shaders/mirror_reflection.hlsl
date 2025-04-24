@@ -44,13 +44,28 @@ VS_Output vs_main(VS_Input input)
 	return output;
 }
 
-float4 ps_main(VS_Output input) : SV_Target
+cbuffer mirror : register(b0)
 {
-	// uint rtv_width , rtv_height, levels;
-	// reflected_scene.GetDimensions(0, rtv_width, rtv_height, levels);
-	// float2 uv = float2(input.pos.x / rtv_width,  input.pos.y / rtv_height); 
-	// float4 reflection =  reflected_scene.Sample(s, uv);
+	bool mirror;
+};
 
+struct PS_Input {
+	float4 pos : SV_POSITION;
+	float3 pos_in_light_view : TEXCOORD0;
+	bool is_front_facing: SV_IsFrontFace;
+};
+
+float4 ps_main(PS_Input input) : SV_Target
+{
+	float4 ground_color = float4(0.6, 0.4, 0.3, 1.0);
+	if (mirror && (input.is_front_facing))
+	{
+		uint rtv_width , rtv_height, levels;
+		reflected_scene.GetDimensions(0, rtv_width, rtv_height, levels);
+		float2 uv = float2(input.pos.x / rtv_width,  input.pos.y / rtv_height); 
+		float4 reflection =  reflected_scene.Sample(s, uv);
+		return  reflection.a * reflection +  (1.0 - reflection.a) * ground_color;
+	}
 	// float2 depth_uv = input.pos_in_light_view.xy * float2(0.5f,0.5f) + float2(0.5f,0.5f);
 	// bool in_shadow = light_depth.Sample(s, depth_uv) <= input.pos_in_light_view.z;
 
@@ -58,5 +73,5 @@ float4 ps_main(VS_Output input) : SV_Target
 	// 	return float4(0,0,0,1);
 	// else
 	// 	return reflection;
-	return float4(0.6, 0.4, 0.3, 1.0);
+	return ground_color;
 }
