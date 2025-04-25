@@ -52,6 +52,7 @@ void D3D11Wrapper::_d3d11_set_debug_layer()
 	d3d11Device->QueryInterface(__uuidof(ID3D11Debug), (void **)&d3dDebug);
 	if (d3dDebug)
 	{
+		d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
 		ID3D11InfoQueue *d3dInfoQueue = nullptr;
 		if (SUCCEEDED(d3dDebug->QueryInterface(__uuidof(ID3D11InfoQueue), (void **)&d3dInfoQueue)))
 		{
@@ -136,27 +137,35 @@ D3D11Wrapper::_d3d11_create_render_texture(size_t width, size_t height, size_t b
 {
 	// Create Texture
 	auto [texture, srv] = _d3d11_create_texture(width, height, TEXTURE_BIND_FLAGS_RENDER_TARGET, nullptr);
+	auto [depth, depth_srv] = _d3d11_create_depth_texture(width, height, bytes_per_pixel);
 
 	ID3D11RenderTargetView *rtv{};
-	auto hResult = d3d11Device->CreateRenderTargetView(texture, 0, &rtv);
-	assert(SUCCEEDED(hResult));
+	d3d11Device->CreateRenderTargetView(texture, 0, &rtv);
 	this->texture_views.push_back(rtv);
 
-	auto [depth, depth_srv, dsv] = _d3d11_create_depth_texture(width, height, bytes_per_pixel);
+	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc {};
+	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+	ID3D11DepthStencilView *dsv;
+	d3d11Device->CreateDepthStencilView(depth, &depthStencilViewDesc, &dsv);
+	this->texture_views.push_back(dsv);
+
 	return {texture, srv, rtv, depth, depth_srv, dsv};
 }
 
 void D3D11Wrapper::_d3d11_create_render_target()
 {
 	ID3D11Texture2D *texture;
-	HRESULT hResult = d3d11SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&texture);
+	HRESULT hResult = d3d11SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&d3d11FrameBuffer);
 	assert(SUCCEEDED(hResult));
 
-	hResult = d3d11Device->CreateRenderTargetView(texture, 0, &d3d11FrameBufferView);
+	hResult = d3d11Device->CreateRenderTargetView(d3d11FrameBuffer, 0, &d3d11FrameBufferView);
 	assert(SUCCEEDED(hResult));
 
-	this->textures.push_back(texture);
-	this->texture_views.push_back(d3d11FrameBufferView);
+	// this->textures.push_back(texture);
+	// this->texture_views.push_back(d3d11FrameBufferView);
 }
 
 ID3D11VertexShader *D3D11Wrapper::_d3d11_create_vertex_shader(std::wstring path, std::string entry)
@@ -359,11 +368,10 @@ D3D11Wrapper::_d3d11_create_texture(size_t width, size_t height, TEXTURE_BIND_FL
 	return {texture, srv};
 }
 
-std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *, ID3D11DepthStencilView *>
+std::tuple<ID3D11Texture2D *, ID3D11ShaderResourceView *>
 D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t bytes_per_pixel)
 {
 	ID3D11Texture2D *texture;
-	ID3D11DepthStencilView *dsv;
 	ID3D11ShaderResourceView *srv;
 
 	D3D11_TEXTURE2D_DESC textureDesc = {};
@@ -379,15 +387,6 @@ D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t by
 	d3d11Device->CreateTexture2D(&textureDesc, nullptr, &texture);
 	this->textures.push_back(texture);
 
-	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-	ZeroMemory(&depthStencilViewDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
-	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	depthStencilViewDesc.Texture2D.MipSlice = 0;
-
-	d3d11Device->CreateDepthStencilView(texture, &depthStencilViewDesc, &dsv);
-	this->texture_views.push_back(dsv);
-
 	D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
 	ZeroMemory(&shaderResourceViewDesc, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
 	shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -397,7 +396,7 @@ D3D11Wrapper::_d3d11_create_depth_texture(size_t width, size_t height, size_t by
 	d3d11Device->CreateShaderResourceView(texture, &shaderResourceViewDesc, &srv);
 	this->texture_views.push_back(srv);
 
-	return {texture, srv, dsv};
+	return {texture, srv};
 }
 
 std::pair<ID3D11Texture2D *, ID3D11ShaderResourceView *>
@@ -538,11 +537,16 @@ D3D11_PRIMITIVE_TOPOLOGY D3D11Wrapper::_drawing_mode(DRAWING_MODE mode)
 }
 void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 {
-	FLOAT backgroundColor[4] = {0.1f, 0.2f, 0.6f, 1.0f};
-	backgroundColor[0] = backgroundColor[0] >= 1.0f ? 0.0f : backgroundColor[0] + .01f;
-
 	// common to all passes
 	{
+		if (state->window.resized)
+		{
+			d3d11FrameBuffer->Release();
+			d3d11FrameBufferView->Release();
+			d3d11SwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+			_d3d11_create_render_target();
+			state->window.resized = false;
+		}
 		d3d11DeviceContext->RSSetState(rasterizerState);
 		d3d11DeviceContext->OMSetDepthStencilState(depthStencilState, 0);
 
@@ -550,12 +554,12 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 		GetClientRect(state->window.win32_win, &winRect);
 		D3D11_VIEWPORT viewport = {0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f};
 		d3d11DeviceContext->RSSetViewports(1, &viewport);
-	}
 
-	for (auto p: passes)
-	{
-		d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(p->render_target.color_view_handle), (FLOAT*)&(p->clear_color));
-		d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(p->render_target.depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		for (auto p : passes)
+		{
+			d3d11DeviceContext->ClearRenderTargetView((ID3D11RenderTargetView *)(p->render_target->color_view_handle), (FLOAT *)&(p->clear_color));
+			d3d11DeviceContext->ClearDepthStencilView((ID3D11DepthStencilView *)(p->render_target->depth_view_handle), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		}
 	}
 
 	for (auto p : passes)
@@ -563,16 +567,16 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 		auto pass = *p;
 		d3d11DeviceContext->IASetPrimitiveTopology(_drawing_mode(pass.mode));
 		_d3d11_begin_pass(pass.name);
-		auto rtv = (ID3D11RenderTargetView *)pass.render_target.color_view_handle;
-		auto dsv = (ID3D11DepthStencilView *)pass.render_target.depth_view_handle;
+		auto rtv = (ID3D11RenderTargetView *)pass.render_target->color_view_handle;
+		auto dsv = (ID3D11DepthStencilView *)pass.render_target->depth_view_handle;
 		d3d11DeviceContext->OMSetRenderTargets(1, &rtv, dsv);
 		d3d11DeviceContext->IASetInputLayout((ID3D11InputLayout *)pass.used_prog.vertex_buffer_layout);
 
 		d3d11DeviceContext->VSSetShader((ID3D11VertexShader *)pass.used_prog.vs.handle, nullptr, 0);
-		for (auto &t : pass.used_prog.vs.textures)
+		for (auto t : pass.used_prog.vs.textures)
 		{
-			d3d11DeviceContext->VSSetShaderResources(t.binding_point, 1, (ID3D11ShaderResourceView **)&t.view_handle);
-			d3d11DeviceContext->VSSetSamplers(t.binding_point, 1, &samplerState);
+			d3d11DeviceContext->VSSetShaderResources(t->binding_point, 1, (ID3D11ShaderResourceView **)&t->view_handle);
+			d3d11DeviceContext->VSSetSamplers(t->binding_point, 1, &samplerState);
 		}
 		for (auto &u : pass.used_prog.vs.uniforms)
 		{
@@ -581,10 +585,10 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 		}
 
 		d3d11DeviceContext->PSSetShader((ID3D11PixelShader *)pass.used_prog.ps.handle, nullptr, 0);
-		for (auto &t : pass.used_prog.ps.textures)
+		for (auto t : pass.used_prog.ps.textures)
 		{
-			d3d11DeviceContext->PSSetShaderResources(t.binding_point, 1, (ID3D11ShaderResourceView **)&t.view_handle);
-			d3d11DeviceContext->PSSetSamplers(t.binding_point, 1, &samplerState);
+			d3d11DeviceContext->PSSetShaderResources(t->binding_point, 1, (ID3D11ShaderResourceView **)&t->view_handle);
+			d3d11DeviceContext->PSSetSamplers(t->binding_point, 1, &samplerState);
 		}
 		for (auto &u : pass.used_prog.ps.uniforms)
 		{
@@ -605,19 +609,19 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 		ID3D11ShaderResourceView* null_srv = nullptr;
 		ID3D11SamplerState* null_sampler = nullptr;
 		ID3D11Buffer* null_buffer = nullptr;
-		for (auto &t : pass.used_prog.vs.textures)
+		for (auto t : pass.used_prog.vs.textures)
 		{
-			d3d11DeviceContext->VSSetShaderResources(t.binding_point, 1, &null_srv);
-			d3d11DeviceContext->VSSetSamplers(t.binding_point, 1, &null_sampler);
+			d3d11DeviceContext->VSSetShaderResources(t->binding_point, 1, &null_srv);
+			d3d11DeviceContext->VSSetSamplers(t->binding_point, 1, &null_sampler);
 		}
 		for (auto &u : pass.used_prog.vs.uniforms)
 		{
 			d3d11DeviceContext->VSSetConstantBuffers(u.binding_point, 1, &null_buffer);
 		}
-		for (auto &t : pass.used_prog.ps.textures)
+		for (auto t : pass.used_prog.ps.textures)
 		{
-			d3d11DeviceContext->PSSetShaderResources(t.binding_point, 1, &null_srv);
-			d3d11DeviceContext->PSSetSamplers(t.binding_point, 1, &null_sampler);
+			d3d11DeviceContext->PSSetShaderResources(t->binding_point, 1, &null_srv);
+			d3d11DeviceContext->PSSetSamplers(t->binding_point, 1, &null_sampler);
 		}
 		for (auto &u : pass.used_prog.ps.uniforms)
 		{
@@ -628,7 +632,8 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 
 	// overlay rendered texture onto swapchain pass
 	{
-		_d3d11_begin_pass(L"final pass - overlay");
+		FLOAT backgroundColor[4] = {0.1f, 0.2f, 0.6f, 1.0f};
+		_d3d11_begin_pass(L"pass - overlay");
 		d3d11DeviceContext->ClearRenderTargetView(d3d11FrameBufferView, backgroundColor);
 		d3d11DeviceContext->OMSetRenderTargets(1, &d3d11FrameBufferView, nullptr);
 		d3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -636,7 +641,7 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 		d3d11DeviceContext->VSSetShader(overlayVertexShader, nullptr, 0);
 		d3d11DeviceContext->PSSetShader(overlayPixelShader, nullptr, 0);
 
-		d3d11DeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView **)&passes.back()->render_target.color.view_handle);
+		d3d11DeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView **)&passes.back()->render_target->color.view_handle);
 		d3d11DeviceContext->PSSetSamplers(0, 1, &samplerState);
 
 		d3d11DeviceContext->Draw(6, 0);
@@ -645,7 +650,9 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 
 	// imgui pass
 	{
+		_d3d11_begin_pass(L"pass - imgui");
 		_frame_imgui();
+		_d3d11_end_pass();
 	}
 
 	ID3D11RenderTargetView *null_rtv = nullptr;
@@ -684,10 +691,11 @@ void D3D11Wrapper::cleanup()
 	depthStencilState->Release();
 
 	samplerState->Release();
+	d3d11FrameBuffer->Release();
+	d3d11FrameBufferView->Release();
 	d3d11SwapChain->Release();
 	d3d11DeviceContext->Release();
 	d3d11Device->Release();
-
 }
 
 void D3D11Wrapper::_cleanup_imgui()

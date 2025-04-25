@@ -247,7 +247,7 @@ struct Shader
 	std::wstring path;
 	std::string entry;
 	std::vector<Uniform> uniforms;
-	std::vector<Texture> textures;
+	std::vector<Texture*> textures;
 	std::function<void(void)> update_uniforms; 
 };
 
@@ -267,7 +267,7 @@ struct Render_Pass
 {
 	std::wstring name;
 	Program used_prog;
-	Render_Target render_target;
+	Render_Target* render_target;
 	DRAWING_MODE mode;
 	glm::vec4 clear_color;
 };

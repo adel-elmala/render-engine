@@ -139,7 +139,7 @@ void WindowManager::start_event_loop()
 	while (SDL_PollEvent(&event) != 0)
 	{
 		ImGui_ImplSDL2_ProcessEvent(&event);
-		if (io.WantCaptureMouse || io.WantCaptureKeyboard)
+		if (io.WantCaptureMouse && event.type != SDL_QUIT)
 			continue;
 		switch (event.type)
 		{

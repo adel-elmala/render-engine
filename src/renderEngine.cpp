@@ -98,6 +98,10 @@ void RenderEngine::update_resources()
 void RenderEngine::render_frame()
 {
 	update_resources();
+	if (state.window.resized)
+	{
+		_resize_render_targets();
+	}
 	switch (state.backend)
 	{
 	case BACKEND_D3D11:
@@ -178,7 +182,7 @@ void RenderEngine::set_drawing_mode(Render_Pass* pass, DRAWING_MODE mode)
 	pass->mode = mode;
 }
 
-Render_Pass* RenderEngine::create_render_pass(Program &p, Render_Target &render_target, std::wstring name, glm::vec4 clear_color)
+Render_Pass* RenderEngine::create_render_pass(Program &p, Render_Target *render_target, std::wstring name, glm::vec4 clear_color)
 {
 	auto pass = new Render_Pass{};
 	pass->used_prog = p;
@@ -206,7 +210,7 @@ Program RenderEngine::create_program(Shader &vs, Shader &ps, Input_Layout &layou
 	return p;
 }
 
-Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures, std::function<void()> update)
+Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture*> textures, std::function<void()> update)
 {
 	Shader s{};
 	s.path = path;
@@ -266,10 +270,10 @@ Texture RenderEngine::create_texture(const char *name, Texture::DIM dimensions, 
 	return t;
 }
 
-Render_Target RenderEngine::create_render_target(const char *name, int width, int height, int bytes_per_pixel)
+Render_Target* RenderEngine::create_render_target(const char *name, int width, int height, int bytes_per_pixel)
 {
-	Render_Target rt{};
-	rt.name = name;
+	auto rt = new Render_Target;
+	rt->name = name;
 
 	Texture color{};
 	color.name = "color_target";
@@ -284,11 +288,12 @@ Render_Target RenderEngine::create_render_target(const char *name, int width, in
 	depth.bytes_per_pixel = bytes_per_pixel;
 	if (state.backend == BACKEND_D3D11)
 	{
-		std::tie(color.texture_handle, color.view_handle, rt.color_view_handle, depth.texture_handle, depth.view_handle, rt.depth_view_handle) = m_d3d11_wrapper->_d3d11_create_render_texture(width, height, bytes_per_pixel);
+		std::tie(color.texture_handle, color.view_handle, rt->color_view_handle, depth.texture_handle, depth.view_handle, rt->depth_view_handle) = m_d3d11_wrapper->_d3d11_create_render_texture(width, height, bytes_per_pixel);
 	}
-	rt.color = color;
-	rt.depth = depth;
+	rt->color = color;
+	rt->depth = depth;
 
+	unique_render_targets.push_back(rt);
 	return rt;
 }
 
@@ -414,7 +419,7 @@ void RenderEngine::_render_bounding_boxes()
 
 		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture> vs_textures = {};
+		std::vector<Texture*> vs_textures = {};
 
 		auto vs_update = [this, &model, mats]()
 		{
@@ -434,7 +439,7 @@ void RenderEngine::_render_bounding_boxes()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture> ps_textures = {};
+		std::vector<Texture*> ps_textures = {};
 		auto ps_update = [](){};
 
 		auto ps = create_shader(
@@ -497,7 +502,7 @@ void RenderEngine::_render_ground()
 	auto vs_uniform_mat_2 = create_uniform("light_mats", light_mats, sizeof(opaque_pass_mats_unifrom), 1);
 
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
-	std::vector<Texture> vs_textures = {};
+	std::vector<Texture*> vs_textures = {};
 
 	auto vs_update = [this, mats, light_mats, scene_center, fovy, used_plight]()
 	{
@@ -530,21 +535,35 @@ void RenderEngine::_render_ground()
 	auto ps_uniform_shadow_option = create_uniform("shadow", &options.render_shadows, sizeof(bool), 1);
 
 	std::vector<Uniform> ps_uniforms = {ps_uniform_mirror_option, ps_uniform_shadow_option};
-	std::vector<Texture> ps_textures = {};
+	std::vector<Texture*> ps_textures = {};
+	auto reflected_scene = new Texture;
 	if (options.ground_is_mirror)
 	{
-		auto reflected_scene = mirrored_scene_rt.color;
-		reflected_scene.binding_point = 0;
+		memcpy(reflected_scene, &mirrored_scene_rt->color, sizeof(Texture));
+		reflected_scene->binding_point = 0;
 		ps_textures.push_back(reflected_scene);
 	}
+	auto depth_map = new Texture;
 	if (options.render_shadows)
 	{
-		auto depth_map = depth_rt.depth;
-		depth_map.binding_point = 1;
+		memcpy(depth_map, &depth_rt->depth, sizeof(Texture));
+		depth_map->binding_point = 1;
 		ps_textures.push_back(depth_map);
 	}
 
-	auto ps_update = [](){};
+	auto ps_update = [this, reflected_scene, depth_map]()
+	{
+		if (options.ground_is_mirror)
+		{
+			memcpy(reflected_scene, &mirrored_scene_rt->color, sizeof(Texture));
+			reflected_scene->binding_point = 0;
+		}
+		if (options.render_shadows)
+		{
+			memcpy(depth_map, &depth_rt->depth, sizeof(Texture));
+			depth_map->binding_point = 1;
+		}
+	};
 
 	auto ps = create_shader(
 		L"../../assets/shaders/mirror_reflection.hlsl",
@@ -584,7 +603,7 @@ void RenderEngine::_render_lights()
 
 		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture> vs_textures = {};
+		std::vector<Texture*> vs_textures = {};
 
 		auto vs_update = [this, mats]()
 		{
@@ -604,7 +623,7 @@ void RenderEngine::_render_lights()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture> ps_textures = {};
+		std::vector<Texture*> ps_textures = {};
 		auto ps_update = [](){};
 
 		auto ps = create_shader(
@@ -648,7 +667,7 @@ void RenderEngine::_render_opaques()
 {
 	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
 	main_rt = create_render_target(
-		"",
+		"main",
 		state.window.width,
 		state.window.height,
 		state.window.bytes_per_pixel);
@@ -663,7 +682,7 @@ void RenderEngine::_render_opaques()
 		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		auto vs_uniform_light = create_uniform("light", &plight, sizeof(PointLight), 1);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
-		std::vector<Texture> vs_textures = {};
+		std::vector<Texture*> vs_textures = {};
 
 		auto vs_update = [this, &model, mats]()
 		{
@@ -683,7 +702,7 @@ void RenderEngine::_render_opaques()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture> ps_textures = {};
+		std::vector<Texture*> ps_textures = {};
 		auto ps_update = [](){};
 
 		auto ps = create_shader(
@@ -713,7 +732,7 @@ void RenderEngine::_render_opaques_reflected()
 {
 	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
 	mirrored_scene_rt = create_render_target(
-		"",
+		"mirrored_scene",
 		state.window.width,
 		state.window.height,
 		state.window.bytes_per_pixel);
@@ -730,7 +749,7 @@ void RenderEngine::_render_opaques_reflected()
 		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		auto vs_uniform_light = create_uniform("light", &plight, sizeof(PointLight), 1);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
-		std::vector<Texture> vs_textures = {};
+		std::vector<Texture*> vs_textures = {};
 
 		auto vs_update = [this, &model, mats]()
 		{
@@ -750,7 +769,7 @@ void RenderEngine::_render_opaques_reflected()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture> ps_textures = {};
+		std::vector<Texture*> ps_textures = {};
 		auto ps_update = [](){};
 
 		auto ps = create_shader(
@@ -788,7 +807,7 @@ void RenderEngine::_render_skybox()
 
 	auto vs_uniform_mat = create_uniform("mats", mat, sizeof(_skybox_pass_uniform), 0);
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-	std::vector<Texture> vs_textures = {};
+	std::vector<Texture*> vs_textures = {};
 
 	auto vs_update = [this, mat]()
 	{
@@ -821,9 +840,11 @@ void RenderEngine::_render_skybox()
 		state.scene.skybox.back.bytes_per_pixel,
 		state.scene.skybox.back.height * state.scene.skybox.back.width * state.scene.skybox.back.bytes_per_pixel,
 		0);
+	auto skybox_texture = new Texture;
+	memcpy(skybox_texture, &ps_t, sizeof(Texture));
 
 	std::vector<Uniform> ps_uniforms = {};
-	std::vector<Texture> ps_textures = {ps_t};
+	std::vector<Texture*> ps_textures = {skybox_texture};
 
 	auto ps_update = [](){};
 
@@ -852,7 +873,7 @@ void RenderEngine::_render_shadows()
 {
 	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
 	depth_rt = create_render_target(
-		"",
+		"depth",
 		state.window.width,
 		state.window.height,
 		state.window.bytes_per_pixel);
@@ -882,7 +903,7 @@ void RenderEngine::_render_shadows()
 
 		auto vs_uniform_mat = create_uniform("mats", light_mats, sizeof(opaque_pass_mats_unifrom), 0);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture> vs_textures = {};
+		std::vector<Texture*> vs_textures = {};
 
 		auto vs_update = [this, light_mats, plight, fovy, scene_center]()
 		{
@@ -906,7 +927,7 @@ void RenderEngine::_render_shadows()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture> ps_textures = {};
+		std::vector<Texture*> ps_textures = {};
 		auto ps_update = []() {};
 
 		auto ps = create_shader(
@@ -1018,5 +1039,19 @@ void RenderEngine::_gen_scene_bounding_box()
 		state.scene.bb.max_x = std::max(state.scene.bb.max_x, model.bb.max_x);
 		state.scene.bb.max_y = std::max(state.scene.bb.max_y, model.bb.max_y);
 		state.scene.bb.max_z = std::max(state.scene.bb.max_z, model.bb.max_z);
+	}
+}
+
+void RenderEngine::_resize_render_targets()
+{
+	auto copy = unique_render_targets;
+	for (auto rt: copy)
+	{
+		auto new_rt = create_render_target(rt->name, state.window.width, state.window.height, state.window.bytes_per_pixel);
+		rt->color = new_rt->color;
+		rt->depth = new_rt->depth;
+		rt->color_view_handle = new_rt->color_view_handle;
+		rt->depth_view_handle = new_rt->depth_view_handle;
+		unique_render_targets.pop_back();
 	}
 }

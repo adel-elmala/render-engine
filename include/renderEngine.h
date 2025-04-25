@@ -44,12 +44,12 @@ public:
 	void set_clear_color(glm::vec4 color);
 	void flush_frame();
 	bool should_exit();
-	Render_Pass* create_render_pass(Program &p, Render_Target &render_target, std::wstring name, glm::vec4 clear_color);
+	Render_Pass* create_render_pass(Program &p, Render_Target *render_target, std::wstring name, glm::vec4 clear_color);
 	Program create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes);
-	Shader create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture> &textures, std::function<void()> update);
+	Shader create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture*> textures, std::function<void()> update);
 	Uniform create_uniform(const char *name, void *data, size_t size, size_t binding_point);
 	Texture create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point);
-	Render_Target create_render_target(const char *name, int width, int height, int bytes_per_pixel);
+	Render_Target* create_render_target(const char *name, int width, int height, int bytes_per_pixel);
 	Model create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center, size_t width, size_t height);
 	
 	std::unique_ptr<SceneManager> m_scene_manager;
@@ -69,15 +69,17 @@ public:
 	void _render_skybox();
 	void _render_shadows();
 	void _gen_scene_bounding_box();
+	void _resize_render_targets();
 	std::vector<glm::vec4>* _bounding_box_lines(Bounding_Box bb);
 	
 	std::unique_ptr<Geometry> m_geometry;
 	std::unique_ptr<D3D11Wrapper> m_d3d11_wrapper;
 	Engine_State state;
 	std::vector<Render_Pass*> passes;
-	Render_Target main_rt;
-	Render_Target depth_rt;
-	Render_Target mirrored_scene_rt;
+	std::vector<Render_Target*> unique_render_targets;
+	Render_Target* main_rt;
+	Render_Target* depth_rt;
+	Render_Target* mirrored_scene_rt;
 	std::thread engine_loop;
 	Engine_Options options;
 	std::vector<std::vector<glm::vec4>*> bounding_boxes;
