@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-WindowManager::WindowManager() : m_width{800}, m_height{600}, state{}, draw_frame_callback{nullptr}
+WindowManager::WindowManager() : m_width{800}, m_height{600}, state{}
 {
 	// ZoneScoped;
 }
@@ -244,13 +244,6 @@ void WindowManager::start_event_loop()
 		}
 		}
 	}
-}
-
-void WindowManager::set_draw_frame_callback(void (*callback)(int w, int h, int bytes_per_pixel, void *framebuffer))
-{
-	// ZoneScoped;
-	if (callback)
-		draw_frame_callback = callback;
 }
 
 void WindowManager::update_surface()

@@ -12,7 +12,6 @@ public:
 	WindowManager();
 	~WindowManager();
 
-	void set_draw_frame_callback(void (*callback)(int w, int h, int bytes_per_pixel, void *framebuffer));
 	void start_event_loop();
 	void update_surface();
 	void enable_window_resizing(bool enable);
@@ -23,7 +22,6 @@ public:
 			state = engine_state;
 	}
 	void run();
-	HWND native_win32_handle();
 	void init_imgui();
 
 	SDL_Surface *m_window_surface;
@@ -31,10 +29,10 @@ public:
 private:
 	bool init();
 	bool resize();
+	HWND native_win32_handle();
 
 	unsigned int m_width;
 	unsigned int m_height;
-	void (*draw_frame_callback)(int w, int h, int bytes_per_pixel, void *framebuffer);
 
 	SDL_Window *m_window_handle;
 	Engine_State *state;
