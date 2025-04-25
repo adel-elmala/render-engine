@@ -1,4 +1,5 @@
 .vs/
 build/
 tracy_records/
-assets/models/
+# assets/models/
+assets/all_models/

@@ -6,7 +6,7 @@
 int main(int argc, char **argv)
 {
 	RenderEngine engine(BACKEND_D3D11);
-	auto bunny = engine.m_scene_manager->parse_model("../../assets/models/bunny/vbunny.obj");
+	auto bunny = engine.m_scene_manager->parse_model("../../assets/models/bunny/bunny.obj");
 
 	Input_Layout layout{};
 	Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
@@ -19,8 +19,7 @@ int main(int argc, char **argv)
 	engine.scene_add_model(bunny);
 
 	PointLight l0{};
-	// l0.position = glm::vec3(0.0f, 100.0f, 700.0f);						// in world space
-	l0.position = glm::vec3(0.0f, 0.0f, 0.0f);						// in world space
+	l0.position = glm::vec3(0.0f, 0.0f, 0.0f);							 // in world space
 	l0.color = glm::vec3(242.0 / 255.0f, 196.0 / 255.0f, 29.0 / 255.0f); // yellowish;
 	l0.intensity = 4.0f;
 	engine.scene_add_point_light(l0);
