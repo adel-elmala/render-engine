@@ -20,7 +20,7 @@ RenderEngine::RenderEngine(BACKEND backend)
 	switch (backend)
 	{
 	case BACKEND_D3D11:
-		RenderEngine_init_d3d11();
+		_init_d3d11();
 		break;
 	case BACKEND_VULKAN:
 		break;
@@ -45,80 +45,6 @@ RenderEngine::~RenderEngine()
 	{
 		delete bb;
 	}
-}
-
-void RenderEngine::RenderEngine_init_d3d11()
-{
-	// ZoneScoped;
-	state.window.height = 600;
-	state.window.width = 800;
-	state.window.bytes_per_pixel = 4;
-	state.running = true;
-	init_camera();
-	init_view_volume();
-
-	m_win_manager = std::make_unique<WindowManager>();
-	m_win_manager->bind_state(&state);
-	m_win_manager->run();
-
-	m_scene_manager = std::make_unique<SceneManager>();
-
-	m_geometry = std::make_unique<Geometry>();
-	m_geometry->bind_state(&state);
-
-	m_d3d11_wrapper = std::make_unique<D3D11Wrapper>();
-	m_d3d11_wrapper->bind_state(&state);
-	m_d3d11_wrapper->initD3D11();
-
-	m_win_manager->init_imgui();
-}
-
-void RenderEngine::render_frame_d3d11(std::vector<Render_Pass*> passes)
-{
-	// ZoneScoped;
-	m_d3d11_wrapper->render_frame(passes);
-	// FrameMark;
-}
-
-void RenderEngine::update_resources()
-{
-	m_geometry->update_world_transform();
-	m_geometry->update_camera_transform();
-	m_geometry->update_perspective_transform();
-	for(auto& pass: passes)
-	{
-		pass->used_prog.vs.update_uniforms();
-		pass->used_prog.ps.update_uniforms();
-	}
-}
-
-void RenderEngine::render_frame()
-{
-	update_resources();
-	if (state.window.resized)
-	{
-		_resize_render_targets();
-	}
-	switch (state.backend)
-	{
-	case BACKEND_D3D11:
-		engine_loop = std::thread(&RenderEngine::render_frame_d3d11, this, passes);
-		break;
-	case BACKEND_VULKAN:
-		break;
-	default:
-		break;
-	}
-}
-
-void RenderEngine::flush_frame()
-{
-	engine_loop.join();
-}
-
-bool RenderEngine::should_exit()
-{
-	return !(state.running);
 }
 
 void RenderEngine::scene_add_skybox(Env_map skybox)
@@ -147,7 +73,142 @@ void RenderEngine::scene_update_camera(Camera cam)
 	state.scene.cam = cam;
 }
 
-void RenderEngine::init_camera()
+void RenderEngine::scene_finish()
+{
+	// opqaue pass
+	_render_opaques();
+	_gen_scene_bounding_box();
+	if (options.render_bounding_boxes)
+	{
+		_render_bounding_boxes();
+	}
+	if (options.render_lights)
+	{
+		_render_lights();
+	}
+	if (options.render_shadows)
+	{
+		_render_shadows();
+	}
+	if (options.render_ground)
+	{
+		if (options.ground_is_mirror)
+		{
+			_render_opaques_reflected();
+		}
+		_render_ground();
+	}
+	if (options.render_skybox)
+	{
+		_render_skybox();
+	}
+	_frame_gui();
+}
+
+void RenderEngine::set_drawing_mode(Render_Pass* pass, DRAWING_MODE mode)
+{
+	// ZoneScoped;
+	pass->mode = mode;
+}
+
+void RenderEngine::set_clear_color(glm::vec4 color)
+{
+	this->clear_color = color;
+}
+
+void RenderEngine::render_bounding_boxes(bool on)
+{
+	options.render_bounding_boxes = on;
+}
+
+void RenderEngine::render_lights(bool on)
+{
+	options.render_lights = on;
+}
+
+void RenderEngine::render_ground(bool on)
+{
+	options.render_ground = on;
+}
+
+void RenderEngine::mirror_ground(bool on)
+{
+	options.ground_is_mirror = on;
+}
+
+void RenderEngine::render_skybox(bool on)
+{
+	options.render_skybox &= on;
+}
+
+void RenderEngine::render_shadows(bool on)
+{
+	options.render_shadows = on;
+}
+
+void RenderEngine::render_frame()
+{
+	_update_resources();
+	if (state.window.resized)
+	{
+		_resize_render_targets();
+	}
+	switch (state.backend)
+	{
+	case BACKEND_D3D11:
+		engine_loop = std::thread(&RenderEngine::_render_frame_d3d11, this, passes);
+		break;
+	case BACKEND_VULKAN:
+		break;
+	default:
+		break;
+	}
+}
+
+void RenderEngine::flush_frame()
+{
+	engine_loop.join();
+}
+
+bool RenderEngine::should_exit()
+{
+	return !(state.running);
+}
+
+void RenderEngine::_init_d3d11()
+{
+	// ZoneScoped;
+	state.window.height = 600;
+	state.window.width = 800;
+	state.window.bytes_per_pixel = 4;
+	state.running = true;
+	_init_camera();
+	_init_view_volume();
+
+	m_win_manager = std::make_unique<WindowManager>();
+	m_win_manager->bind_state(&state);
+	m_win_manager->run();
+
+	m_scene_manager = std::make_unique<SceneManager>();
+
+	m_geometry = std::make_unique<Geometry>();
+	m_geometry->bind_state(&state);
+
+	m_d3d11_wrapper = std::make_unique<D3D11Wrapper>();
+	m_d3d11_wrapper->bind_state(&state);
+	m_d3d11_wrapper->initD3D11();
+
+	m_win_manager->init_imgui();
+}
+
+void RenderEngine::_render_frame_d3d11(std::vector<Render_Pass*> passes)
+{
+	// ZoneScoped;
+	m_d3d11_wrapper->render_frame(passes);
+	// FrameMark;
+}
+
+void RenderEngine::_init_camera()
 {
 	// ZoneScoped;
 	if (state.backend == BACKEND_D3D11)
@@ -159,7 +220,7 @@ void RenderEngine::init_camera()
 	}
 }
 
-void RenderEngine::init_view_volume()
+void RenderEngine::_init_view_volume()
 {
 	// ZoneScoped;
 	if (state.backend == BACKEND_D3D11)
@@ -173,13 +234,625 @@ void RenderEngine::init_view_volume()
 	}
 }
 
-void RenderEngine::set_drawing_mode(Render_Pass* pass, DRAWING_MODE mode)
+struct opaque_pass_mats_unifrom
 {
-	// ZoneScoped;
-	pass->mode = mode;
+	glm::mat4 model_world;
+	glm::mat4 world_camera;
+	glm::mat4 camera_ndc;
+};
+
+void RenderEngine::_render_bounding_boxes()
+{
+	for (auto& model: state.scene.models)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		mats->model_world = m_geometry->model_world_transform;
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+		std::vector<Texture*> vs_textures = {};
+
+		auto vs_update = [this, &model, mats]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = _create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture*> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = _create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		Input_Layout layout{};
+		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+		layout.elements = {e0};
+
+		auto bb_verts = _bounding_box_lines(model.bb);
+
+		auto _prog = _create_program(
+			vs,
+			ps,
+			layout,
+			bb_verts->data(),
+			bb_verts->size() * sizeof(glm::vec4),
+			sizeof(glm::vec4),
+			0,
+			bb_verts->size());
+
+		auto pass = _create_render_pass(_prog, main_rt, L"pass - render bounding boxes", clear_color);
+		pass->visible = &options.render_bounding_boxes;
+		set_drawing_mode(pass, DRAWING_MODE_LINES);
+	}
 }
 
-Render_Pass* RenderEngine::create_render_pass(Program &p, Render_Target *render_target, std::wstring name, glm::vec4 clear_color)
+void RenderEngine::_render_ground()
+{
+	auto scene_width = state.scene.bb.max_x - state.scene.bb.min_x;
+	auto scene_height = state.scene.bb.max_y - state.scene.bb.min_y;
+	auto scene_depth = state.scene.bb.max_z - state.scene.bb.min_z;
+
+	auto scene_center = glm::vec3(
+		state.scene.bb.min_x + scene_width / 2.0,
+		state.scene.bb.min_y,
+		state.scene.bb.min_z + scene_depth / 2.0);
+
+	auto plane = _create_axis_aligned_plane(glm::vec3(0, 1, 0), scene_center, scene_width * 4, scene_depth * 4);
+
+	auto mats = new opaque_pass_mats_unifrom;
+	mats->model_world = m_geometry->model_world_transform;
+	mats->world_camera = m_geometry->world_camera_transform;
+	mats->camera_ndc = m_geometry->camera_ndc_transform;
+	auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+
+	auto used_plight = state.scene.pLights[0];
+	auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+	auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
+	float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
+
+	auto light_mats = new opaque_pass_mats_unifrom;
+	light_mats->model_world = m_geometry->model_world_transform;
+	light_mats->world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
+	light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+	auto vs_uniform_mat_2 = _create_uniform("light_mats", light_mats, sizeof(opaque_pass_mats_unifrom), 1);
+
+	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
+	std::vector<Texture*> vs_textures = {};
+
+	auto vs_update = [this, mats, light_mats, scene_center, fovy, used_plight]()
+	{
+		opaque_pass_mats_unifrom new_mats{};
+		new_mats.model_world = m_geometry->model_world_transform;
+		new_mats.world_camera = m_geometry->world_camera_transform;
+		new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+		memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+
+		auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+		auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
+
+		opaque_pass_mats_unifrom new_mats_light{};
+		new_mats_light.model_world = m_geometry->model_world_transform;
+		new_mats_light.world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
+		new_mats_light.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+
+		memcpy(light_mats, &new_mats_light, sizeof(opaque_pass_mats_unifrom));
+	};
+
+	auto vs = _create_shader(
+		L"../../assets/shaders/mirror_reflection.hlsl",
+		"vs_main",
+		SHADER_STAGE_VERTEX,
+		vs_uniforms,
+		vs_textures,
+		vs_update);
+
+	auto ps_uniform_mirror_option = _create_uniform("mirror", &options.ground_is_mirror, sizeof(bool), 0);
+	auto ps_uniform_shadow_option = _create_uniform("shadow", &options.render_shadows, sizeof(bool), 1);
+
+	std::vector<Uniform> ps_uniforms = {ps_uniform_mirror_option, ps_uniform_shadow_option};
+	std::vector<Texture*> ps_textures = {};
+	auto reflected_scene = new Texture;
+	if (options.ground_is_mirror)
+	{
+		memcpy(reflected_scene, &mirrored_scene_rt->color, sizeof(Texture));
+		reflected_scene->binding_point = 0;
+		ps_textures.push_back(reflected_scene);
+	}
+	auto depth_map = new Texture;
+	if (options.render_shadows)
+	{
+		memcpy(depth_map, &depth_rt->depth, sizeof(Texture));
+		depth_map->binding_point = 1;
+		ps_textures.push_back(depth_map);
+	}
+
+	auto ps_update = [this, reflected_scene, depth_map]()
+	{
+		if (options.ground_is_mirror)
+		{
+			memcpy(reflected_scene, &mirrored_scene_rt->color, sizeof(Texture));
+			reflected_scene->binding_point = 0;
+		}
+		if (options.render_shadows)
+		{
+			memcpy(depth_map, &depth_rt->depth, sizeof(Texture));
+			depth_map->binding_point = 1;
+		}
+	};
+
+	auto ps = _create_shader(
+		L"../../assets/shaders/mirror_reflection.hlsl",
+		"ps_main",
+		SHADER_STAGE_PIXEL,
+		ps_uniforms,
+		ps_textures,
+		ps_update);
+
+	Input_Layout layout{};
+	Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+	Element_Desc e1 = {V_ATTRIBUTE_TYPE_NORMAL, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+	Element_Desc e2 = {V_ATTRIBUTE_TYPE_TEXTURE_COORD, FORMAT_R32G32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+	layout.elements = {e0, e1, e2};
+	auto prog = _create_program(
+		vs,
+		ps,
+		layout,
+		plane.verts.data(),
+		plane.verts.size() * sizeof(Vertex_attribute),
+		sizeof(Vertex_attribute),
+		0,
+		plane.verts.size());
+
+	auto pass = _create_render_pass(prog, main_rt, L"pass - render ground plane", clear_color);
+	pass->visible = &options.render_ground;
+	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+}
+
+void RenderEngine::_render_lights()
+{
+	for (auto& light: state.scene.pLights)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		mats->model_world = glm::identity<glm::mat4>();
+		mats->model_world = glm::translate(mats->model_world, light.position);
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+		std::vector<Texture*> vs_textures = {};
+
+		auto vs_update = [this, mats, &light]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = glm::identity<glm::mat4>();
+			new_mats.model_world = glm::translate(new_mats.model_world, light.position);
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = _create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture*> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = _create_shader(
+			L"../../assets/shaders/wireframe.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		Input_Layout layout{};
+		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
+		layout.elements = {e0};
+
+		Bounding_Box light_bb{
+			.min_x = -100 + light.position.x,
+			.min_y = -100 + light.position.y,
+			.min_z = -100 + light.position.z,
+			.max_x = 100 + light.position.x,
+			.max_y = 100 + light.position.y,
+			.max_z = 100 + light.position.z,
+		};
+		auto bb_verts = _bounding_box_lines(light_bb);
+
+		auto _prog = _create_program(
+			vs,
+			ps,
+			layout,
+			bb_verts->data(),
+			bb_verts->size() * sizeof(glm::vec4),
+			sizeof(glm::vec4),
+			0,
+			bb_verts->size());
+
+		auto pass = _create_render_pass(_prog, main_rt, L"pass - render lights", clear_color);
+		pass->visible = &options.render_lights;
+		set_drawing_mode(pass, DRAWING_MODE_LINES);
+	}
+}
+
+void RenderEngine::_render_opaques()
+{
+	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
+	main_rt = _create_render_target(
+		"main",
+		state.window.width,
+		state.window.height,
+		state.window.bytes_per_pixel);
+
+	for (auto& model: state.scene.models)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		mats->model_world = m_geometry->model_world_transform;
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		auto vs_uniform_light = _create_uniform("light", &plight, sizeof(PointLight), 1);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
+		std::vector<Texture*> vs_textures = {};
+
+		auto vs_update = [this, &model, mats]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = _create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture*> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = _create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		auto _prog = _create_program(
+			vs,
+			ps,
+			model.layout,
+			model.verts.data(),
+			model.verts.size() * sizeof(Vertex_attribute),
+			sizeof(Vertex_attribute),
+			0,
+			model.verts.size());
+
+		auto pass = _create_render_pass(_prog, main_rt, L"pass - render opaques", clear_color);
+		auto always_visible = new bool(true);
+		pass->visible = always_visible;
+		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+	}
+}
+
+void RenderEngine::_render_opaques_reflected()
+{
+	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
+	mirrored_scene_rt = _create_render_target(
+		"mirrored_scene",
+		state.window.width,
+		state.window.height,
+		state.window.bytes_per_pixel);
+
+	size_t model_id = 0;
+	for (auto& model: state.scene.models)
+	{
+		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
+		// mats->model_world =glm::translate(glm::scale(m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0, 3, 0));
+		mats->model_world = glm::scale(m_geometry->model_world_transform, glm::vec3(1, -1, 1));
+		mats->world_camera = m_geometry->world_camera_transform;
+		mats->camera_ndc = m_geometry->camera_ndc_transform;
+
+		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
+		auto vs_uniform_light = _create_uniform("light", &plight, sizeof(PointLight), 1);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
+		std::vector<Texture*> vs_textures = {};
+
+		auto vs_update = [this, &model, mats]()
+		{
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = glm::scale(m_geometry->model_world_transform * model.model_world_transfrom, glm::vec3(1, -1, 1));
+			new_mats.world_camera = m_geometry->world_camera_transform;
+			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
+			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = _create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture*> ps_textures = {};
+		auto ps_update = [](){};
+
+		auto ps = _create_shader(
+			L"../../assets/shaders/shaders.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		auto _prog = _create_program(
+			vs,
+			ps,
+			model.layout,
+			model.verts.data(),
+			model.verts.size() * sizeof(Vertex_attribute),
+			sizeof(Vertex_attribute),
+			0,
+			model.verts.size());
+
+		auto pass = _create_render_pass(_prog, mirrored_scene_rt, L"pass - render opaques mirrored", glm::vec4(1, 1, 1, 0));
+		pass->visible = &options.ground_is_mirror;
+		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+	}
+}
+
+struct _skybox_pass_uniform
+{
+	glm::mat4 NDCWorld;
+};
+
+void RenderEngine::_render_skybox()
+{
+	auto mat = new _skybox_pass_uniform;
+	mat->NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
+
+	auto vs_uniform_mat = _create_uniform("mats", mat, sizeof(_skybox_pass_uniform), 0);
+	std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+	std::vector<Texture*> vs_textures = {};
+
+	auto vs_update = [this, mat]()
+	{
+		_skybox_pass_uniform new_mats{};
+		new_mats.NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
+		memcpy(mat, &new_mats, sizeof(_skybox_pass_uniform));
+	};
+
+	auto vs = _create_shader(
+		L"../../assets/shaders/envMap.hlsl",
+		"vs_main",
+		SHADER_STAGE_VERTEX,
+		vs_uniforms,
+		vs_textures,
+		vs_update);
+
+	char *cube_data[6] = {
+		state.scene.skybox.right.data[0],
+		state.scene.skybox.left.data[0],
+		state.scene.skybox.top.data[0],
+		state.scene.skybox.bottom.data[0],
+		state.scene.skybox.front.data[0],
+		state.scene.skybox.back.data[0],
+	};
+	auto ps_t = _create_texture(
+		"skybox_pass_t",
+		Texture::DIM_CUBE,
+		cube_data,
+		state.scene.skybox.back.width, state.scene.skybox.back.height,
+		state.scene.skybox.back.bytes_per_pixel,
+		state.scene.skybox.back.height * state.scene.skybox.back.width * state.scene.skybox.back.bytes_per_pixel,
+		0);
+	auto skybox_texture = new Texture;
+	memcpy(skybox_texture, &ps_t, sizeof(Texture));
+
+	std::vector<Uniform> ps_uniforms = {};
+	std::vector<Texture*> ps_textures = {skybox_texture};
+
+	auto ps_update = [](){};
+
+	auto ps = _create_shader(
+		L"../../assets/shaders/envMap.hlsl",
+		"ps_main",
+		SHADER_STAGE_PIXEL,
+		ps_uniforms,
+		ps_textures,
+		ps_update);
+
+	Input_Layout layout{};
+	auto prog = _create_program(
+		vs,
+		ps,
+		layout,
+		nullptr,
+		0,
+		0, 0, 6);
+
+	auto pass = _create_render_pass(prog, main_rt, L"pass - render skybox", clear_color);
+	pass->visible = &options.render_skybox;
+	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+}
+
+void RenderEngine::_render_shadows()
+{
+	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
+	depth_rt = _create_render_target(
+		"depth",
+		state.window.width,
+		state.window.height,
+		state.window.bytes_per_pixel);
+
+	auto scene_width = state.scene.bb.max_x - state.scene.bb.min_x;
+	auto scene_height = state.scene.bb.max_y - state.scene.bb.min_y;
+	auto scene_depth = state.scene.bb.max_z - state.scene.bb.min_z;
+
+	auto scene_center = glm::vec3(
+		state.scene.bb.min_x + scene_width / 2.0,
+		state.scene.bb.min_y,
+		state.scene.bb.min_z + scene_depth / 2.0);
+
+	for (auto &model : state.scene.models)
+	{
+		if (model.cast_shadow == false)
+			continue;
+
+		auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+		auto light_dir = glm::vec3(scene_center_ws) - plight.position;
+		float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
+
+		auto light_mats = new opaque_pass_mats_unifrom;
+		light_mats->model_world = m_geometry->model_world_transform;
+		light_mats->world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
+		light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+
+		auto vs_uniform_mat = _create_uniform("mats", light_mats, sizeof(opaque_pass_mats_unifrom), 0);
+		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
+		std::vector<Texture*> vs_textures = {};
+
+		auto vs_update = [this, light_mats, plight, fovy, scene_center]()
+		{
+			auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
+			auto light_dir = glm::vec3(scene_center_ws) - plight.position;
+
+			opaque_pass_mats_unifrom new_mats{};
+			new_mats.model_world = m_geometry->model_world_transform;
+			new_mats.world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
+			new_mats.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+
+			memcpy(light_mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
+		};
+
+		auto vs = _create_shader(
+			L"../../assets/shaders/depth.hlsl",
+			"vs_main",
+			SHADER_STAGE_VERTEX,
+			vs_uniforms,
+			vs_textures,
+			vs_update);
+
+		std::vector<Uniform> ps_uniforms = {};
+		std::vector<Texture*> ps_textures = {};
+		auto ps_update = []() {};
+
+		auto ps = _create_shader(
+			L"../../assets/shaders/depth.hlsl",
+			"ps_main",
+			SHADER_STAGE_PIXEL,
+			ps_uniforms,
+			ps_textures,
+			ps_update);
+
+		auto prog = _create_program(
+			vs,
+			ps,
+			model.layout,
+			model.verts.data(),
+			model.verts.size() * sizeof(Vertex_attribute),
+			sizeof(Vertex_attribute),
+			0,
+			model.verts.size());
+
+		auto pass = _create_render_pass(prog, depth_rt, L"pass - render light view depth", clear_color);
+		pass->visible = &options.render_shadows;
+		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
+	}
+}
+
+void RenderEngine::_update_resources()
+{
+	m_geometry->update_world_transform();
+	m_geometry->update_camera_transform();
+	m_geometry->update_perspective_transform();
+	for(auto& pass: passes)
+	{
+		pass->used_prog.vs.update_uniforms();
+		pass->used_prog.ps.update_uniforms();
+	}
+}
+
+void RenderEngine::_gen_scene_bounding_box()
+{
+	state.scene.bb = {
+		.min_x = std::numeric_limits<float>::infinity(),
+		.min_y = std::numeric_limits<float>::infinity(),
+		.min_z = std::numeric_limits<float>::infinity(),
+		.max_x = -std::numeric_limits<float>::infinity(),
+		.max_y = -std::numeric_limits<float>::infinity(),
+		.max_z = -std::numeric_limits<float>::infinity()
+	};
+
+	for (auto model: state.scene.models)
+	{
+		state.scene.bb.min_x = std::min(state.scene.bb.min_x, model.bb.min_x);
+		state.scene.bb.min_y = std::min(state.scene.bb.min_y, model.bb.min_y);
+		state.scene.bb.min_z = std::min(state.scene.bb.min_z, model.bb.min_z);
+
+		state.scene.bb.max_x = std::max(state.scene.bb.max_x, model.bb.max_x);
+		state.scene.bb.max_y = std::max(state.scene.bb.max_y, model.bb.max_y);
+		state.scene.bb.max_z = std::max(state.scene.bb.max_z, model.bb.max_z);
+	}
+}
+
+void RenderEngine::_resize_render_targets()
+{
+	auto copy = unique_render_targets;
+	for (auto rt: copy)
+	{
+		auto new_rt = _create_render_target(rt->name, state.window.width, state.window.height, state.window.bytes_per_pixel);
+		rt->color = new_rt->color;
+		rt->depth = new_rt->depth;
+		rt->color_view_handle = new_rt->color_view_handle;
+		rt->depth_view_handle = new_rt->depth_view_handle;
+		unique_render_targets.pop_back();
+	}
+}
+
+void RenderEngine::_frame_gui()
+{
+	state.gui.engine_options = &options;
+	state.gui.plight = &state.scene.pLights[0];
+}
+
+
+Render_Pass* RenderEngine::_create_render_pass(Program &p, Render_Target *render_target, std::wstring name, glm::vec4 clear_color)
 {
 	auto pass = new Render_Pass{};
 	pass->used_prog = p;
@@ -191,7 +864,7 @@ Render_Pass* RenderEngine::create_render_pass(Program &p, Render_Target *render_
 	return pass;
 }
 
-Program RenderEngine::create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes)
+Program RenderEngine::_create_program(Shader &vs, Shader &ps, Input_Layout &layout, void *vertex_buffer_data, size_t buffer_size, size_t vb_stride, size_t vb_offset, size_t n_vert_attributes)
 {
 	Program p{};
 	p.vs = vs;
@@ -207,7 +880,7 @@ Program RenderEngine::create_program(Shader &vs, Shader &ps, Input_Layout &layou
 	return p;
 }
 
-Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture*> textures, std::function<void()> update)
+Shader RenderEngine::_create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture*> textures, std::function<void()> update)
 {
 	Shader s{};
 	s.path = path;
@@ -225,7 +898,7 @@ Shader RenderEngine::create_shader(std::wstring path, std::string entry, SHADER_
 	return s;
 }
 
-Uniform RenderEngine::create_uniform(const char *name, void *data, size_t size, size_t binding_point)
+Uniform RenderEngine::_create_uniform(const char *name, void *data, size_t size, size_t binding_point)
 {
 	Uniform u{};
 	u.name = name;
@@ -239,7 +912,7 @@ Uniform RenderEngine::create_uniform(const char *name, void *data, size_t size, 
 	return u;
 }
 
-Texture RenderEngine::create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point)
+Texture RenderEngine::_create_texture(const char *name, Texture::DIM dimensions, char *data[6], int width, int height, int bytes_per_pixel, size_t size, size_t binding_point)
 {
 	Texture t{};
 	t.name = name;
@@ -267,7 +940,7 @@ Texture RenderEngine::create_texture(const char *name, Texture::DIM dimensions, 
 	return t;
 }
 
-Render_Target* RenderEngine::create_render_target(const char *name, int width, int height, int bytes_per_pixel)
+Render_Target* RenderEngine::_create_render_target(const char *name, int width, int height, int bytes_per_pixel)
 {
 	auto rt = new Render_Target;
 	rt->name = name;
@@ -327,7 +1000,7 @@ std::vector<glm::vec4>* RenderEngine::_bounding_box_lines(Bounding_Box bb)
 	return bb_verts;
 }
 
-Model RenderEngine::create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center , size_t width, size_t height)
+Model RenderEngine::_create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center , size_t width, size_t height)
 {
 	auto n = glm::normalize(normal);
 	auto n_dot_xy = glm::dot(glm::vec3(0, 0, 1), n);
@@ -396,676 +1069,4 @@ Model RenderEngine::create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center
 	m.verts.push_back(v4);
 	m.verts.push_back(v5);
 	return m;
-}
-
-struct opaque_pass_mats_unifrom
-{
-	glm::mat4 model_world;
-	glm::mat4 world_camera;
-	glm::mat4 camera_ndc;
-};
-
-void RenderEngine::_render_bounding_boxes()
-{
-	for (auto& model: state.scene.models)
-	{
-		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
-		mats->model_world = m_geometry->model_world_transform;
-		mats->world_camera = m_geometry->world_camera_transform;
-		mats->camera_ndc = m_geometry->camera_ndc_transform;
-
-		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
-		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture*> vs_textures = {};
-
-		auto vs_update = [this, &model, mats]()
-		{
-			opaque_pass_mats_unifrom new_mats{};
-			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
-			new_mats.world_camera = m_geometry->world_camera_transform;
-			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
-			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
-		};
-
-		auto vs = create_shader(
-			L"../../assets/shaders/wireframe.hlsl",
-			"vs_main",
-			SHADER_STAGE_VERTEX,
-			vs_uniforms,
-			vs_textures,
-			vs_update);
-
-		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
-
-		auto ps = create_shader(
-			L"../../assets/shaders/wireframe.hlsl",
-			"ps_main",
-			SHADER_STAGE_PIXEL,
-			ps_uniforms,
-			ps_textures,
-			ps_update);
-
-		Input_Layout layout{};
-		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-		layout.elements = {e0};
-
-		auto bb_verts = _bounding_box_lines(model.bb);
-
-		auto _prog = create_program(
-			vs,
-			ps,
-			layout,
-			bb_verts->data(),
-			bb_verts->size() * sizeof(glm::vec4),
-			sizeof(glm::vec4),
-			0,
-			bb_verts->size());
-
-		auto pass = create_render_pass(_prog, main_rt, L"pass - render bounding boxes", clear_color);
-		pass->visible = &options.render_bounding_boxes;
-		set_drawing_mode(pass, DRAWING_MODE_LINES);
-	}
-}
-
-void RenderEngine::_render_ground()
-{
-	auto scene_width = state.scene.bb.max_x - state.scene.bb.min_x;
-	auto scene_height = state.scene.bb.max_y - state.scene.bb.min_y;
-	auto scene_depth = state.scene.bb.max_z - state.scene.bb.min_z;
-
-	auto scene_center = glm::vec3(
-		state.scene.bb.min_x + scene_width / 2.0,
-		state.scene.bb.min_y,
-		state.scene.bb.min_z + scene_depth / 2.0);
-
-	auto plane = create_axis_aligned_plane(glm::vec3(0, 1, 0), scene_center, scene_width * 4, scene_depth * 4);
-
-	auto mats = new opaque_pass_mats_unifrom;
-	mats->model_world = m_geometry->model_world_transform;
-	mats->world_camera = m_geometry->world_camera_transform;
-	mats->camera_ndc = m_geometry->camera_ndc_transform;
-	auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
-
-	auto used_plight = state.scene.pLights[0];
-	auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
-	auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
-	float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
-
-	auto light_mats = new opaque_pass_mats_unifrom;
-	light_mats->model_world = m_geometry->model_world_transform;
-	light_mats->world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
-	light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
-	auto vs_uniform_mat_2 = create_uniform("light_mats", light_mats, sizeof(opaque_pass_mats_unifrom), 1);
-
-	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
-	std::vector<Texture*> vs_textures = {};
-
-	auto vs_update = [this, mats, light_mats, scene_center, fovy, used_plight]()
-	{
-		opaque_pass_mats_unifrom new_mats{};
-		new_mats.model_world = m_geometry->model_world_transform;
-		new_mats.world_camera = m_geometry->world_camera_transform;
-		new_mats.camera_ndc = m_geometry->camera_ndc_transform;
-		memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
-
-		auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
-		auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
-
-		opaque_pass_mats_unifrom new_mats_light{};
-		new_mats_light.model_world = m_geometry->model_world_transform;
-		new_mats_light.world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
-		new_mats_light.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
-
-		memcpy(light_mats, &new_mats_light, sizeof(opaque_pass_mats_unifrom));
-	};
-
-	auto vs = create_shader(
-		L"../../assets/shaders/mirror_reflection.hlsl",
-		"vs_main",
-		SHADER_STAGE_VERTEX,
-		vs_uniforms,
-		vs_textures,
-		vs_update);
-
-	auto ps_uniform_mirror_option = create_uniform("mirror", &options.ground_is_mirror, sizeof(bool), 0);
-	auto ps_uniform_shadow_option = create_uniform("shadow", &options.render_shadows, sizeof(bool), 1);
-
-	std::vector<Uniform> ps_uniforms = {ps_uniform_mirror_option, ps_uniform_shadow_option};
-	std::vector<Texture*> ps_textures = {};
-	auto reflected_scene = new Texture;
-	if (options.ground_is_mirror)
-	{
-		memcpy(reflected_scene, &mirrored_scene_rt->color, sizeof(Texture));
-		reflected_scene->binding_point = 0;
-		ps_textures.push_back(reflected_scene);
-	}
-	auto depth_map = new Texture;
-	if (options.render_shadows)
-	{
-		memcpy(depth_map, &depth_rt->depth, sizeof(Texture));
-		depth_map->binding_point = 1;
-		ps_textures.push_back(depth_map);
-	}
-
-	auto ps_update = [this, reflected_scene, depth_map]()
-	{
-		if (options.ground_is_mirror)
-		{
-			memcpy(reflected_scene, &mirrored_scene_rt->color, sizeof(Texture));
-			reflected_scene->binding_point = 0;
-		}
-		if (options.render_shadows)
-		{
-			memcpy(depth_map, &depth_rt->depth, sizeof(Texture));
-			depth_map->binding_point = 1;
-		}
-	};
-
-	auto ps = create_shader(
-		L"../../assets/shaders/mirror_reflection.hlsl",
-		"ps_main",
-		SHADER_STAGE_PIXEL,
-		ps_uniforms,
-		ps_textures,
-		ps_update);
-
-	Input_Layout layout{};
-	Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-	Element_Desc e1 = {V_ATTRIBUTE_TYPE_NORMAL, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-	Element_Desc e2 = {V_ATTRIBUTE_TYPE_TEXTURE_COORD, FORMAT_R32G32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-	layout.elements = {e0, e1, e2};
-	auto prog = create_program(
-		vs,
-		ps,
-		layout,
-		plane.verts.data(),
-		plane.verts.size() * sizeof(Vertex_attribute),
-		sizeof(Vertex_attribute),
-		0,
-		plane.verts.size());
-
-	auto pass = create_render_pass(prog, main_rt, L"pass - render ground plane", clear_color);
-	pass->visible = &options.render_ground;
-	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
-}
-
-void RenderEngine::_render_lights()
-{
-	for (auto& light: state.scene.pLights)
-	{
-		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
-		mats->model_world = glm::identity<glm::mat4>();
-		mats->model_world = glm::translate(mats->model_world, light.position);
-		mats->world_camera = m_geometry->world_camera_transform;
-		mats->camera_ndc = m_geometry->camera_ndc_transform;
-
-		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
-		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture*> vs_textures = {};
-
-		auto vs_update = [this, mats, &light]()
-		{
-			opaque_pass_mats_unifrom new_mats{};
-			new_mats.model_world = glm::identity<glm::mat4>();
-			new_mats.model_world = glm::translate(new_mats.model_world, light.position);
-			new_mats.world_camera = m_geometry->world_camera_transform;
-			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
-			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
-		};
-
-		auto vs = create_shader(
-			L"../../assets/shaders/wireframe.hlsl",
-			"vs_main",
-			SHADER_STAGE_VERTEX,
-			vs_uniforms,
-			vs_textures,
-			vs_update);
-
-		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
-
-		auto ps = create_shader(
-			L"../../assets/shaders/wireframe.hlsl",
-			"ps_main",
-			SHADER_STAGE_PIXEL,
-			ps_uniforms,
-			ps_textures,
-			ps_update);
-
-		Input_Layout layout{};
-		Element_Desc e0 = {V_ATTRIBUTE_TYPE_POSITION, FORMAT_R32G32B32A32_FLOAT, V_ATTRIBUTE_FREQ_PER_VERTEX};
-		layout.elements = {e0};
-
-		Bounding_Box light_bb{
-			.min_x = -100 + light.position.x,
-			.min_y = -100 + light.position.y,
-			.min_z = -100 + light.position.z,
-			.max_x = 100 + light.position.x,
-			.max_y = 100 + light.position.y,
-			.max_z = 100 + light.position.z,
-		};
-		auto bb_verts = _bounding_box_lines(light_bb);
-
-		auto _prog = create_program(
-			vs,
-			ps,
-			layout,
-			bb_verts->data(),
-			bb_verts->size() * sizeof(glm::vec4),
-			sizeof(glm::vec4),
-			0,
-			bb_verts->size());
-
-		auto pass = create_render_pass(_prog, main_rt, L"pass - render lights", clear_color);
-		pass->visible = &options.render_lights;
-		set_drawing_mode(pass, DRAWING_MODE_LINES);
-	}
-}
-
-void RenderEngine::_render_opaques()
-{
-	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
-	main_rt = create_render_target(
-		"main",
-		state.window.width,
-		state.window.height,
-		state.window.bytes_per_pixel);
-
-	for (auto& model: state.scene.models)
-	{
-		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
-		mats->model_world = m_geometry->model_world_transform;
-		mats->world_camera = m_geometry->world_camera_transform;
-		mats->camera_ndc = m_geometry->camera_ndc_transform;
-
-		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
-		auto vs_uniform_light = create_uniform("light", &plight, sizeof(PointLight), 1);
-		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
-		std::vector<Texture*> vs_textures = {};
-
-		auto vs_update = [this, &model, mats]()
-		{
-			opaque_pass_mats_unifrom new_mats{};
-			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
-			new_mats.world_camera = m_geometry->world_camera_transform;
-			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
-			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
-		};
-
-		auto vs = create_shader(
-			L"../../assets/shaders/shaders.hlsl",
-			"vs_main",
-			SHADER_STAGE_VERTEX,
-			vs_uniforms,
-			vs_textures,
-			vs_update);
-
-		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
-
-		auto ps = create_shader(
-			L"../../assets/shaders/shaders.hlsl",
-			"ps_main",
-			SHADER_STAGE_PIXEL,
-			ps_uniforms,
-			ps_textures,
-			ps_update);
-
-		auto _prog = create_program(
-			vs,
-			ps,
-			model.layout,
-			model.verts.data(),
-			model.verts.size() * sizeof(Vertex_attribute),
-			sizeof(Vertex_attribute),
-			0,
-			model.verts.size());
-
-		auto pass = create_render_pass(_prog, main_rt, L"pass - render opaques", clear_color);
-		auto always_visible = new bool(true);
-		pass->visible = always_visible;
-		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
-	}
-}
-
-void RenderEngine::_render_opaques_reflected()
-{
-	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
-	mirrored_scene_rt = create_render_target(
-		"mirrored_scene",
-		state.window.width,
-		state.window.height,
-		state.window.bytes_per_pixel);
-
-	size_t model_id = 0;
-	for (auto& model: state.scene.models)
-	{
-		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
-		// mats->model_world =glm::translate(glm::scale(m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0, 3, 0));
-		mats->model_world = glm::scale(m_geometry->model_world_transform, glm::vec3(1, -1, 1));
-		mats->world_camera = m_geometry->world_camera_transform;
-		mats->camera_ndc = m_geometry->camera_ndc_transform;
-
-		auto vs_uniform_mat = create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
-		auto vs_uniform_light = create_uniform("light", &plight, sizeof(PointLight), 1);
-		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
-		std::vector<Texture*> vs_textures = {};
-
-		auto vs_update = [this, &model, mats]()
-		{
-			opaque_pass_mats_unifrom new_mats{};
-			new_mats.model_world = glm::scale(m_geometry->model_world_transform * model.model_world_transfrom, glm::vec3(1, -1, 1));
-			new_mats.world_camera = m_geometry->world_camera_transform;
-			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
-			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
-		};
-
-		auto vs = create_shader(
-			L"../../assets/shaders/shaders.hlsl",
-			"vs_main",
-			SHADER_STAGE_VERTEX,
-			vs_uniforms,
-			vs_textures,
-			vs_update);
-
-		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
-
-		auto ps = create_shader(
-			L"../../assets/shaders/shaders.hlsl",
-			"ps_main",
-			SHADER_STAGE_PIXEL,
-			ps_uniforms,
-			ps_textures,
-			ps_update);
-
-		auto _prog = create_program(
-			vs,
-			ps,
-			model.layout,
-			model.verts.data(),
-			model.verts.size() * sizeof(Vertex_attribute),
-			sizeof(Vertex_attribute),
-			0,
-			model.verts.size());
-
-		auto pass = create_render_pass(_prog, mirrored_scene_rt, L"pass - render opaques mirrored", glm::vec4(1, 1, 1, 0));
-		pass->visible = &options.ground_is_mirror;
-		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
-	}
-}
-
-struct _skybox_pass_uniform
-{
-	glm::mat4 NDCWorld;
-};
-
-void RenderEngine::_render_skybox()
-{
-	auto mat = new _skybox_pass_uniform;
-	mat->NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
-
-	auto vs_uniform_mat = create_uniform("mats", mat, sizeof(_skybox_pass_uniform), 0);
-	std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-	std::vector<Texture*> vs_textures = {};
-
-	auto vs_update = [this, mat]()
-	{
-		_skybox_pass_uniform new_mats{};
-		new_mats.NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
-		memcpy(mat, &new_mats, sizeof(_skybox_pass_uniform));
-	};
-
-	auto vs = create_shader(
-		L"../../assets/shaders/envMap.hlsl",
-		"vs_main",
-		SHADER_STAGE_VERTEX,
-		vs_uniforms,
-		vs_textures,
-		vs_update);
-
-	char *cube_data[6] = {
-		state.scene.skybox.right.data[0],
-		state.scene.skybox.left.data[0],
-		state.scene.skybox.top.data[0],
-		state.scene.skybox.bottom.data[0],
-		state.scene.skybox.front.data[0],
-		state.scene.skybox.back.data[0],
-	};
-	auto ps_t = create_texture(
-		"skybox_pass_t",
-		Texture::DIM_CUBE,
-		cube_data,
-		state.scene.skybox.back.width, state.scene.skybox.back.height,
-		state.scene.skybox.back.bytes_per_pixel,
-		state.scene.skybox.back.height * state.scene.skybox.back.width * state.scene.skybox.back.bytes_per_pixel,
-		0);
-	auto skybox_texture = new Texture;
-	memcpy(skybox_texture, &ps_t, sizeof(Texture));
-
-	std::vector<Uniform> ps_uniforms = {};
-	std::vector<Texture*> ps_textures = {skybox_texture};
-
-	auto ps_update = [](){};
-
-	auto ps = create_shader(
-		L"../../assets/shaders/envMap.hlsl",
-		"ps_main",
-		SHADER_STAGE_PIXEL,
-		ps_uniforms,
-		ps_textures,
-		ps_update);
-
-	Input_Layout layout{};
-	auto prog = create_program(
-		vs,
-		ps,
-		layout,
-		nullptr,
-		0,
-		0, 0, 6);
-
-	auto pass = create_render_pass(prog, main_rt, L"pass - render skybox", clear_color);
-	pass->visible = &options.render_skybox;
-	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
-}
-
-void RenderEngine::_render_shadows()
-{
-	auto &plight = state.scene.pLights[0]; // TODO(adel): account for multiple light sources in the scene
-	depth_rt = create_render_target(
-		"depth",
-		state.window.width,
-		state.window.height,
-		state.window.bytes_per_pixel);
-
-	auto scene_width = state.scene.bb.max_x - state.scene.bb.min_x;
-	auto scene_height = state.scene.bb.max_y - state.scene.bb.min_y;
-	auto scene_depth = state.scene.bb.max_z - state.scene.bb.min_z;
-
-	auto scene_center = glm::vec3(
-		state.scene.bb.min_x + scene_width / 2.0,
-		state.scene.bb.min_y,
-		state.scene.bb.min_z + scene_depth / 2.0);
-
-	for (auto &model : state.scene.models)
-	{
-		if (model.cast_shadow == false)
-			continue;
-
-		auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
-		auto light_dir = glm::vec3(scene_center_ws) - plight.position;
-		float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
-
-		auto light_mats = new opaque_pass_mats_unifrom;
-		light_mats->model_world = m_geometry->model_world_transform;
-		light_mats->world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
-		light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
-
-		auto vs_uniform_mat = create_uniform("mats", light_mats, sizeof(opaque_pass_mats_unifrom), 0);
-		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture*> vs_textures = {};
-
-		auto vs_update = [this, light_mats, plight, fovy, scene_center]()
-		{
-			auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
-			auto light_dir = glm::vec3(scene_center_ws) - plight.position;
-
-			opaque_pass_mats_unifrom new_mats{};
-			new_mats.model_world = m_geometry->model_world_transform;
-			new_mats.world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
-			new_mats.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
-
-			memcpy(light_mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
-		};
-
-		auto vs = create_shader(
-			L"../../assets/shaders/depth.hlsl",
-			"vs_main",
-			SHADER_STAGE_VERTEX,
-			vs_uniforms,
-			vs_textures,
-			vs_update);
-
-		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = []() {};
-
-		auto ps = create_shader(
-			L"../../assets/shaders/depth.hlsl",
-			"ps_main",
-			SHADER_STAGE_PIXEL,
-			ps_uniforms,
-			ps_textures,
-			ps_update);
-
-		auto prog = create_program(
-			vs,
-			ps,
-			model.layout,
-			model.verts.data(),
-			model.verts.size() * sizeof(Vertex_attribute),
-			sizeof(Vertex_attribute),
-			0,
-			model.verts.size());
-
-		auto pass = create_render_pass(prog, depth_rt, L"pass - render light view depth", clear_color);
-		pass->visible = &options.render_shadows;
-		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
-	}
-}
-
-void RenderEngine::scene_finish()
-{
-	// opqaue pass
-	_render_opaques();
-	_gen_scene_bounding_box();
-	if (options.render_bounding_boxes)
-	{
-		_render_bounding_boxes();
-	}
-	if (options.render_lights)
-	{
-		_render_lights();
-	}
-	if (options.render_shadows)
-	{
-		_render_shadows();
-	}
-	if (options.render_ground)
-	{
-		if (options.ground_is_mirror)
-		{
-			_render_opaques_reflected();
-		}
-		_render_ground();
-	}
-	if (options.render_skybox)
-	{
-		_render_skybox();
-	}
-	_frame_gui();
-}
-
-void RenderEngine::render_bounding_boxes(bool on)
-{
-	options.render_bounding_boxes = on;
-}
-
-void RenderEngine::render_lights(bool on)
-{
-	options.render_lights = on;
-}
-
-void RenderEngine::render_ground(bool on)
-{
-	options.render_ground = on;
-}
-
-void RenderEngine::mirror_ground(bool on)
-{
-	options.ground_is_mirror = on;
-}
-
-void RenderEngine::render_skybox(bool on)
-{
-	options.render_skybox &= on;
-}
-
-void RenderEngine::render_shadows(bool on)
-{
-	options.render_shadows = on;
-}
-
-void RenderEngine::set_clear_color(glm::vec4 color)
-{
-	this->clear_color = color;
-}
-
-void RenderEngine::_gen_scene_bounding_box()
-{
-	state.scene.bb = {
-		.min_x = std::numeric_limits<float>::infinity(),
-		.min_y = std::numeric_limits<float>::infinity(),
-		.min_z = std::numeric_limits<float>::infinity(),
-		.max_x = -std::numeric_limits<float>::infinity(),
-		.max_y = -std::numeric_limits<float>::infinity(),
-		.max_z = -std::numeric_limits<float>::infinity()
-	};
-
-	for (auto model: state.scene.models)
-	{
-		state.scene.bb.min_x = std::min(state.scene.bb.min_x, model.bb.min_x);
-		state.scene.bb.min_y = std::min(state.scene.bb.min_y, model.bb.min_y);
-		state.scene.bb.min_z = std::min(state.scene.bb.min_z, model.bb.min_z);
-
-		state.scene.bb.max_x = std::max(state.scene.bb.max_x, model.bb.max_x);
-		state.scene.bb.max_y = std::max(state.scene.bb.max_y, model.bb.max_y);
-		state.scene.bb.max_z = std::max(state.scene.bb.max_z, model.bb.max_z);
-	}
-}
-
-void RenderEngine::_resize_render_targets()
-{
-	auto copy = unique_render_targets;
-	for (auto rt: copy)
-	{
-		auto new_rt = create_render_target(rt->name, state.window.width, state.window.height, state.window.bytes_per_pixel);
-		rt->color = new_rt->color;
-		rt->depth = new_rt->depth;
-		rt->color_view_handle = new_rt->color_view_handle;
-		rt->depth_view_handle = new_rt->depth_view_handle;
-		unique_render_targets.pop_back();
-	}
-}
-
-void RenderEngine::_frame_gui()
-{
-	state.gui.engine_options = &options;
-	state.gui.plight = &state.scene.pLights[0];
 }
