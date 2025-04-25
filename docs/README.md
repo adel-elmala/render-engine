@@ -5,7 +5,8 @@ Custom render engine, with support for multiple APIs (dx11 only for now, and to 
 
 ### Feature List:
 1. mirror reflection
-2. shadows (wip)
+2. skybox
+3. shadows (wip)
 
 
 ### Old cpu-based render engine can be found [here](https://github.com/adel-elmala/render-engine/tree/software-renderer).
@@ -22,4 +23,5 @@ Custom render engine, with support for multiple APIs (dx11 only for now, and to 
 9. <del>make new engine after all this to be the main branch state</del>
 10. <del>edit readme</del>
 11. fix rendeing artifacts (lighting direction, shadows, black flickering...)
-12. fix leaks
+12. fix mouse control
+13. fix leaks
