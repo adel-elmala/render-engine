@@ -4,6 +4,10 @@
 #include "../include/geometry.h"
 #include "../include/d3d11Wrapper.h"
 
+#include "imgui.h"
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_dx11.h"
+
 #include <iostream>
 #include <chrono>
 
@@ -72,14 +76,7 @@ void RenderEngine::RenderEngine_init_d3d11()
 void RenderEngine::render_frame_d3d11(std::vector<Render_Pass*> passes)
 {
 	// ZoneScoped;
-	auto start = std::chrono::system_clock::now();
-
-	// if (state.window.resized) ;
 	m_d3d11_wrapper->render_frame(passes);
-
-	auto end = std::chrono::system_clock::now();
-	auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-	std::cout << "\rFPS: " << 1000000 / elapsed.count();
 	// FrameMark;
 }
 
@@ -467,6 +464,7 @@ void RenderEngine::_render_bounding_boxes()
 			bb_verts->size());
 
 		auto pass = create_render_pass(_prog, main_rt, L"pass - render bounding boxes", clear_color);
+		pass->visible = &options.render_bounding_boxes;
 		set_drawing_mode(pass, DRAWING_MODE_LINES);
 	}
 }
@@ -589,6 +587,7 @@ void RenderEngine::_render_ground()
 		plane.verts.size());
 
 	auto pass = create_render_pass(prog, main_rt, L"pass - render ground plane", clear_color);
+	pass->visible = &options.render_ground;
 	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 }
 
@@ -598,6 +597,7 @@ void RenderEngine::_render_lights()
 	{
 		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
 		mats->model_world = glm::identity<glm::mat4>();
+		mats->model_world = glm::translate(mats->model_world, light.position);
 		mats->world_camera = m_geometry->world_camera_transform;
 		mats->camera_ndc = m_geometry->camera_ndc_transform;
 
@@ -605,10 +605,11 @@ void RenderEngine::_render_lights()
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
 		std::vector<Texture*> vs_textures = {};
 
-		auto vs_update = [this, mats]()
+		auto vs_update = [this, mats, &light]()
 		{
 			opaque_pass_mats_unifrom new_mats{};
 			new_mats.model_world = glm::identity<glm::mat4>();
+			new_mats.model_world = glm::translate(new_mats.model_world, light.position);
 			new_mats.world_camera = m_geometry->world_camera_transform;
 			new_mats.camera_ndc = m_geometry->camera_ndc_transform;
 			memcpy(mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
@@ -659,6 +660,7 @@ void RenderEngine::_render_lights()
 			bb_verts->size());
 
 		auto pass = create_render_pass(_prog, main_rt, L"pass - render lights", clear_color);
+		pass->visible = &options.render_lights;
 		set_drawing_mode(pass, DRAWING_MODE_LINES);
 	}
 }
@@ -724,6 +726,8 @@ void RenderEngine::_render_opaques()
 			model.verts.size());
 
 		auto pass = create_render_pass(_prog, main_rt, L"pass - render opaques", clear_color);
+		auto always_visible = new bool(true);
+		pass->visible = always_visible;
 		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 	}
 }
@@ -790,7 +794,8 @@ void RenderEngine::_render_opaques_reflected()
 			0,
 			model.verts.size());
 
-		auto pass = create_render_pass(_prog, mirrored_scene_rt, L"pass - render opaques mirrored", glm::vec4(1,1,1,0));
+		auto pass = create_render_pass(_prog, mirrored_scene_rt, L"pass - render opaques mirrored", glm::vec4(1, 1, 1, 0));
+		pass->visible = &options.ground_is_mirror;
 		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 	}
 }
@@ -865,8 +870,9 @@ void RenderEngine::_render_skybox()
 		0,
 		0, 0, 6);
 
-	auto skybox_pass = create_render_pass(prog, main_rt, L"pass - render skybox", clear_color);
-	set_drawing_mode(skybox_pass, DRAWING_MODE_TRIANGLES);
+	auto pass = create_render_pass(prog, main_rt, L"pass - render skybox", clear_color);
+	pass->visible = &options.render_skybox;
+	set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 }
 
 void RenderEngine::_render_shadows()
@@ -949,6 +955,7 @@ void RenderEngine::_render_shadows()
 			model.verts.size());
 
 		auto pass = create_render_pass(prog, depth_rt, L"pass - render light view depth", clear_color);
+		pass->visible = &options.render_shadows;
 		set_drawing_mode(pass, DRAWING_MODE_TRIANGLES);
 	}
 }
@@ -982,6 +989,7 @@ void RenderEngine::scene_finish()
 	{
 		_render_skybox();
 	}
+	_frame_gui();
 }
 
 void RenderEngine::render_bounding_boxes(bool on)
@@ -1054,4 +1062,10 @@ void RenderEngine::_resize_render_targets()
 		rt->depth_view_handle = new_rt->depth_view_handle;
 		unique_render_targets.pop_back();
 	}
+}
+
+void RenderEngine::_frame_gui()
+{
+	state.gui.engine_options = &options;
+	state.gui.plight = &state.scene.pLights[0];
 }

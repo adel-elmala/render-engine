@@ -33,7 +33,7 @@ void WindowManager::init_imgui()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO &io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NoKeyboard; // disable Keyboard Controls
 
 	ImGui::StyleColorsDark();
 
@@ -45,7 +45,7 @@ void WindowManager::init_imgui()
 bool WindowManager::init()
 {
 	// ZoneScoped;
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
 	{
 		std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
 		return false;
@@ -60,7 +60,7 @@ bool WindowManager::init()
 			"window title",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			m_width, m_height,
-			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 		if (NULL == m_window_handle)
 		{
 			std::cerr << "SDL could not create a window! SDL_Error: " << SDL_GetError() << std::endl;
@@ -135,33 +135,52 @@ void WindowManager::start_event_loop()
 	// ZoneScoped;
 	SDL_Event event;
 	ImGuiIO &io = ImGui::GetIO();
-	// std::scoped_lock lock(state->window.m);
 	while (SDL_PollEvent(&event) != 0)
 	{
-		ImGui_ImplSDL2_ProcessEvent(&event);
-		if (io.WantCaptureMouse && event.type != SDL_QUIT)
-			continue;
 		switch (event.type)
 		{
 		case SDL_QUIT:
-			std::cout << "Exiting..\n";
+		{
 			state->running = false;
 			break;
+		}
 		case SDL_MOUSEMOTION:
+		{
+			if (io.WantCaptureMouse)
+			{
+				ImGui_ImplSDL2_ProcessEvent(&event);
+				break;
+			}
 			state->window.cursor_dx = event.motion.xrel;
 			state->window.cursor_dy = event.motion.yrel;
 			state->window.cursor_x = event.motion.x;
 			state->window.cursor_y = event.motion.y;
 			break;
+		}
 		case SDL_MOUSEBUTTONDOWN:
+		{
+			if (io.WantCaptureMouse)
+			{
+				ImGui_ImplSDL2_ProcessEvent(&event);
+				break;
+			}
 			if (event.button.button == 1)
 				state->window.enable_mouse_movement = true;
 			break;
+		}
 		case SDL_MOUSEBUTTONUP:
+		{
+			if (io.WantCaptureMouse)
+			{
+				ImGui_ImplSDL2_ProcessEvent(&event);
+				break;
+			}
 			if (event.button.button == 1)
 				state->window.enable_mouse_movement = false;
 			break;
+		}
 		case SDL_KEYDOWN:
+		{
 			switch (event.key.keysym.sym)
 			{
 			case SDLK_w:
@@ -183,7 +202,9 @@ void WindowManager::start_event_loop()
 				break;
 			}
 			break;
+		}
 		case SDL_KEYUP:
+		{
 			switch (event.key.keysym.sym)
 			{
 			case SDLK_w:
@@ -202,7 +223,10 @@ void WindowManager::start_event_loop()
 				break;
 			}
 			break;
+		}
 		case SDL_WINDOWEVENT: // resize event
+		{
+
 			switch (event.window.event)
 			{
 			case SDL_WINDOWEVENT_RESIZED:
@@ -213,8 +237,11 @@ void WindowManager::start_event_loop()
 				break;
 			}
 			break;
+		}
 		default:
+		{
 			break;
+		}
 		}
 	}
 }

@@ -565,6 +565,8 @@ void D3D11Wrapper::render_frame(std::vector<Render_Pass*> &passes)
 	for (auto p : passes)
 	{
 		auto pass = *p;
+		if (*pass.visible == false)
+			continue;
 		d3d11DeviceContext->IASetPrimitiveTopology(_drawing_mode(pass.mode));
 		_d3d11_begin_pass(pass.name);
 		auto rtv = (ID3D11RenderTargetView *)pass.render_target->color_view_handle;
@@ -711,8 +713,35 @@ void D3D11Wrapper::_frame_imgui()
 	// Start the Dear ImGui frame
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
+	auto io = ImGui::GetIO();
 	ImGui::NewFrame();
-	ImGui::ShowDemoWindow(&show_demo);
+	// ImGui::ShowDemoWindow(&show_demo);
+	{
+		static float clear_color[4] = {};
+
+		ImGui::Begin("Engine control panel"); // Create a window called "Hello, world!" and append into it.
+
+		ImGui::SeparatorText("General options:");		   // Display some text (you can use a format strings too)
+		ImGui::Checkbox("show lights", &((Engine_Options*)state->gui.engine_options)->render_lights);
+		ImGui::Checkbox("show bounding boxs", &((Engine_Options*)state->gui.engine_options)->render_bounding_boxes);
+		ImGui::Checkbox("show skybox", &((Engine_Options*)state->gui.engine_options)->render_skybox);
+		ImGui::Checkbox("show ground plane", &((Engine_Options*)state->gui.engine_options)->render_ground);
+		ImGui::Checkbox("show ground reflection", &((Engine_Options*)state->gui.engine_options)->ground_is_mirror);
+		ImGui::Checkbox("show shadows", &((Engine_Options*)state->gui.engine_options)->render_shadows);
+
+		ImGui::SeparatorText("Point lights:");
+		ImGui::SliderFloat3("light-0 position", &((PointLight *)state->gui.plight)->position.x, -1000, 1000);
+		ImGui::ColorEdit3("clear color", (float *)clear_color); // Edit 3 floats representing a color
+
+		// if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
+		// 	counter++;
+		// ImGui::SameLine();
+		// ImGui::Text("counter = %d", counter);
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+		ImGui::End();
+	}
+
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }

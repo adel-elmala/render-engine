@@ -82,8 +82,6 @@ struct Material
 	uint32_t ns;
 };
 
-
-
 struct Camera
 {
 	glm::vec3 position;
@@ -223,10 +221,17 @@ struct GPU_Handle
 	Handle_t context;
 };
 
+struct GUI_Context
+{
+	Handle_t engine_options;
+	Handle_t plight;
+};
+
 struct Engine_State
 {
 	GPU_Handle gpu; 
 	Window window;
+	GUI_Context gui;
 	Scene scene;
 	ViewVolume view_volume;
 	size_t n_threads;
@@ -270,4 +275,15 @@ struct Render_Pass
 	Render_Target* render_target;
 	DRAWING_MODE mode;
 	glm::vec4 clear_color;
+	bool* visible;
+};
+
+struct Engine_Options
+{
+	bool render_bounding_boxes;
+	bool render_lights;
+	bool render_ground;
+	bool render_skybox;
+	bool render_shadows;
+	bool ground_is_mirror;
 };

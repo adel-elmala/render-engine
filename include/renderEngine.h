@@ -9,17 +9,6 @@
 
 class D3D11Wrapper;
 
-
-struct Engine_Options
-{
-	bool render_bounding_boxes;
-	bool render_lights;
-	bool render_ground;
-	bool render_skybox;
-	bool render_shadows;
-	bool ground_is_mirror;
-};
-
 // TODO[adel] : use strategy design pattern to switch between rasterizer/ray tracer/vulkan
 class RenderEngine
 {
@@ -68,6 +57,7 @@ public:
 	void _render_ground();
 	void _render_skybox();
 	void _render_shadows();
+	void _frame_gui();
 	void _gen_scene_bounding_box();
 	void _resize_render_targets();
 	std::vector<glm::vec4>* _bounding_box_lines(Bounding_Box bb);
