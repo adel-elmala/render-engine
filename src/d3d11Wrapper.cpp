@@ -726,8 +726,11 @@ void D3D11Wrapper::_frame_imgui()
 		ImGui::Checkbox("show bounding boxs", &((Engine_Options *)state->gui.engine_options)->render_bounding_boxes);
 		ImGui::Checkbox("show skybox", &((Engine_Options *)state->gui.engine_options)->render_skybox);
 		ImGui::Checkbox("show ground plane", &((Engine_Options *)state->gui.engine_options)->render_ground);
-		ImGui::Checkbox("show ground reflection", &((Engine_Options *)state->gui.engine_options)->ground_is_mirror);
-		ImGui::Checkbox("show shadows", &((Engine_Options *)state->gui.engine_options)->render_shadows);
+		if (((Engine_Options *)state->gui.engine_options)->render_ground)
+		{
+			ImGui::Checkbox("show ground reflection", &((Engine_Options *)state->gui.engine_options)->ground_is_mirror);
+			ImGui::Checkbox("show shadows", &((Engine_Options *)state->gui.engine_options)->render_shadows);
+		}
 
 		ImGui::SeparatorText("Point lights:");
 		ImGui::SliderFloat3("light-0 position", &((PointLight *)state->gui.plight)->position.x, -1000, 1000);
@@ -739,6 +742,7 @@ void D3D11Wrapper::_frame_imgui()
 		// ImGui::Text("counter = %d", counter);
 
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+		ImGui::TextColored(ImVec4(0.0f, 0.5f, 0.0f, 1.0f), "Move camera with 'WASD' keys");
 		ImGui::End();
 	}
 
