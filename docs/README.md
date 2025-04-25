@@ -49,9 +49,9 @@ try to use as most of cpu caps as possible , SIMD , multi-threading.
 ## TODO
 1. <del>Refactor the engine, handle  only d3d11 and remove any software-backend related stuff</del>
 2. <del>Refactor Application stuff, and make it more flexable to use </del>
-3. make the engine API more verbose with options to render the scene and models, (i.e enable shadows, wireframe, transparentcy,...), passes should not be implemented into the main by the user.
+3. <del>make the engine API more verbose with options to render the scene and models, (i.e enable shadows, wireframe, transparentcy,...), passes should not be implemented into the main by the user.<del>
 4. add imgui support
-5. render light (toggle rendering the light as sprites from the engine)
+5. <del>render light (toggle rendering the light as sprites from the engine)<del>
 6. <del> render bounding-boxes for scence models </del>
 7. add logging
 8. make a branch that uses only software backend for showcasing
