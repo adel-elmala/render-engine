@@ -229,7 +229,7 @@ struct GUI_Context
 
 struct Engine_State
 {
-	GPU_Handle gpu; 
+	GPU_Handle gpu;
 	Window window;
 	GUI_Context gui;
 	Scene scene;
@@ -252,8 +252,8 @@ struct Shader
 	std::wstring path;
 	std::string entry;
 	std::vector<Uniform> uniforms;
-	std::vector<Texture*> textures;
-	std::function<void(void)> update_uniforms; 
+	std::vector<Texture *> textures;
+	std::function<void(void)> update_uniforms;
 };
 
 struct Program
@@ -272,10 +272,10 @@ struct Render_Pass
 {
 	std::wstring name;
 	Program used_prog;
-	Render_Target* render_target;
+	Render_Target *render_target;
 	DRAWING_MODE mode;
 	glm::vec4 clear_color;
-	bool* visible;
+	bool *visible;
 };
 
 struct Engine_Options

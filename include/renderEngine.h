@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <string>
 #include "common.h"
 #include "geometry.h"
@@ -9,7 +8,6 @@
 
 class D3D11Wrapper;
 
-// TODO[adel] : use strategy design pattern to switch between rasterizer/ray tracer/vulkan
 class RenderEngine
 {
 public:

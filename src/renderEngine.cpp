@@ -41,7 +41,7 @@ RenderEngine::~RenderEngine()
 	{
 		delete pass;
 	}
-	for (auto bb: bounding_boxes)
+	for (auto bb : bounding_boxes)
 	{
 		delete bb;
 	}
@@ -105,7 +105,7 @@ void RenderEngine::scene_finish()
 	_frame_gui();
 }
 
-void RenderEngine::set_drawing_mode(Render_Pass* pass, DRAWING_MODE mode)
+void RenderEngine::set_drawing_mode(Render_Pass *pass, DRAWING_MODE mode)
 {
 	// ZoneScoped;
 	pass->mode = mode;
@@ -201,7 +201,7 @@ void RenderEngine::_init_d3d11()
 	m_win_manager->init_imgui();
 }
 
-void RenderEngine::_render_frame_d3d11(std::vector<Render_Pass*> passes)
+void RenderEngine::_render_frame_d3d11(std::vector<Render_Pass *> passes)
 {
 	// ZoneScoped;
 	m_d3d11_wrapper->render_frame(passes);
@@ -243,7 +243,7 @@ struct opaque_pass_mats_unifrom
 
 void RenderEngine::_render_bounding_boxes()
 {
-	for (auto& model: state.scene.models)
+	for (auto &model : state.scene.models)
 	{
 		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
 		mats->model_world = m_geometry->model_world_transform;
@@ -252,7 +252,7 @@ void RenderEngine::_render_bounding_boxes()
 
 		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture*> vs_textures = {};
+		std::vector<Texture *> vs_textures = {};
 
 		auto vs_update = [this, &model, mats]()
 		{
@@ -272,8 +272,8 @@ void RenderEngine::_render_bounding_boxes()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
+		std::vector<Texture *> ps_textures = {};
+		auto ps_update = []() {};
 
 		auto ps = _create_shader(
 			L"../../assets/shaders/wireframe.hlsl",
@@ -336,7 +336,7 @@ void RenderEngine::_render_ground()
 	auto vs_uniform_mat_2 = _create_uniform("light_mats", light_mats, sizeof(opaque_pass_mats_unifrom), 1);
 
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
-	std::vector<Texture*> vs_textures = {};
+	std::vector<Texture *> vs_textures = {};
 
 	auto vs_update = [this, mats, light_mats, scene_center, fovy, used_plight]()
 	{
@@ -369,7 +369,7 @@ void RenderEngine::_render_ground()
 	auto ps_uniform_shadow_option = _create_uniform("shadow", &options.render_shadows, sizeof(bool), 1);
 
 	std::vector<Uniform> ps_uniforms = {ps_uniform_mirror_option, ps_uniform_shadow_option};
-	std::vector<Texture*> ps_textures = {};
+	std::vector<Texture *> ps_textures = {};
 	auto reflected_scene = new Texture;
 	if (options.ground_is_mirror)
 	{
@@ -429,7 +429,7 @@ void RenderEngine::_render_ground()
 
 void RenderEngine::_render_lights()
 {
-	for (auto& light: state.scene.pLights)
+	for (auto &light : state.scene.pLights)
 	{
 		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
 		mats->model_world = glm::identity<glm::mat4>();
@@ -439,7 +439,7 @@ void RenderEngine::_render_lights()
 
 		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture*> vs_textures = {};
+		std::vector<Texture *> vs_textures = {};
 
 		auto vs_update = [this, mats, &light]()
 		{
@@ -460,8 +460,8 @@ void RenderEngine::_render_lights()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
+		std::vector<Texture *> ps_textures = {};
+		auto ps_update = []() {};
 
 		auto ps = _create_shader(
 			L"../../assets/shaders/wireframe.hlsl",
@@ -510,7 +510,7 @@ void RenderEngine::_render_opaques()
 		state.window.height,
 		state.window.bytes_per_pixel);
 
-	for (auto& model: state.scene.models)
+	for (auto &model : state.scene.models)
 	{
 		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
 		mats->model_world = m_geometry->model_world_transform;
@@ -520,7 +520,7 @@ void RenderEngine::_render_opaques()
 		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		auto vs_uniform_light = _create_uniform("light", &plight, sizeof(PointLight), 1);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
-		std::vector<Texture*> vs_textures = {};
+		std::vector<Texture *> vs_textures = {};
 
 		auto vs_update = [this, &model, mats]()
 		{
@@ -540,8 +540,8 @@ void RenderEngine::_render_opaques()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
+		std::vector<Texture *> ps_textures = {};
+		auto ps_update = []() {};
 
 		auto ps = _create_shader(
 			L"../../assets/shaders/shaders.hlsl",
@@ -578,7 +578,7 @@ void RenderEngine::_render_opaques_reflected()
 		state.window.bytes_per_pixel);
 
 	size_t model_id = 0;
-	for (auto& model: state.scene.models)
+	for (auto &model : state.scene.models)
 	{
 		auto mats = new opaque_pass_mats_unifrom; // TODO(adel): fix leak
 		// mats->model_world =glm::translate(glm::scale(m_geometry->model_world_transform, glm::vec3(1, -1, 1)), glm::vec3(0, 3, 0));
@@ -589,7 +589,7 @@ void RenderEngine::_render_opaques_reflected()
 		auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 		auto vs_uniform_light = _create_uniform("light", &plight, sizeof(PointLight), 1);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_light};
-		std::vector<Texture*> vs_textures = {};
+		std::vector<Texture *> vs_textures = {};
 
 		auto vs_update = [this, &model, mats]()
 		{
@@ -609,8 +609,8 @@ void RenderEngine::_render_opaques_reflected()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
-		auto ps_update = [](){};
+		std::vector<Texture *> ps_textures = {};
+		auto ps_update = []() {};
 
 		auto ps = _create_shader(
 			L"../../assets/shaders/shaders.hlsl",
@@ -648,7 +648,7 @@ void RenderEngine::_render_skybox()
 
 	auto vs_uniform_mat = _create_uniform("mats", mat, sizeof(_skybox_pass_uniform), 0);
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-	std::vector<Texture*> vs_textures = {};
+	std::vector<Texture *> vs_textures = {};
 
 	auto vs_update = [this, mat]()
 	{
@@ -685,9 +685,9 @@ void RenderEngine::_render_skybox()
 	memcpy(skybox_texture, &ps_t, sizeof(Texture));
 
 	std::vector<Uniform> ps_uniforms = {};
-	std::vector<Texture*> ps_textures = {skybox_texture};
+	std::vector<Texture *> ps_textures = {skybox_texture};
 
-	auto ps_update = [](){};
+	auto ps_update = []() {};
 
 	auto ps = _create_shader(
 		L"../../assets/shaders/envMap.hlsl",
@@ -745,7 +745,7 @@ void RenderEngine::_render_shadows()
 
 		auto vs_uniform_mat = _create_uniform("mats", light_mats, sizeof(opaque_pass_mats_unifrom), 0);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
-		std::vector<Texture*> vs_textures = {};
+		std::vector<Texture *> vs_textures = {};
 
 		auto vs_update = [this, light_mats, plight, fovy, scene_center]()
 		{
@@ -769,7 +769,7 @@ void RenderEngine::_render_shadows()
 			vs_update);
 
 		std::vector<Uniform> ps_uniforms = {};
-		std::vector<Texture*> ps_textures = {};
+		std::vector<Texture *> ps_textures = {};
 		auto ps_update = []() {};
 
 		auto ps = _create_shader(
@@ -801,7 +801,7 @@ void RenderEngine::_update_resources()
 	m_geometry->update_world_transform();
 	m_geometry->update_camera_transform();
 	m_geometry->update_perspective_transform();
-	for(auto& pass: passes)
+	for (auto &pass : passes)
 	{
 		pass->used_prog.vs.update_uniforms();
 		pass->used_prog.ps.update_uniforms();
@@ -816,10 +816,9 @@ void RenderEngine::_gen_scene_bounding_box()
 		.min_z = std::numeric_limits<float>::infinity(),
 		.max_x = -std::numeric_limits<float>::infinity(),
 		.max_y = -std::numeric_limits<float>::infinity(),
-		.max_z = -std::numeric_limits<float>::infinity()
-	};
+		.max_z = -std::numeric_limits<float>::infinity()};
 
-	for (auto model: state.scene.models)
+	for (auto model : state.scene.models)
 	{
 		state.scene.bb.min_x = std::min(state.scene.bb.min_x, model.bb.min_x);
 		state.scene.bb.min_y = std::min(state.scene.bb.min_y, model.bb.min_y);
@@ -834,7 +833,7 @@ void RenderEngine::_gen_scene_bounding_box()
 void RenderEngine::_resize_render_targets()
 {
 	auto copy = unique_render_targets;
-	for (auto rt: copy)
+	for (auto rt : copy)
 	{
 		auto new_rt = _create_render_target(rt->name, state.window.width, state.window.height, state.window.bytes_per_pixel);
 		rt->color = new_rt->color;
@@ -851,8 +850,7 @@ void RenderEngine::_frame_gui()
 	state.gui.plight = &state.scene.pLights[0];
 }
 
-
-Render_Pass* RenderEngine::_create_render_pass(Program &p, Render_Target *render_target, std::wstring name, glm::vec4 clear_color)
+Render_Pass *RenderEngine::_create_render_pass(Program &p, Render_Target *render_target, std::wstring name, glm::vec4 clear_color)
 {
 	auto pass = new Render_Pass{};
 	pass->used_prog = p;
@@ -880,7 +878,7 @@ Program RenderEngine::_create_program(Shader &vs, Shader &ps, Input_Layout &layo
 	return p;
 }
 
-Shader RenderEngine::_create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture*> textures, std::function<void()> update)
+Shader RenderEngine::_create_shader(std::wstring path, std::string entry, SHADER_STAGE stage, std::vector<Uniform> &uniforms, std::vector<Texture *> textures, std::function<void()> update)
 {
 	Shader s{};
 	s.path = path;
@@ -940,7 +938,7 @@ Texture RenderEngine::_create_texture(const char *name, Texture::DIM dimensions,
 	return t;
 }
 
-Render_Target* RenderEngine::_create_render_target(const char *name, int width, int height, int bytes_per_pixel)
+Render_Target *RenderEngine::_create_render_target(const char *name, int width, int height, int bytes_per_pixel)
 {
 	auto rt = new Render_Target;
 	rt->name = name;
@@ -967,7 +965,7 @@ Render_Target* RenderEngine::_create_render_target(const char *name, int width, 
 	return rt;
 }
 
-std::vector<glm::vec4>* RenderEngine::_bounding_box_lines(Bounding_Box bb)
+std::vector<glm::vec4> *RenderEngine::_bounding_box_lines(Bounding_Box bb)
 {
 	glm::vec4 p0(bb.min_x, bb.min_y, bb.min_z, 1.0f);
 	glm::vec4 p1(bb.max_x, bb.min_y, bb.min_z, 1.0f);
@@ -1000,7 +998,7 @@ std::vector<glm::vec4>* RenderEngine::_bounding_box_lines(Bounding_Box bb)
 	return bb_verts;
 }
 
-Model RenderEngine::_create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center , size_t width, size_t height)
+Model RenderEngine::_create_axis_aligned_plane(glm::vec3 normal, glm::vec3 center, size_t width, size_t height)
 {
 	auto n = glm::normalize(normal);
 	auto n_dot_xy = glm::dot(glm::vec3(0, 0, 1), n);
