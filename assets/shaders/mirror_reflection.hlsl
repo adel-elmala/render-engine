@@ -24,7 +24,8 @@ struct VS_Input {
 
 struct VS_Output {
 	float4 pos : SV_POSITION;
-	float3 pos_in_light_view : TEXCOORD0;
+	float2 depth_uv : TEXCOORD0;
+	float light_z : TEXCOORD1;
 };
 
 VS_Output vs_main(VS_Input input)
@@ -40,7 +41,8 @@ VS_Output vs_main(VS_Input input)
 	VS_Output output;
 	output.pos = pos_ndc;
 	output.pos /= output.pos.w;
-	output.pos_in_light_view = pos_light_ndc.xyz;
+	output.depth_uv = pos_light_ndc.xy * float2(0.5f,-0.5f) + float2(0.5f,0.5f);
+	output.light_z = pos_light_ndc.z;
 	return output;
 }
 
@@ -56,7 +58,8 @@ cbuffer shadow : register(b1)
 
 struct PS_Input {
 	float4 pos : SV_POSITION;
-	float3 pos_in_light_view : TEXCOORD0;
+	float2 depth_uv : TEXCOORD0;
+	float light_z : TEXCOORD1;
 	bool is_front_facing: SV_IsFrontFace;
 };
 
@@ -64,7 +67,6 @@ float4 ps_main(PS_Input input) : SV_Target
 {
 	float4 ground_color = float4(0.6, 0.4, 0.3, 1.0);
 
-	float2 depth_uv = input.pos_in_light_view.xy * float2(0.5f,-0.5f) + float2(0.5f,0.5f);
 	if (mirror && input.is_front_facing)
 	{
 		uint rtv_width , rtv_height, levels;
@@ -75,10 +77,16 @@ float4 ps_main(PS_Input input) : SV_Target
 	}
 	if(shadow && input.is_front_facing)
 	{
-		float depth_seen = light_depth.Sample(s, depth_uv);
-		bool in_shadow = depth_seen < input.pos_in_light_view.z;
-		if (in_shadow)
-			ground_color = float4(0,0,0,1);
+		if (saturate(input.depth_uv.x) == input.depth_uv.x &&
+		 	saturate(input.depth_uv.y) == input.depth_uv.y && 
+			input.light_z > 0)
+		{
+			float epsilon = 0.0115 ;
+			float depth_seen = light_depth.Sample(s, input.depth_uv);
+			bool in_shadow = depth_seen <= input.light_z + epsilon;
+			if (in_shadow)
+				ground_color = float4(0,0,0,1);
+		}
 	}
 	return ground_color;
 }

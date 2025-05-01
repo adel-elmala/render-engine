@@ -324,7 +324,7 @@ void RenderEngine::_render_ground()
 	mats->camera_ndc = m_geometry->camera_ndc_transform;
 	auto vs_uniform_mat = _create_uniform("mats", mats, sizeof(opaque_pass_mats_unifrom), 0);
 
-	auto used_plight = state.scene.pLights[0];
+	auto &used_plight = state.scene.pLights[0];
 	auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
 	auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
 	float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
@@ -338,7 +338,7 @@ void RenderEngine::_render_ground()
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
 	std::vector<Texture *> vs_textures = {};
 
-	auto vs_update = [this, mats, light_mats, scene_center, fovy, used_plight]()
+	auto vs_update = [this, mats, light_mats, scene_center, fovy, &used_plight]()
 	{
 		opaque_pass_mats_unifrom new_mats{};
 		new_mats.model_world = m_geometry->model_world_transform;
@@ -747,7 +747,7 @@ void RenderEngine::_render_shadows()
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
 		std::vector<Texture *> vs_textures = {};
 
-		auto vs_update = [this, light_mats, plight, fovy, scene_center]()
+		auto vs_update = [this, light_mats, &plight, fovy, scene_center]()
 		{
 			auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
 			auto light_dir = glm::vec3(scene_center_ws) - plight.position;
