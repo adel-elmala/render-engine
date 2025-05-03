@@ -13,9 +13,10 @@ Geometry::~Geometry()
 void Geometry::update_world_transform()
 {
 	// ZoneScoped;
-	static char count = 0;
 	static float dx = 0.0f;
 	static float dy = 0.0f;
+	static float old_cursor_x = 0.0f;
+	static float old_cursor_y = 0.0f;
 	if (state->backend == BACKEND_D3D11)
 	{
 		model_world_transform = glm::identity<glm::mat4>();
@@ -31,14 +32,22 @@ void Geometry::update_world_transform()
 
 	if (state->window.enable_mouse_movement)
 	{
-		dx = (state->window.window_origin_x + state->window.cursor_x) / state->window.screen_width - 0.5f;
-		dy = (state->window.window_origin_y + state->window.cursor_y) / state->window.screen_height - 0.5f;
+		if (old_cursor_x != state->window.cursor_x)
+		{
+			old_cursor_x = state->window.cursor_x;
+			dx += state->window.cursor_dx;
+		}
+		if (old_cursor_y != state->window.cursor_y)
+		{
+			old_cursor_y = state->window.cursor_y;
+			dy += state->window.cursor_dy;
+		}
 	}
-	model_world_transform = glm::rotate(model_world_transform, dx * glm::radians(360.0f), glm::vec3(0, 1, 0));
-	model_world_transform = glm::rotate(model_world_transform, dy * glm::radians(360.0f), glm::vec3(1, 0, 0));
+	model_world_transform = glm::rotate(model_world_transform, dx * glm::radians(1.0f), glm::vec3(0, 1, 0));
+	model_world_transform = glm::rotate(model_world_transform, dy * glm::radians(1.0f), glm::vec3(1, 0, 0));
 
-	model_world_transform_mouse = glm::rotate(glm::identity<glm::mat4>(), dx * glm::radians(360.0f), glm::vec3(0, 1, 0));
-	model_world_transform_mouse = glm::rotate(model_world_transform_mouse, dx * glm::radians(360.0f), glm::vec3(0, 1, 0));
+	model_world_transform_mouse = glm::rotate(glm::identity<glm::mat4>(), dx * glm::radians(1.0f), glm::vec3(0, 1, 0));
+	// model_world_transform_mouse = glm::rotate(model_world_transform_mouse, dy * glm::radians(1.0f), glm::vec3(1, 0, 0));
 }
 
 void Geometry::update_camera_transform()
