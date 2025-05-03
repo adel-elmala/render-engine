@@ -13,30 +13,25 @@ struct VS_Input {
 
 struct VS_Output {
 	float4 pos : SV_POSITION;
-	float3 uv :TEXCOORD;
+	float3 uv :TEXCOORD0;
 };
 
 VS_Output vs_main(VS_Input input)
 {
 	float4 rect_positions[6];
-	rect_positions[0] = float4( -1, -1, 0.999, 1);
-	rect_positions[1] = float4( 1, -1, 0.999, 1);
-	rect_positions[2] = float4( -1, 1, 0.999, 1);
-	rect_positions[3] = float4( 1, -1, 0.999, 1);
-	rect_positions[4] = float4( 1, 1, 0.999, 1);
-	rect_positions[5] = float4( -1, 1, 0.999, 1);
+	rect_positions[0] = float4( -1, -1, 0.99999, 1);
+	rect_positions[1] = float4( 1, -1, 0.99999, 1);
+	rect_positions[2] = float4( -1, 1, 0.99999, 1);
+	rect_positions[3] = float4( 1, -1, 0.99999, 1);
+	rect_positions[4] = float4( 1, 1, 0.99999, 1);
+	rect_positions[5] = float4( -1, 1, 0.99999, 1);
 
-	float3 rect_uvs[6];
-	rect_uvs[0] = normalize(mul(NDCWorld, rect_positions[0]).xyz);
-	rect_uvs[1] = normalize(mul(NDCWorld, rect_positions[1]).xyz);
-	rect_uvs[2] = normalize(mul(NDCWorld, rect_positions[2]).xyz);
-	rect_uvs[3] = normalize(mul(NDCWorld, rect_positions[3]).xyz);
-	rect_uvs[4] = normalize(mul(NDCWorld, rect_positions[4]).xyz);
-	rect_uvs[5] = normalize(mul(NDCWorld, rect_positions[5]).xyz);
+	float4 rect_position_world = mul(NDCWorld, rect_positions[input.vID]);
+	float3 rect_uv = rect_position_world.xyz;
 
 	VS_Output output;
 	output.pos = rect_positions[input.vID];
-	output.uv = rect_uvs[input.vID];
+	output.uv = rect_uv;
 	return output;
 }
 

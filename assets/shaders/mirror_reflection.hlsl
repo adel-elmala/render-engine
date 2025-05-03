@@ -24,25 +24,22 @@ struct VS_Input {
 
 struct VS_Output {
 	float4 pos : SV_POSITION;
-	float2 depth_uv : TEXCOORD0;
-	float light_z : TEXCOORD1;
+	float4 pos_light : TEXCOORD0;
 };
 
 VS_Output vs_main(VS_Input input)
 {
 	float4 pos_ws = mul(modelWorld, input.pos);
 	float4 pos_cs = mul(worldCamera, pos_ws);
-	float4 pos_ndc = mul(cameraNDC, pos_cs);
+	float4 pos_clip = mul(cameraNDC, pos_cs);
 
-	float4 pos_light_cs = mul(worldLight, pos_ws);
-	float4 pos_light_ndc = mul(lightNDC, pos_light_cs);
-	pos_light_ndc /= pos_light_ndc.w;
+	float4 pos_light_ws = mul(_, input.pos);
+	float4 pos_light_cs = mul(worldLight, pos_light_ws);
+	float4 pos_light_clip = mul(lightNDC, pos_light_cs);
 
 	VS_Output output;
-	output.pos = pos_ndc;
-	output.pos /= output.pos.w;
-	output.depth_uv = pos_light_ndc.xy * float2(0.5f,-0.5f) + float2(0.5f,0.5f);
-	output.light_z = pos_light_ndc.z;
+	output.pos = pos_clip;
+	output.pos_light = pos_light_clip;
 	return output;
 }
 
@@ -58,9 +55,8 @@ cbuffer shadow : register(b1)
 
 struct PS_Input {
 	float4 pos : SV_POSITION;
-	float2 depth_uv : TEXCOORD0;
-	float light_z : TEXCOORD1;
-	bool is_front_facing: SV_IsFrontFace;
+	float4 pos_light : TEXCOORD0;
+	bool is_front_facing : SV_IsFrontFace;
 };
 
 float4 ps_main(PS_Input input) : SV_Target
@@ -77,15 +73,21 @@ float4 ps_main(PS_Input input) : SV_Target
 	}
 	if(shadow && input.is_front_facing)
 	{
-		if (saturate(input.depth_uv.x) == input.depth_uv.x &&
-		 	saturate(input.depth_uv.y) == input.depth_uv.y && 
-			input.light_z > 0)
+		float4 pos_light_ndc = input.pos_light / input.pos_light.w;
+		float2 depth_uv = pos_light_ndc.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+		float light_z = pos_light_ndc.z;
+		if ((saturate(depth_uv.x) == depth_uv.x) &&
+		 	(saturate(depth_uv.y) == depth_uv.y) && 
+			(light_z > 0))
 		{
-			float epsilon = 0.0115 ;
-			float depth_seen = light_depth.Sample(s, input.depth_uv);
-			bool in_shadow = depth_seen <= input.light_z + epsilon;
-			if (in_shadow)
-				ground_color = float4(0,0,0,1);
+			float epsilon = 0.0001;
+			float depth_seen = light_depth.Sample(s, depth_uv);
+			if (depth_seen < 1.0)
+			{
+				bool in_shadow = depth_seen <= light_z + epsilon;
+				if (in_shadow)
+					ground_color = float4(0,0,0,1);
+			}
 		}
 	}
 	return ground_color;

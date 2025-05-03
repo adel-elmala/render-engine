@@ -16,7 +16,11 @@ int main(int argc, char **argv)
 	bunny.layout = layout;
 	bunny.cast_shadow = true;
 
+	auto bunny_2 = bunny;
+	bunny_2.model_world_transfrom = glm::translate(glm::identity<glm::mat4>(), {100, 0 , 100});
+
 	engine.scene_add_model(bunny);
+	// engine.scene_add_model(bunny_2);
 
 	PointLight l0{};
 	l0.position = glm::vec3(0.0f, 0.0f, 0.0f);							 // in world space
@@ -28,7 +32,7 @@ int main(int argc, char **argv)
 	cam.position = glm::vec3{0.0f, 0.0f, 0.0f};
 	cam.lookat = glm::vec3{0.0f, 0.0f, 1.0f};
 	cam.up = glm::vec3{0.0f, 1.0f, 0.0f};
-	cam.sensitivity = 3.5f;
+	cam.sensitivity = 0.5f;
 	engine.scene_update_camera(cam);
 
 	auto skybox = engine.m_scene_manager->load_env_texture_cube("../../assets/models/skybox/");

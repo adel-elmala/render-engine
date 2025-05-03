@@ -216,7 +216,7 @@ void RenderEngine::_init_camera()
 		state.scene.cam.position = glm::vec3{0.0f, 0.0f, 0.0f};
 		state.scene.cam.lookat = glm::vec3{0.0f, 0.0f, 1.0f};
 		state.scene.cam.up = glm::vec3{0.0f, 1.0f, 0.0f};
-		state.scene.cam.sensitivity = 3.5f;
+		state.scene.cam.sensitivity = 0.15f;
 	}
 }
 
@@ -225,12 +225,9 @@ void RenderEngine::_init_view_volume()
 	// ZoneScoped;
 	if (state.backend == BACKEND_D3D11)
 	{
-		state.view_volume.near_plane = 50.0f;
-		state.view_volume.far_plane = 1500.0f;
-		state.view_volume.left_plane = -50.0f;
-		state.view_volume.right_plane = 50.0f;
-		state.view_volume.top_plane = 50.0f;
-		state.view_volume.bottom_plane = -50.0f;
+		state.view_volume.near_plane = 0.1f;
+		state.view_volume.far_plane = 100.0f;
+		state.view_volume.fovy = glm::radians(45.0f);
 	}
 }
 
@@ -327,12 +324,12 @@ void RenderEngine::_render_ground()
 	auto &used_plight = state.scene.pLights[0];
 	auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
 	auto light_dir = glm::vec3(scene_center_ws) - used_plight.position;
-	float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
+	float fovy = state.view_volume.fovy;
 
 	auto light_mats = new opaque_pass_mats_unifrom;
 	light_mats->model_world = m_geometry->model_world_transform;
-	light_mats->world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
-	light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+	light_mats->world_camera = glm::lookAt(used_plight.position, light_dir, glm::vec3(0, 1, 0));
+	light_mats->camera_ndc = glm::perspective(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
 	auto vs_uniform_mat_2 = _create_uniform("light_mats", light_mats, sizeof(opaque_pass_mats_unifrom), 1);
 
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat, vs_uniform_mat_2};
@@ -351,8 +348,8 @@ void RenderEngine::_render_ground()
 
 		opaque_pass_mats_unifrom new_mats_light{};
 		new_mats_light.model_world = m_geometry->model_world_transform;
-		new_mats_light.world_camera = glm::lookAtLH(used_plight.position, light_dir, glm::vec3(0, 1, 0));
-		new_mats_light.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+		new_mats_light.world_camera = glm::lookAt(used_plight.position, light_dir, glm::vec3(0, 1, 0));
+		new_mats_light.camera_ndc = glm::perspective(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
 
 		memcpy(light_mats, &new_mats_light, sizeof(opaque_pass_mats_unifrom));
 	};
@@ -476,12 +473,12 @@ void RenderEngine::_render_lights()
 		layout.elements = {e0};
 
 		Bounding_Box light_bb{
-			.min_x = -100 + light.position.x,
-			.min_y = -100 + light.position.y,
-			.min_z = -100 + light.position.z,
-			.max_x = 100 + light.position.x,
-			.max_y = 100 + light.position.y,
-			.max_z = 100 + light.position.z,
+			.min_x = -1 + light.position.x,
+			.min_y = -1 + light.position.y,
+			.min_z = -1 + light.position.z,
+			.max_x = 1 + light.position.x,
+			.max_y = 1 + light.position.y,
+			.max_z = 1 + light.position.z,
 		};
 		auto bb_verts = _bounding_box_lines(light_bb);
 
@@ -644,7 +641,7 @@ struct _skybox_pass_uniform
 void RenderEngine::_render_skybox()
 {
 	auto mat = new _skybox_pass_uniform;
-	mat->NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
+	mat->NDCWorld =  glm::inverse(m_geometry->model_world_transform_mouse) * glm::inverse(m_geometry->world_camera_transform) * glm::inverse(m_geometry->camera_ndc_transform);
 
 	auto vs_uniform_mat = _create_uniform("mats", mat, sizeof(_skybox_pass_uniform), 0);
 	std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
@@ -653,7 +650,7 @@ void RenderEngine::_render_skybox()
 	auto vs_update = [this, mat]()
 	{
 		_skybox_pass_uniform new_mats{};
-		new_mats.NDCWorld = glm::inverse(m_geometry->model_world_transform) * glm::inverse(m_geometry->camera_ndc_transform);
+		new_mats.NDCWorld = glm::inverse(m_geometry->model_world_transform_mouse) * glm::inverse(m_geometry->world_camera_transform) * glm::inverse(m_geometry->camera_ndc_transform);
 		memcpy(mat, &new_mats, sizeof(_skybox_pass_uniform));
 	};
 
@@ -736,26 +733,26 @@ void RenderEngine::_render_shadows()
 
 		auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
 		auto light_dir = glm::vec3(scene_center_ws) - plight.position;
-		float fovy = atan2f(state.view_volume.top_plane, state.view_volume.near_plane) * 2;
+		float fovy = state.view_volume.fovy;
 
 		auto light_mats = new opaque_pass_mats_unifrom;
-		light_mats->model_world = m_geometry->model_world_transform;
-		light_mats->world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
-		light_mats->camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+		light_mats->model_world = m_geometry->model_world_transform * model.model_world_transfrom;
+		light_mats->world_camera = glm::lookAt(plight.position, light_dir, glm::vec3(0, 1, 0));
+		light_mats->camera_ndc = glm::perspective(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
 
 		auto vs_uniform_mat = _create_uniform("mats", light_mats, sizeof(opaque_pass_mats_unifrom), 0);
 		std::vector<Uniform> vs_uniforms = {vs_uniform_mat};
 		std::vector<Texture *> vs_textures = {};
 
-		auto vs_update = [this, light_mats, &plight, fovy, scene_center]()
+		auto vs_update = [this, light_mats, &plight, fovy, scene_center, &model]()
 		{
 			auto scene_center_ws = m_geometry->model_world_transform * glm::vec4(scene_center, 1);
 			auto light_dir = glm::vec3(scene_center_ws) - plight.position;
 
 			opaque_pass_mats_unifrom new_mats{};
-			new_mats.model_world = m_geometry->model_world_transform;
-			new_mats.world_camera = glm::lookAtLH(plight.position, light_dir, glm::vec3(0, 1, 0));
-			new_mats.camera_ndc = glm::perspectiveLH(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
+			new_mats.model_world = m_geometry->model_world_transform * model.model_world_transfrom;
+			new_mats.world_camera = glm::lookAt(plight.position, light_dir, glm::vec3(0, 1, 0));
+			new_mats.camera_ndc = glm::perspective(fovy, (float)state.window.width / state.window.height, state.view_volume.near_plane, state.view_volume.far_plane);
 
 			memcpy(light_mats, &new_mats, sizeof(opaque_pass_mats_unifrom));
 		};

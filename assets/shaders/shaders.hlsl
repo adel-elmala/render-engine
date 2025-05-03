@@ -64,7 +64,6 @@ VS_Output vs_main(VS_Input input)
 
 	VS_Output output;
 	output.pos = mul(cameraNDC, pos_cs);
-	output.pos /= output.pos.w;
 	output.color.xyz = diffuse_color + specular_color;
 	output.color.w = 1.0;
 	output.uv = input.uv;

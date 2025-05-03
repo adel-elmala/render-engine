@@ -19,8 +19,8 @@ void Geometry::update_world_transform()
 	if (state->backend == BACKEND_D3D11)
 	{
 		model_world_transform = glm::identity<glm::mat4>();
-		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, -400, (state->view_volume.near_plane + ((state->view_volume.far_plane - state->view_volume.near_plane) / 2))});
-		model_world_transform = glm::scale(model_world_transform, glm::vec3{2.5f, 2.5f, 2.5f});
+		model_world_transform = glm::translate(model_world_transform, glm::vec3{0, -10, (state->view_volume.near_plane + ((state->view_volume.far_plane - state->view_volume.near_plane) / 2))});
+		model_world_transform = glm::scale(model_world_transform, glm::vec3{.05f, .05f, .05f});
 	}
 	else
 	{
@@ -36,12 +36,14 @@ void Geometry::update_world_transform()
 	}
 	model_world_transform = glm::rotate(model_world_transform, dx * glm::radians(360.0f), glm::vec3(0, 1, 0));
 	model_world_transform = glm::rotate(model_world_transform, dy * glm::radians(360.0f), glm::vec3(1, 0, 0));
+
+	model_world_transform_mouse = glm::rotate(glm::identity<glm::mat4>(), dx * glm::radians(360.0f), glm::vec3(0, 1, 0));
+	model_world_transform_mouse = glm::rotate(model_world_transform_mouse, dx * glm::radians(360.0f), glm::vec3(0, 1, 0));
 }
 
 void Geometry::update_camera_transform()
 {
 	// ZoneScoped;
-
 	auto &eye = state->scene.cam.position;
 	auto gaze = state->scene.cam.lookat;
 	auto up = state->scene.cam.up;
@@ -58,40 +60,23 @@ void Geometry::update_camera_transform()
 	}
 
 	if (state->window.move_cam_right)
-		state->scene.cam.position += u * state->scene.cam.sensitivity;
+		eye += u * state->scene.cam.sensitivity;
 	if (state->window.move_cam_left)
-		state->scene.cam.position -= u * state->scene.cam.sensitivity;
+		eye -= u * state->scene.cam.sensitivity;
 	if (state->window.move_cam_forward)
-		state->scene.cam.position -= state->backend == BACKEND_D3D11 ? -w * state->scene.cam.sensitivity : w * state->scene.cam.sensitivity;
+		eye -= state->backend == BACKEND_D3D11 ? -w * state->scene.cam.sensitivity : w * state->scene.cam.sensitivity;
 	if (state->window.move_cam_back)
-		state->scene.cam.position += state->backend == BACKEND_D3D11 ? -w * state->scene.cam.sensitivity : w * state->scene.cam.sensitivity;
+		eye += state->backend == BACKEND_D3D11 ? -w * state->scene.cam.sensitivity : w * state->scene.cam.sensitivity;
 
 	gaze = eye + gaze;
-	world_camera_transform = glm::lookAtLH(eye, gaze, up);
+	world_camera_transform = glm::lookAt(eye, gaze, up);
 }
 
 void Geometry::update_perspective_transform()
 {
 	// ZoneScoped;
-
 	auto n = state->view_volume.near_plane;
 	auto f = state->view_volume.far_plane;
-	auto t = state->view_volume.top_plane;
-	auto b = state->view_volume.bottom_plane;
-	auto l = state->view_volume.left_plane;
-	auto r = state->view_volume.right_plane;
 
-	glm::vec4 r0(2.0f / (r - l), 0.0f, 0.0f, -(r + l) / (r - l));
-	glm::vec4 r1(0.0f, 2.0f / (t - b), 0.0, -(t + b) / (t - b));
-	glm::vec4 r2(0.0f, 0.0f, 2.0f / (n - f), -(n + f) / (n - f));
-	glm::vec4 r3(0.0f, 0.0f, 0.0f, 1.0f);
-
-	if (state->backend == BACKEND_D3D11)
-	{
-		r2 = glm::vec4(0.0f, 0.0f, 1.0f / (f - n), (-n) / (f - n));
-	}
-
-	float fovy = atan2f(t, n) * 2;
-	camera_ndc_transform = glm::perspectiveLH(fovy, (float)state->window.width / state->window.height, n, f);
-
+	camera_ndc_transform = glm::perspective(state->view_volume.fovy, (float)state->window.width / state->window.height, n, f);
 }

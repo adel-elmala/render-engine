@@ -733,7 +733,7 @@ void D3D11Wrapper::_frame_imgui()
 		}
 
 		ImGui::SeparatorText("Point lights:");
-		ImGui::SliderFloat3("light-0 position", &((PointLight *)state->gui.plight)->position.x, -1000, 1000);
+		ImGui::SliderFloat3("light-0 position", &((PointLight *)state->gui.plight)->position.x, -50, 50);
 		// ImGui::ColorEdit3("clear color", (float *)clear_color); // Edit 3 floats representing a color
 
 		// if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)

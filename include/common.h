@@ -6,6 +6,8 @@
 #define GLM_FORCE_INLINE
 #define GLM_FORCE_AVX2
 #define GLM_FORCE_ALIGNED
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE 
+#define GLM_FORCE_LEFT_HANDED 
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // translate, rotate, scale, perspective
@@ -109,10 +111,7 @@ struct ViewVolume
 {
 	float near_plane;
 	float far_plane;
-	float left_plane;
-	float right_plane;
-	float top_plane;
-	float bottom_plane;
+	float fovy;
 };
 
 struct Window
